@@ -4,7 +4,7 @@ import { STATIC_MODE } from "@/lib/client-data";
 import {
   isConfigurationError,
   isPublishedERPGap,
-  roadDataTime,
+  roadFeedStatus,
 } from "@/lib/data-status";
 import { formatDateTime } from "@/lib/format";
 import { DOC_LINKS } from "@/lib/layers";
@@ -23,45 +23,14 @@ export function FeedStatus({
   error?: string | null;
 }) {
   const { t, lang } = useI18n();
-  const unavailable =
-    data?.status === "error" ||
-    (!data && Boolean(error)) ||
-    Boolean(
-      data &&
-      active.length > 0 &&
-      active.every((id) => {
-        const layer = data.layers.find((item) => item.id === id);
-        return layer?.status === "error" && layer.count === 0;
-      }),
-    );
-  const cached = Boolean(data && (STATIC_MODE || data.status === "stale"));
-  const key = unavailable
-    ? "status.error"
-    : cached
-      ? "status.stale"
-      : data?.status === "partial"
-        ? "status.partial"
-        : loading && !data
-          ? "status.loading"
-          : "status.liveRoads";
+  const status = roadFeedStatus(data, active, loading, error, STATIC_MODE);
   return (
-    <p
-      className="atlas-feed-status"
-      data-state={
-        unavailable ? "error" : cached ? "stale" : (data?.status ?? "loading")
-      }
-      role="status"
-    >
+    <p className="atlas-feed-status" data-state={status.state} role="status">
       <span className="atlas-status-dot" aria-hidden="true" />
-      <strong>{t(key)}</strong>
-      {cached &&
-        data?.layers.some(
-          (layer) => layer.status === "error" || layer.status === "partial",
-        ) && <span>· {t("status.partial")}</span>}
-      {data && !unavailable && (
-        <time dateTime={roadDataTime(data, active, STATIC_MODE)}>
-          {formatDateTime(roadDataTime(data, active, STATIC_MODE), lang)}
-        </time>
+      <strong>{t(status.label)}</strong>
+      {status.partial && <span>· {t("status.partial")}</span>}
+      {status.time && (
+        <time dateTime={status.time}>{formatDateTime(status.time, lang)}</time>
       )}
     </p>
   );

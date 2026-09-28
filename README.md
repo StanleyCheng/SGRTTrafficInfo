@@ -74,16 +74,19 @@ particular street), with the limitation stated in the panel.
 
 Static hosting has no server-side credential proxy and never ships the private DataMall key.
 It loads a saved official road-condition snapshot, split into one file per layer. A persistent
-**Cached copy** label shows the original snapshot date on desktop and phone; these road conditions
-must not be interpreted as current traffic. Layers 1–2 still start on and the camera layers start off.
+data-status icon opens a **Cached copy** label and the original snapshot date on desktop and phone;
+these road conditions must not be interpreted as current traffic. Layers 1–2 still start on and the
+camera layers start off.
 Traffic images use the keyless data.gov.sg feed and refresh while that layer is visible.
 
 ### Phone and desktop controls
 
-- **Both layouts:** icons toggle visibility; the short labels beneath them independently open
-  details, legends and filters. Opening the incident filter never disables the default-on layer.
-  The rail groups live conditions, trip planning and cameras; the phone version scrolls horizontally
-  with a swipe cue. Both versions collapse to a chip that retains data freshness.
+- **Both layouts:** a single icon-only row toggles layer visibility. Hover/focus shows a tooltip;
+  tapping briefly shows its name and new state without opening a popup. The pinned Options icon
+  opens the last-tapped layer's details, legends and filters without changing visibility.
+  The row scrolls horizontally, with a chevron indicating more controls. Browse, Reset and
+  Collapse are icon controls in the same row; Options and data status stay reachable while scrolling.
+  The collapsed dock retains the data-status icon, which explains feed health and capture dates.
 - **Browse visible layers:** a searchable, paginated text list provides a keyboard-accessible way to
   select a camera or road record, including reports with no published coordinates. Map and list use
   the same property filters. Escape dismisses details and returns focus to the selecting control.
@@ -94,7 +97,8 @@ Traffic images use the keyless data.gov.sg feed and refresh while that layer is 
 - **Default view:** driver layers 1 (live congestion) and 2 (accidents & breakdowns) are on; layers
   3–9 and all three camera layers are off, in every build.
 - **Top bar:** the app-icon button retracts the header and restores it in the same position. The
-  language, basemap and source buttons remain independent keyboard controls.
+  language, basemap and source buttons remain independent keyboard controls. On phones the header
+  stays on one row: logo, short title, one EN/中 language toggle, and icon-only basemap/Sources buttons.
 
 ## Data sources (all official, no mock data)
 

@@ -1,7 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type FocusEvent,
+  type PointerEvent,
+} from "react";
 import { STATIC_MODE } from "@/lib/client-data";
+import { roadFeedStatus } from "@/lib/data-status";
 import { formatDateTime } from "@/lib/format";
 import { LAYERS, ROAD_LAYER_ORDER } from "@/lib/layers";
 import {
@@ -15,7 +23,7 @@ import {
   type RoadLayerId,
 } from "@/lib/types";
 import { useI18n } from "./i18n-provider";
-import { CloseIcon } from "./icons";
+import { CloseIcon, InfoIcon, ListIcon, OptionsIcon, ResetIcon } from "./icons";
 import { RoadLayerInfo } from "./layer-detail";
 import {
   AnyLayerGlyph,
@@ -59,15 +67,9 @@ export interface LayerPanelProps {
 }
 
 type EntryId = LayerId | RoadLayerId;
-const SETTINGS = new Set<EntryId>(["incidents", "parking", "ev"]);
-const SUMMARIES = new Set<EntryId>([
-  "traffic-speed",
-  "erp",
-  "zones",
-  "expressway",
-]);
 const HINT_ID = "atlas-layer-hint";
 const POPUP_ID = "atlas-layer-details";
+const GUIDE_ID = "atlas-layer-guide";
 
 interface Entry {
   id: EntryId;
@@ -110,12 +112,19 @@ export function LayerPanel({
   className = "",
 }: LayerPanelProps) {
   const { t, lang } = useI18n();
-  const [open, setOpen] = useState<EntryId | "browse" | null>(null);
-  const [hint, setHint] = useState<{ entry: Entry; x: number } | null>(null);
-  const [more, setMore] = useState(true);
+  const [open, setOpen] = useState<EntryId | "browse" | "status" | null>(null);
+  const [selectedEntry, setSelectedEntry] = useState<EntryId>("incidents");
+  const [hint, setHint] = useState<{
+    text: string;
+    owner: string;
+    x: number;
+  } | null>(null);
+  const [more, setMore] = useState(false);
   const panelRef = useRef<HTMLElement>(null);
+  const railRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const returnFocus = useRef<HTMLElement | null>(null);
+  const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeRoad = ROAD_LAYER_ORDER.filter((id) => roadActive[id]);
   const cached = Boolean(
     roadConditions && (STATIC_MODE || roadConditions.status === "stale"),
@@ -164,17 +173,100 @@ export function LayerPanel({
     }),
   );
   const current = entries.find((entry) => entry.id === open);
+  const selected = entries.find((entry) => entry.id === selectedEntry)!;
+  const status = roadFeedStatus(
+    roadConditions,
+    activeRoad,
+    roadLoading,
+    roadError,
+    STATIC_MODE,
+  );
+  const statusDescription = [
+    t("panel.dataStatus"),
+    t(status.label),
+    status.partial ? t("status.partial") : "",
+    status.time ? formatDateTime(status.time, lang) : "",
+    error ? t("err.loadFailed") : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const optionsLabel = t("panel.options", { name: selected.name });
 
   useEffect(() => {
     if (open) headingRef.current?.focus({ preventScroll: true });
   }, [open]);
+  useEffect(
+    () => () => {
+      if (hintTimer.current) clearTimeout(hintTimer.current);
+    },
+    [],
+  );
+  useEffect(() => {
+    const rail = railRef.current;
+    if (!rail) return;
+    const observer = new ResizeObserver(() =>
+      setMore(rail.scrollLeft + rail.clientWidth < rail.scrollWidth - 4),
+    );
+    observer.observe(rail);
+    if (rail.firstElementChild) observer.observe(rail.firstElementChild);
+    return () => observer.disconnect();
+  }, [collapsed]);
+  const clearHint = () => {
+    if (hintTimer.current) clearTimeout(hintTimer.current);
+    hintTimer.current = null;
+    setHint(null);
+  };
+  const showHint = (
+    owner: string,
+    text: string,
+    target: HTMLElement,
+    transient = false,
+  ) => {
+    clearHint();
+    const panel = panelRef.current?.getBoundingClientRect();
+    const tile = target.getBoundingClientRect();
+    if (!panel) return;
+    setHint({ owner, text, x: tile.left - panel.left + tile.width / 2 });
+    if (transient)
+      hintTimer.current = setTimeout(() => {
+        hintTimer.current = null;
+        setHint(null);
+      }, 2600);
+  };
+  const tooltipProps = (owner: string, text: string) => ({
+    "data-tip": text,
+    "data-tooltip-owner": owner,
+    "aria-describedby": hint?.owner === owner && !open ? HINT_ID : GUIDE_ID,
+  });
+  const hintForTarget = (target: HTMLButtonElement) =>
+    showHint(
+      target.dataset.tooltipOwner ?? "",
+      target.dataset.tip ?? "",
+      target,
+    );
+  const handlePointerEnter = (event: PointerEvent<HTMLButtonElement>) => {
+    if (event.pointerType !== "touch") hintForTarget(event.currentTarget);
+  };
+  const handlePointerLeave = () => {
+    if (!hintTimer.current) setHint(null);
+  };
+  const handleFocus = (event: FocusEvent<HTMLButtonElement>) => {
+    const target = event.currentTarget;
+    hintForTarget(target);
+    // Native focus can scroll the rail after the focus event. Re-anchor once
+    // layout settles, without extending the brief tooltip started by a tap.
+    requestAnimationFrame(() => {
+      if (!hintTimer.current && document.activeElement === target)
+        hintForTarget(target);
+    });
+  };
   const close = () => {
     setOpen(null);
     returnFocus.current?.focus({ preventScroll: true });
   };
-  const inspect = (id: EntryId | "browse", target: HTMLElement) => {
+  const inspect = (id: EntryId | "browse" | "status", target: HTMLElement) => {
     returnFocus.current = target;
-    setHint(null);
+    clearHint();
     setOpen(id);
   };
   const showCameras = () => {
@@ -184,43 +276,39 @@ export function LayerPanel({
   const describe = (entry: Entry) =>
     [
       entry.name,
+      entry.unavailable
+        ? t("status.error")
+        : t(entry.on ? "panel.visible" : "panel.hidden"),
+      entry.count != null
+        ? `${entry.count} ${t(entry.info ? "common.reports" : UNIT[entry.id as LayerId])}`
+        : entry.unavailable
+          ? ""
+          : t("status.loading"),
       entry.note,
-      entry.unavailable ? t("status.error") : "",
       entry.info?.sources.map((source) => source.name).join(" · "),
     ]
       .filter(Boolean)
       .join(" — ");
 
-  if (collapsed)
-    return (
-      <div className={`panel atlas-header atlas-layers-collapsed ${className}`}>
-        <button
-          type="button"
-          className="atlas-text-action"
-          aria-expanded={false}
-          onClick={() => onCollapsedChange(false)}
-        >
-          <Mark />
-          {t("panel.expand")}
-        </button>
-        <FeedStatus
-          data={roadConditions}
-          active={activeRoad}
-          loading={roadLoading}
-          error={roadError}
-        />
-      </div>
-    );
-
   return (
     <section
       ref={panelRef}
-      className={`panel atlas-layers ${mobile ? "atlas-layers-phone" : "atlas-layers-bar"} ${className}`}
+      className={[
+        "panel",
+        "atlas-layers",
+        collapsed
+          ? "atlas-layers-collapsed"
+          : mobile
+            ? "atlas-layers-phone"
+            : "atlas-layers-bar",
+        className,
+      ].join(" ")}
       aria-label={t("panel.title")}
       onKeyDown={(event) => {
-        if (event.key === "Escape" && open) {
+        if (event.key === "Escape" && (open || hint)) {
           event.stopPropagation();
-          close();
+          if (open) close();
+          clearHint();
         }
       }}
     >
@@ -231,68 +319,63 @@ export function LayerPanel({
           role="tooltip"
           style={{ "--hint-x": `${hint.x}px` } as CSSProperties}
         >
-          {describe(hint.entry)}
+          {hint.text}
         </p>
       )}
-      <header className="atlas-layer-toolbar">
-        <h2>{t("panel.title")}</h2>
+      <p id={GUIDE_ID} className="sr-only">
+        {t("panel.guide")}
+      </p>
+      <p className="sr-only" role="status">
+        {statusDescription}
+      </p>
+      {!anyOn && (
+        <p className="sr-only" role="status">
+          {t("panel.allOff")}
+        </p>
+      )}
+      {collapsed ? (
         <button
           type="button"
-          className="atlas-text-action"
-          data-testid="browse-features"
-          aria-expanded={open === "browse"}
-          aria-controls={POPUP_ID}
-          onClick={(event) => inspect("browse", event.currentTarget)}
-        >
-          {t("browse.title")}
-        </button>
-        <button
-          type="button"
-          className="atlas-text-action"
-          onClick={onReset}
-          aria-label={t("panel.reset")}
-        >
-          {t("a11y.reset")}
-        </button>
-        <button
-          type="button"
-          className="atlas-icon-button tip tip-right"
-          data-tip={t("panel.collapse")}
-          aria-label={t("panel.collapse")}
+          className="atlas-icon-button"
+          aria-expanded={false}
+          aria-label={t("panel.expand")}
+          {...tooltipProps("expand", t("panel.expand"))}
+          onPointerEnter={handlePointerEnter}
+          onPointerLeave={handlePointerLeave}
+          onFocus={handleFocus}
+          onBlur={clearHint}
           onClick={() => {
+            clearHint();
             setOpen(null);
-            onCollapsedChange(true);
+            onCollapsedChange(false);
           }}
         >
-          <CloseIcon size={16} />
+          <Mark />
         </button>
-      </header>
-      <FeedStatus
-        data={roadConditions}
-        active={activeRoad}
-        loading={roadLoading}
-        error={roadError}
-      />
-      <div
-        className="atlas-rail-scroll"
-        onScroll={(event) => {
-          const rail = event.currentTarget;
-          setMore(rail.scrollLeft + rail.clientWidth < rail.scrollWidth - 4);
-        }}
-      >
-        {groups.map((group) => (
-          <div
-            className="atlas-rail-group"
-            role="group"
-            aria-label={group.name}
-            key={group.name}
-          >
-            <p className="atlas-group-name">{group.name}</p>
-            <ul className="atlas-rail">
-              {group.defs.map((def) => {
-                const entry = entries.find((item) => item.id === def.id)!;
-                return (
-                  <li key={entry.id}>
+      ) : (
+        <>
+          <div className="atlas-rail-window" data-more={more}>
+            <div
+              ref={railRef}
+              className="atlas-rail-scroll"
+              onScroll={(event) => {
+                const rail = event.currentTarget;
+                setMore(
+                  rail.scrollLeft + rail.clientWidth < rail.scrollWidth - 4,
+                );
+                clearHint();
+              }}
+            >
+              <ul className="atlas-rail">
+                {entries.map((entry) => (
+                  <li
+                    key={entry.id}
+                    className={
+                      entry.id === "parking" || entry.id === "redlight"
+                        ? "atlas-rail-group-start"
+                        : undefined
+                    }
+                  >
                     <button
                       type="button"
                       className="atlas-rail-icon"
@@ -300,37 +383,17 @@ export function LayerPanel({
                       data-layer={entry.id}
                       data-active={entry.on && !entry.unavailable}
                       data-error={entry.unavailable}
+                      data-selected={selectedEntry === entry.id}
                       aria-pressed={entry.on}
                       aria-label={`${entry.name} · ${entry.unavailable ? t("status.error") : entry.count != null ? `${entry.count} ${t(entry.info ? "common.reports" : UNIT[entry.id as LayerId])}` : t("status.loading")}`}
-                      data-tip={describe(entry)}
-                      aria-describedby={
-                        hint?.entry.id === entry.id && !open
-                          ? HINT_ID
-                          : undefined
-                      }
-                      onMouseEnter={(event) => {
-                        const panel = panelRef.current?.getBoundingClientRect();
-                        const tile =
-                          event.currentTarget.getBoundingClientRect();
-                        if (panel)
-                          setHint({
-                            entry,
-                            x: tile.left - panel.left + tile.width / 2,
-                          });
-                      }}
-                      onMouseLeave={() => setHint(null)}
-                      onFocus={(event) => {
-                        const panel = panelRef.current?.getBoundingClientRect();
-                        const tile =
-                          event.currentTarget.getBoundingClientRect();
-                        if (panel)
-                          setHint({
-                            entry,
-                            x: tile.left - panel.left + tile.width / 2,
-                          });
-                      }}
-                      onBlur={() => setHint(null)}
+                      {...tooltipProps(entry.id, describe(entry))}
+                      onPointerEnter={handlePointerEnter}
+                      onPointerLeave={handlePointerLeave}
+                      onFocus={handleFocus}
+                      onBlur={clearHint}
                       onClick={(event) => {
+                        setSelectedEntry(entry.id);
+                        setOpen(null);
                         if (!entry.unavailable || entry.on) {
                           if (
                             ROAD_LAYER_ORDER.includes(entry.id as RoadLayerId)
@@ -338,13 +401,15 @@ export function LayerPanel({
                             onRoadToggle(entry.id as RoadLayerId);
                           else onToggle(entry.id as LayerId);
                         }
-                        if (
-                          entry.unavailable ||
-                          (!entry.on &&
-                            (SETTINGS.has(entry.id) || SUMMARIES.has(entry.id)))
-                        )
-                          inspect(entry.id, event.currentTarget);
-                        setHint(null);
+                        showHint(
+                          entry.id,
+                          describe({
+                            ...entry,
+                            on: entry.unavailable ? entry.on : !entry.on,
+                          }),
+                          event.currentTarget,
+                          true,
+                        );
                       }}
                     >
                       <AnyLayerGlyph
@@ -359,31 +424,126 @@ export function LayerPanel({
                         <span className="atlas-rail-dot" aria-hidden="true" />
                       )}
                     </button>
-                    <button
-                      type="button"
-                      className="atlas-rail-label"
-                      data-details={entry.id}
-                      aria-label={t("panel.details", { name: entry.name })}
-                      aria-expanded={open === entry.id}
-                      aria-controls={POPUP_ID}
-                      onClick={(event) =>
-                        inspect(entry.id, event.currentTarget)
-                      }
-                    >
-                      {t(`panel.short.${entry.id}`)}
-                    </button>
                   </li>
-                );
-              })}
-            </ul>
+                ))}
+                <li className="atlas-rail-group-start">
+                  <button
+                    type="button"
+                    className="atlas-icon-button"
+                    data-testid="browse-features"
+                    aria-label={t("browse.title")}
+                    aria-expanded={open === "browse"}
+                    aria-controls={POPUP_ID}
+                    {...tooltipProps("browse", t("browse.title"))}
+                    onPointerEnter={handlePointerEnter}
+                    onPointerLeave={handlePointerLeave}
+                    onFocus={handleFocus}
+                    onBlur={clearHint}
+                    onClick={(event) => inspect("browse", event.currentTarget)}
+                  >
+                    <ListIcon />
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    className="atlas-icon-button"
+                    aria-label={t("panel.reset")}
+                    data-testid="reset-layers"
+                    {...tooltipProps("reset", t("panel.reset"))}
+                    onPointerEnter={handlePointerEnter}
+                    onPointerLeave={handlePointerLeave}
+                    onFocus={handleFocus}
+                    onBlur={clearHint}
+                    onClick={(event) => {
+                      onReset();
+                      setSelectedEntry("incidents");
+                      setOpen(null);
+                      showHint(
+                        "reset",
+                        t("panel.reset"),
+                        event.currentTarget,
+                        true,
+                      );
+                    }}
+                  >
+                    <ResetIcon />
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    className="atlas-icon-button"
+                    aria-label={t("panel.collapse")}
+                    {...tooltipProps("collapse", t("panel.collapse"))}
+                    onPointerEnter={handlePointerEnter}
+                    onPointerLeave={handlePointerLeave}
+                    onFocus={handleFocus}
+                    onBlur={clearHint}
+                    onClick={() => {
+                      clearHint();
+                      setOpen(null);
+                      onCollapsedChange(true);
+                    }}
+                  >
+                    <CloseIcon />
+                  </button>
+                </li>
+              </ul>
+            </div>
+            {more && (
+              <span className="atlas-rail-overflow" aria-hidden="true">
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 12 12"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                >
+                  <path d="m4 2 4 4-4 4" />
+                </svg>
+              </span>
+            )}
           </div>
-        ))}
-      </div>
-      <p className="atlas-layer-guide">
-        {t("panel.guide")}
-        {mobile && more && <span>{t("panel.more")} →</span>}
-      </p>
-      {!anyOn && <p className="atlas-layer-notice">{t("panel.allOff")}</p>}
+          <button
+            type="button"
+            className="atlas-icon-button atlas-options-button"
+            style={layerStyle(selected.color)}
+            data-testid="layer-options"
+            data-details={selectedEntry}
+            aria-label={optionsLabel}
+            aria-expanded={open === selectedEntry}
+            aria-controls={POPUP_ID}
+            {...tooltipProps("options", optionsLabel)}
+            onPointerEnter={handlePointerEnter}
+            onPointerLeave={handlePointerLeave}
+            onFocus={handleFocus}
+            onBlur={clearHint}
+            onClick={(event) => inspect(selectedEntry, event.currentTarget)}
+          >
+            <OptionsIcon />
+          </button>
+        </>
+      )}
+      <button
+        type="button"
+        className="atlas-icon-button atlas-status-button"
+        data-testid="data-status"
+        data-state={status.state}
+        aria-label={statusDescription}
+        aria-expanded={open === "status"}
+        aria-controls={POPUP_ID}
+        {...tooltipProps("status", statusDescription)}
+        onPointerEnter={handlePointerEnter}
+        onPointerLeave={handlePointerLeave}
+        onFocus={handleFocus}
+        onBlur={clearHint}
+        onClick={(event) => inspect("status", event.currentTarget)}
+      >
+        <InfoIcon />
+        <span className="atlas-status-dot" aria-hidden="true" />
+      </button>
       {open && (
         <section
           id={POPUP_ID}
@@ -392,7 +552,8 @@ export function LayerPanel({
         >
           <header className="atlas-popup-heading">
             <h3 id="atlas-layer-heading" ref={headingRef} tabIndex={-1}>
-              {current?.name ?? t("browse.title")}
+              {current?.name ??
+                t(open === "browse" ? "browse.title" : "panel.dataStatus")}
             </h3>
             <button
               type="button"
@@ -414,6 +575,41 @@ export function LayerPanel({
               onSelect={onSelect}
               onRoadSelect={onRoadSelect}
             />
+          ) : open === "status" ? (
+            <>
+              <FeedStatus
+                data={roadConditions}
+                active={activeRoad}
+                loading={roadLoading}
+                error={roadError}
+              />
+              {cached && (
+                <p className="atlas-popup-note">
+                  {t(STATIC_MODE ? "status.staticRoads" : "status.cachedNote")}
+                </p>
+              )}
+              <FeedIssue
+                error={roadError ?? roadConditions?.error}
+                onRetry={onRoadRetry}
+                onUseCameras={showCameras}
+              />
+              {error && <FeedIssue error={error} onRetry={onRetry} />}
+              {!anyOn && (
+                <p className="atlas-popup-note">{t("panel.allOff")}</p>
+              )}
+              <p className="atlas-popup-note">
+                {t("panel.summary", {
+                  layers: entries.length,
+                  points:
+                    layers?.reduce((sum, layer) => sum + layer.count, 0) ?? "—",
+                })}
+                {loading
+                  ? ` · ${t("status.loading")}`
+                  : generatedAt
+                    ? ` · ${t("status.updated")} ${formatDateTime(generatedAt, lang)}`
+                    : ""}
+              </p>
+            </>
           ) : (
             current && (
               <>
@@ -485,39 +681,6 @@ export function LayerPanel({
           )}
         </section>
       )}
-      <footer className="atlas-layer-footer">
-        <FeedIssue
-          error={roadError ?? roadConditions?.error}
-          onRetry={onRoadRetry}
-          onUseCameras={showCameras}
-        />
-        {error && (
-          <p>
-            {t("err.loadFailed")}{" "}
-            <button
-              type="button"
-              className="atlas-text-action"
-              onClick={onRetry}
-            >
-              {t("status.retry")}
-            </button>
-          </p>
-        )}
-        {!mobile && (
-          <p>
-            {t("panel.summary", {
-              layers: entries.length,
-              points:
-                layers?.reduce((sum, layer) => sum + layer.count, 0) ?? "—",
-            })}
-            {loading
-              ? ` · ${t("status.loading")}`
-              : generatedAt
-                ? ` · ${t("status.updated")} ${formatDateTime(generatedAt, lang)}`
-                : ""}
-          </p>
-        )}
-      </footer>
     </section>
   );
 }

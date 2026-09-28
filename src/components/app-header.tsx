@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useI18n } from "@/components/i18n-provider";
 import type { BasemapId } from "@/components/MapView";
 import { LANGS } from "@/lib/i18n";
+import { MapIcon } from "./icons";
 
 export interface AppHeaderProps {
   basemap?: BasemapId;
@@ -36,8 +37,20 @@ function SourcesIcon() {
         strokeLinejoin="round"
         fill="none"
       />
-      <path d="M11.5 3.6V7h3.4" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" fill="none" />
-      <path d="M7.5 11h5M7.5 13.8h3.2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" fill="none" />
+      <path
+        d="M11.5 3.6V7h3.4"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+        fill="none"
+      />
+      <path
+        d="M7.5 11h5M7.5 13.8h3.2"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        fill="none"
+      />
     </svg>
   );
 }
@@ -89,7 +102,7 @@ export function AppHeader({
     <header
       className={`panel atlas-header atlas-app-header flex min-w-0 max-w-full items-center gap-3 px-3 py-2.5 sm:gap-5 sm:px-4 ${className}`}
     >
-      <div className="flex min-w-0 items-center gap-2.5">
+      <div className="atlas-header-identity flex min-w-0 items-center gap-2.5">
         <button
           type="button"
           className="atlas-logo-button"
@@ -107,7 +120,7 @@ export function AppHeader({
       </div>
 
       <div
-        className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3"
+        className="atlas-header-actions ml-auto flex shrink-0 items-center gap-2 sm:gap-3"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="atlas-clock hidden flex-col gap-1 lg:flex">
@@ -117,10 +130,22 @@ export function AppHeader({
           </span>
         </div>
 
+        <button
+          type="button"
+          className="atlas-icon-button atlas-language-toggle tip tip-below sm:hidden"
+          data-testid="mobile-language-toggle"
+          aria-label={t(lang === "en" ? "lang.switchToZh" : "lang.switchToEn")}
+          aria-pressed={lang === "zh"}
+          data-tip={t(lang === "en" ? "lang.switchToZh" : "lang.switchToEn")}
+          onClick={() => setLang(lang === "en" ? "zh" : "en")}
+        >
+          {lang === "en" ? "EN" : "中"}
+        </button>
+
         <div
           role="group"
           aria-label={t("lang.switch")}
-          className="relative flex h-11 w-[100px] shrink-0 items-center rounded-full border border-line-strong/50 bg-surface/60 p-0.5"
+          className="relative hidden h-11 w-[100px] shrink-0 items-center rounded-full border border-line-strong/50 bg-surface/60 p-0.5 sm:flex"
         >
           <span
             aria-hidden="true"
@@ -164,7 +189,12 @@ export function AppHeader({
                 : t("map.switchToOsm")
             }
           >
-            {basemap === "osm" ? t("map.positron") : t("map.osm")}
+            <span className="sm:hidden">
+              <MapIcon />
+            </span>
+            <span className="hidden sm:inline">
+              {basemap === "osm" ? t("map.positron") : t("map.osm")}
+            </span>
           </button>
         )}
 

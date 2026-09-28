@@ -198,7 +198,10 @@ body {
 
 .atlas-layers {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
   align-self: flex-start;
 }
 
@@ -279,9 +282,8 @@ body {
 
 .atlas-layers-bar {
   width: max-content;
-  /* Leave the bottom-right MapLibre control column (zoom / geolocate) a gutter, so a
-     wide dock wraps instead of painting over those controls. */
-  max-width: min(94vw, 780px, calc(100vw - 150px));
+  /* Keep all controls on one line and reserve the map-control gutter. */
+  max-width: min(1060px, calc(100vw - 150px));
 }
 
 .atlas-layers-collapsed {
@@ -290,11 +292,42 @@ body {
 
 .atlas-rail {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
-  padding: 0 12px 10px;
+  width: max-content;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 2px 6px;
 }
+
+.atlas-rail > li { flex: 0 0 auto; }
+.atlas-rail-group-start { margin-left: 8px; }
+.atlas-rail-window { position: relative; flex: 1; min-width: 0; }
+.atlas-rail-scroll {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-padding-inline: 4px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.atlas-rail-scroll::-webkit-scrollbar { display: none; }
+.atlas-rail-overflow {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  padding-left: 2px;
+  background: var(--surface);
+  color: var(--accent);
+  pointer-events: none;
+}
+.atlas-options-button { color: var(--layer-color); }
+.atlas-status-button { position: relative; color: var(--accent); }
+.atlas-status-button[data-state="stale"],
+.atlas-status-button[data-state="partial"] { color: var(--warn); }
+.atlas-status-button[data-state="error"] { color: var(--err); }
+.atlas-status-button .atlas-status-dot { position: absolute; top: 5px; right: 5px; }
 
 .atlas-rail-icon {
   position: relative;
@@ -310,10 +343,8 @@ body {
 }
 
 /*
- * The rail wraps onto two rows and sits against the bottom of the window, so a
- * bubble anchored to a single icon is either clipped or hidden behind the next row.
- * One shared bubble floats above the whole panel instead: always on screen, never
- * covering the icons it describes, and free to wrap in English or Chinese.
+ * One shared bubble floats outside the horizontal scrolling region, so both
+ * hover/focus tooltips and brief tap feedback remain fully visible.
  */
 .atlas-rail-hint {
   position: absolute;
@@ -324,10 +355,10 @@ body {
   padding: 7px 10px;
   border-radius: 10px;
   background: var(--ink);
-  font-size: 11px;
+  font-size: var(--text-caption);
   font-weight: 500;
   line-height: 1.4;
-  color: #fff;
+  color: var(--surface);
   box-shadow: 0 8px 20px -12px rgb(23 19 15 / 65%);
   pointer-events: none;
 }
@@ -733,30 +764,6 @@ button,
 }
 
 @media (max-width: 639px) {
-  /* On phones the layer control is a single thumb-scrollable dock. Keeping the
-     icons on one line gives the map back the height previously used by two rows. */
-  .atlas-layers-phone .atlas-rail {
-    flex-wrap: nowrap;
-    justify-content: flex-start;
-    gap: 8px;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    padding: 8px 10px max(8px, env(safe-area-inset-bottom));
-    scroll-padding-inline: 10px;
-    scroll-snap-type: x proximity;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .atlas-layers-phone .atlas-rail::-webkit-scrollbar {
-    display: none;
-  }
-
-  .atlas-layers-phone .atlas-rail > li {
-    flex: 0 0 auto;
-    scroll-snap-align: start;
-  }
-
   .atlas-layers-phone .atlas-rail-icon {
     width: 48px;
     height: 48px;
@@ -896,13 +903,12 @@ button,
   border-radius: var(--radius-control);
 }
 .atlas-logo-button:hover { background: var(--surface-2); }
-.atlas-layer-toolbar, .atlas-popup-heading {
+.atlas-language-toggle { display: none; }
+.atlas-popup-heading {
   display: flex;
   align-items: center;
   gap: 8px;
 }
-.atlas-layer-toolbar { padding: 4px 12px 0; }
-.atlas-layer-toolbar h2 { font-size: var(--text-caption); font-weight: 600; margin-right: auto; }
 .atlas-popup-heading { position: sticky; top: -12px; z-index: 1; background: var(--surface); }
 .atlas-popup-heading h3 { flex: 1; font-size: 16px; font-weight: 600; }
 .atlas-popup-note { font-size: 14px; line-height: 1.5; color: var(--ink-2); margin-top: 8px; }
@@ -933,28 +939,24 @@ button,
 .atlas-feed-status[data-state="stale"], .atlas-feed-status[data-state="partial"] { color: var(--warn); }
 .atlas-feed-status[data-state="error"] { color: var(--err); }
 .atlas-status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; align-self: center; }
-.atlas-rail-scroll { display: flex; gap: 20px; overflow-x: auto; padding: 8px 12px 0; overscroll-behavior-x: contain; scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
-.atlas-rail-group { flex: 0 0 auto; }
-.atlas-group-name { font-size: var(--text-caption); color: var(--ink-2); margin-bottom: 8px; }
-.atlas-rail { flex-wrap: nowrap; justify-content: flex-start; gap: 6px; padding: 0; }
 .atlas-rail-icon { border-radius: var(--radius-tile); }
 .atlas-rail-icon[data-active="true"] { border-width: 2px; }
-.atlas-rail-label { display: block; width: 52px; min-height: 44px; font-size: var(--text-caption); line-height: 1.25; color: var(--ink-2); border-radius: var(--radius-control); }
-.atlas-rail-label:hover, .atlas-rail-label[aria-expanded="true"] { background: var(--mint); color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
-.atlas-rail-count { font-size: 11px; bottom: -4px; }
-.atlas-layer-guide { padding: 4px 12px 8px; font-size: var(--text-caption); line-height: 1.4; color: var(--ink-2); }
-.atlas-layer-guide span { display: block; margin-top: 4px; font-weight: 600; }
+.atlas-rail-count { font-size: 11px; }
 .atlas-layer-notice { margin: 8px 12px; font-size: var(--text-caption); line-height: 1.5; color: var(--warn); }
 .atlas-rail-popup .atlas-layer-notice { margin-inline: 0; }
 .atlas-source-time { font-size: var(--text-caption); line-height: 1.5; color: var(--muted); margin-top: 6px; }
-.atlas-layer-footer { border-top: 1px solid var(--line); padding: 8px 12px; font-size: var(--text-caption); line-height: 1.5; color: var(--ink-2); max-height: 150px; overflow-y: auto; }
-.atlas-layer-footer:empty { display: none; }
 .atlas-feed-issue { color: var(--err); font-size: 13px; line-height: 1.5; }
 .atlas-feed-issue[data-state="gap"] { color: var(--warn); }
 .atlas-feed-issue details { font-size: var(--text-caption); color: var(--ink-2); }
 .atlas-feed-issue summary { cursor: pointer; min-height: 32px; padding-block: 6px; }
-.atlas-layers-collapsed { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 4px 8px; }
-.atlas-layers-collapsed .atlas-feed-status { padding: 4px; }
+.atlas-layers-collapsed { width: max-content; }
+.atlas-layers-collapsed .atlas-rail-popup,
+.atlas-layers-collapsed .atlas-rail-hint {
+  left: 50%;
+  right: auto;
+  width: min(600px, calc(100vw - 32px));
+  transform: translateX(-50%);
+}
 .atlas-feature-list { font-size: 14px; color: var(--ink-2); }
 .atlas-feature-list label { display: block; margin-block: 12px 6px; }
 .atlas-feature-list input { width: 100%; min-height: 44px; font-size: 16px; padding: 8px 12px; border: 1px solid var(--line-strong); border-radius: var(--radius-control); background: var(--surface-2); color: var(--ink); caret-color: var(--accent); }
@@ -972,14 +974,18 @@ button,
 ::selection { color: var(--ink); background: var(--mint); }
 
 @media (max-width: 639px) {
-  .atlas-app-header { flex-wrap: wrap; gap: 4px 12px; }
-  .atlas-app-header > div:first-child { flex: 1 0 100%; }
+  .atlas-app-header { flex-wrap: nowrap; gap: 8px; }
+  .atlas-header-identity { flex: 1; gap: 8px; }
+  .atlas-header-actions { gap: 4px; }
+  .atlas-language-toggle { display: grid; font-size: 12px; font-weight: 700; }
+  .atlas-basemap-button { min-width: 44px; width: 44px; padding: 0; }
   .atlas-layers-phone { width: calc(100vw - 68px); }
-  .atlas-layer-toolbar { gap: 4px; padding-inline: 8px; }
-  .atlas-layer-toolbar h2 { display: none; }
-  .atlas-layer-toolbar > .atlas-text-action:first-of-type { flex: 1; font-size: 12px; }
-  .atlas-layers-phone .atlas-rail { padding: 0; overflow: visible; gap: 8px; }
-  .atlas-layers-phone .atlas-rail-label { width: 48px; }
-  .atlas-rail-popup { max-height: min(46dvh, max(140px, calc(100dvh - 440px))); }
-  .atlas-layer-footer { max-height: 100px; }
+  .atlas-layers-phone .atlas-rail { gap: 8px; }
+  .atlas-rail-popup { max-height: min(60dvh, calc(100dvh - 170px)); }
+  .atlas-layers-collapsed .atlas-rail-popup,
+  .atlas-layers-collapsed .atlas-rail-hint {
+    left: 0;
+    width: calc(100vw - 68px);
+    transform: none;
+  }
 }

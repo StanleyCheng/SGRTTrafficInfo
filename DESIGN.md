@@ -58,16 +58,17 @@ shimmer for loading, 200 ms colour/transform transitions on controls. Everything
 
 - Desktop: map fills the viewport; mint header top-left, detail card top-right, MapLibre
   controls bottom-right, and the **layer rail docked bottom-centre**. The dock reserves a
-  right-hand gutter (`calc(100vw - 150px)` at its widest) so a 12-icon rail scrolls instead of
+  right-hand gutter (`calc(100vw - 150px)` at its widest) so the single-row icon dock scrolls instead of
   painting over the zoom/geolocate controls, and it retracts while a detail card is open.
 - Phone: header pinned to the top, the layer control is a **rail of coloured icons docked at the
-  bottom of the window**, listing all twelve layers in every build. A layer the running build cannot
-  reach is still listed, and its tooltip says why, rather than disappearing. Hovering or focusing an
-  icon shows **one shared tooltip bubble above the rail** (name plus description) — a bubble anchored
-  to a single icon in a two-row rail is either clipped by the window edge or hidden behind the next
-  row. Icons toggle visibility; short, visible names beneath them independently open details and
-  filters. Opening an already active incident filter never disables its layer. Activating a summary
-  layer opens its legend or cards immediately. Closing a popup returns focus to its trigger.
+  bottom of the window**, listing all twelve layers in every build. Both platforms use one
+  icon-only row: no visible group headings, layer labels, action labels or status strip. A layer
+  the running build cannot reach is still listed, and its tooltip reports unavailability.
+  Hovering or focusing an icon shows **one shared tooltip bubble above the rail**; tapping toggles
+  visibility and briefly shows the layer name, state, count and description, without opening a popup.
+  The pinned Options icon opens the last-tapped layer's details, filters, legends or summaries.
+  Opening Options never changes visibility. Browse, Reset and Collapse are icons in the scrolling
+  row; Options and data status are pinned at its edge. Closing a popup returns focus to its trigger.
   The rail retracts while a detail card is open (both platforms), and never lists the rows as a wall
   of text. Its one shared tooltip floats above the panel, points at the hovered tile with a caret,
   and is exposed to assistive tech through `aria-describedby`; the settings panel is not open at the
@@ -79,6 +80,9 @@ shimmer for loading, 200 ms colour/transform transitions on controls. Everything
   carries no tooltip — it sits against the window edge, where a bubble would be clipped to a stray
   sliver; controls inside it use `.tip-below` so their bubbles open downwards. The header is not
   an interactive wrapper: each control owns its keyboard activation.
+  On phones it stays strictly one row with the logo, short title, one EN/中 language toggle,
+  icon-only basemap and Sources controls. Titles can truncate on unusually narrow screens;
+  controls retain 44 px targets and the full title fits the iPhone 16 Pro Max portrait viewport.
 - Floating cards use `.panel` (96% ivory surface + 16 px blur + hairline + shadow) and one
   of two radii: card `20px`, control `12px`. Inset layer cards use `14px`. Cards never position themselves — the parent
   owns layout so the map can inset them.
@@ -92,11 +96,11 @@ shimmer for loading, 200 ms colour/transform transitions on controls. Everything
   assistive technology. Metadata can wrap without pushing a switch out of the card.
 - The nine driver layers are grouped **live road conditions** (1–4) then **route, parking &
   safety** (5–9); camera locations follow last. Every row keeps its own glyph, so a shared hue
-  family is never the only way to tell two layers apart. Short labels identify every layer;
-  opening details names the official feeds behind it.
-- The list is a control surface, so it is never replaced by a loading state: rows render
-  immediately with `—` counts while the first (slow) payload is in flight, and the status chip in
-  the panel header carries the progress. Swapping rows for skeletons hid the layers outright.
+  family is never the only way to tell two layers apart. Tooltips and accessible names identify
+  every layer; opening Options names the official feeds behind it.
+- The rail is a control surface, so it is never replaced by a loading state: icons render
+  immediately with `—` counts while the first (slow) payload is in flight, and the pinned
+  status icon carries the progress. Swapping controls for skeletons hid the layers outright.
 - **Default view:** driver layers 1–2 on, everything else off — including the three camera layers,
   which never carry the default view in any build.
 - Summaries stay compact and inside the panel: parking and EV aggregate into `.atlas-mini-card`
@@ -125,10 +129,12 @@ shimmer for loading, 200 ms colour/transform transitions on controls. Everything
 
 ## Operational clarity and accessibility
 
-- The dock groups live conditions, trip planning and camera locations; the phone rail scrolls
-  horizontally with a visible swipe cue. Label actions have 44 px touch targets.
-- A persistent status strip retains the original road-data observation time. Static deployments
-  always identify their saved snapshot as a cached copy, including while the dock is collapsed.
+- The dock preserves the live conditions, trip planning and camera order, separated by small
+  spacing breaks. It scrolls horizontally without wrapping, and its chevron signals more controls.
+  All layer and utility actions have at least 44 px touch targets.
+- A persistent data-status icon retains feed health through its color, tooltip and accessible name;
+  tapping it opens capture dates and actionable feed issues. Static deployments identify their
+  saved snapshot as a cached copy. Status remains available even when the dock is collapsed.
 - Sources uses a native modal dialog with focus containment, Escape dismissal and focus return,
   and lists every road and camera layer. Other layer disclosures remain non-modal.
 - Browse visible layers provides search and pagination over the active layers using the map's

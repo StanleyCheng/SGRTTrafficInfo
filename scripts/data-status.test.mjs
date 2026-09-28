@@ -4,6 +4,7 @@ import {
   isConfigurationError,
   isPublishedERPGap,
   roadDataTime,
+  roadFeedStatus,
 } from "../src/lib/data-status.ts";
 
 const data = {
@@ -53,5 +54,47 @@ test("the retired ERP rate feed offers its published table, not a retry", () => 
   assert.equal(
     isPublishedERPGap("LTA ERP Rates: HTTP 404; Incidents: HTTP 503"),
     false,
+  );
+});
+
+test("the compact static status exposes the real capture date and partial coverage", () => {
+  const snapshot = {
+    ...data,
+    status: "partial",
+    layers: [{ id: "erp", count: 0, status: "partial", sources: [] }],
+  };
+  const status = roadFeedStatus(snapshot, ["erp"], false, null, true);
+  assert.equal(status.state, "stale");
+  assert.equal(status.label, "status.stale");
+  assert.equal(status.partial, true);
+  assert.equal(status.time, snapshot.generatedAt);
+});
+
+test("failed active feeds take priority over cached status", () => {
+  const snapshot = {
+    ...data,
+    status: "partial",
+    layers: [{ id: "incidents", count: 0, status: "error", sources: [] }],
+  };
+  const status = roadFeedStatus(snapshot, ["incidents"], false, null, true);
+  assert.equal(status.state, "error");
+  assert.equal(status.label, "status.error");
+  assert.equal(status.time, null);
+});
+
+test("loading and missing credentials are distinguished before data arrives", () => {
+  assert.equal(
+    roadFeedStatus(null, ["incidents"], true, null, false).label,
+    "status.loading",
+  );
+  assert.equal(
+    roadFeedStatus(
+      null,
+      ["incidents"],
+      false,
+      "DATAMALL_ACCOUNT_KEY is not configured",
+      false,
+    ).state,
+    "error",
   );
 });

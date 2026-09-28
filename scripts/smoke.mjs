@@ -43,7 +43,10 @@ function findChrome() {
     process.env.CHROME_PATH,
     // macOS
     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-    path.join(process.env.HOME ?? "", "Applications/Google Chrome.app/Contents/MacOS/Google Chrome"),
+    path.join(
+      process.env.HOME ?? "",
+      "Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    ),
     "/Applications/Chromium.app/Contents/MacOS/Chromium",
     "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
     // Linux
@@ -100,7 +103,9 @@ async function cdpConnect(port) {
   const events = [];
   await new Promise((resolve, reject) => {
     ws.addEventListener("open", () => resolve());
-    ws.addEventListener("error", (e) => reject(new Error(String(e.message ?? e))));
+    ws.addEventListener("error", (e) =>
+      reject(new Error(String(e.message ?? e))),
+    );
   });
   ws.addEventListener("message", (ev) => {
     const msg = JSON.parse(ev.data);
@@ -127,7 +132,9 @@ async function cdpConnect(port) {
 const results = [];
 function check(name, ok, detail = "") {
   results.push({ name, ok, detail });
-  console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? ` — ${detail}` : ""}`);
+  console.log(
+    `${ok ? "PASS" : "FAIL"}  ${name}${detail ? ` — ${detail}` : ""}`,
+  );
 }
 
 /** Extract console errors/warnings from the CDP event log. */
@@ -222,6 +229,50 @@ async function main() {
     }
     return false;
   };
+  const keyPress = async (key, code, windowsVirtualKeyCode) => {
+    await send("Input.dispatchKeyEvent", {
+      type: "keyDown",
+      key,
+      code,
+      windowsVirtualKeyCode,
+    });
+    await send("Input.dispatchKeyEvent", {
+      type: "keyUp",
+      key,
+      code,
+      windowsVirtualKeyCode,
+    });
+  };
+  const touchTap = async (selector) => {
+    const point = await evaluate(`(() => {
+      const el = document.querySelector(${JSON.stringify(selector)});
+      el.scrollIntoView({block: 'nearest', inline: 'center'});
+      const box = el.getBoundingClientRect();
+      return {x: box.x + box.width / 2, y: box.y + box.height / 2};
+    })()`);
+    await send("Input.dispatchTouchEvent", {
+      type: "touchStart",
+      touchPoints: [point],
+    });
+    await send("Input.dispatchTouchEvent", {
+      type: "touchEnd",
+      touchPoints: [],
+    });
+    await sleep(120);
+  };
+  const dockGeometry = () =>
+    evaluate(`(() => {
+    const dock = document.querySelector('.atlas-layers');
+    const buttons = [...dock.querySelectorAll('.atlas-rail button, [data-testid="layer-options"], [data-testid="data-status"]')];
+    const boxes = buttons.map(b => b.getBoundingClientRect());
+    const centres = boxes.map(r => r.y + r.height / 2);
+    return {
+      height: dock.getBoundingClientRect().height,
+      rowSpread: Math.max(...centres) - Math.min(...centres),
+      targets: boxes.every(r => r.width >= 44 && r.height >= 44),
+      noLabels: !dock.querySelector('.atlas-rail-label, .atlas-group-name, .atlas-layer-toolbar, footer'),
+    };
+  })()`);
 
   try {
     await send("Page.enable");
@@ -337,7 +388,9 @@ async function main() {
     const zhText = await evaluate("document.body.innerText");
     check(
       "language toggle switches to Traditional Chinese",
-      zhText.includes("資料圖層"),
+      (await evaluate(
+        "document.querySelector('.atlas-layers').getAttribute('aria-label')",
+      )) === "資料圖層",
       zhText.slice(0, 40),
     );
     check(
@@ -355,7 +408,9 @@ async function main() {
     await sleep(400);
     check(
       "language toggle switches back to English",
-      /data layers/i.test(await evaluate("document.body.innerText")),
+      (await evaluate(
+        "document.querySelector('.atlas-layers').getAttribute('aria-label')",
+      )) === "Data layers",
     );
 
     // 2b. the agreed default view, identical in every build: all nine driver layers
@@ -387,8 +442,23 @@ async function main() {
         JSON.stringify(["traffic-speed", "incidents"]),
       "on: " + (layersOn.join(", ") || "none"),
     );
+    const desktopDock = await dockGeometry();
+    check(
+      "desktop dock is a single icon-only row",
+      desktopDock.height < 90 &&
+        desktopDock.rowSpread <= 2 &&
+        desktopDock.targets &&
+        desktopDock.noLabels,
+      JSON.stringify(desktopDock),
+    );
+    check(
+      "desktop keeps only its original language switch",
+      await evaluate(
+        `document.querySelector('[data-testid="mobile-language-toggle"]').getBoundingClientRect().width === 0`,
+      ),
+    );
 
-    // Label activation must never hide the default-on incident layer.
+    // The Options action must never hide the default-on incident layer.
     await evaluate(
       `document.querySelector('[data-details="incidents"]').click()`,
     );
@@ -436,17 +506,42 @@ async function main() {
     );
 
     const dataState = await evaluate(
-      `document.querySelector('.atlas-feed-status')?.dataset.state`,
+      `document.querySelector('[data-testid="data-status"]')?.dataset.state`,
     );
     check(
-      "road freshness is visible",
+      "road freshness is exposed by the status icon",
       Boolean(dataState) && (!staticMode || dataState === "stale"),
       `state=${dataState}`,
+    );
+    await evaluate(
+      `(() => { const b = document.querySelector('[data-testid="data-status"]'); b.focus(); b.click(); })()`,
+    );
+    if (staticMode) {
+      const statusTime = await evaluate(`(async () => {
+        const snapshot = await fetch('data/road-conditions/index.json').then(r => r.json());
+        return {saved: snapshot.generatedAt, shown: document.querySelector('.atlas-feed-status time')?.dateTime, text: document.querySelector('.atlas-rail-popup').innerText};
+      })()`);
+      check(
+        "status icon opens the original cached capture date",
+        statusTime.saved === statusTime.shown &&
+          statusTime.text.includes("Cached copy"),
+        JSON.stringify(statusTime),
+      );
+    }
+    await keyPress("Escape", "Escape", 27);
+    check(
+      "data-status dismissal restores focus",
+      await evaluate(
+        `document.activeElement.dataset.testid === 'data-status' && !document.querySelector('.atlas-rail-popup')`,
+      ),
     );
     if (staticMode) {
       for (const id of ["erp", "expressway"]) {
         await evaluate(
           `document.querySelector('[data-layer="${id}"]').click()`,
+        );
+        await evaluate(
+          `document.querySelector('[data-testid="layer-options"]').click()`,
         );
         await waitFor(
           id === "erp"
@@ -485,7 +580,7 @@ async function main() {
       pressedBefore !== null &&
         (pressedBefore !== pressedAfter ||
           (await evaluate(
-            `document.querySelector('[data-layer="hazards"]').dataset.error === 'true' && Boolean(document.querySelector('.atlas-rail-popup'))`,
+            `document.querySelector('[data-layer="hazards"]').dataset.error === 'true' && Boolean(document.querySelector('.atlas-rail-hint'))`,
           ))),
       `${toggleProbe}: ${pressedBefore} -> ${pressedAfter}`,
     );
@@ -510,6 +605,9 @@ async function main() {
     })()`);
     await sleep(1800);
     if (imagesNotConfigured) {
+      await evaluate(
+        `document.querySelector('[data-testid="layer-options"]').click()`,
+      );
       check(
         "unconfigured image feed explains recovery without Retry",
         await evaluate(
@@ -702,9 +800,8 @@ async function main() {
 
       // 5a. turn a driver layer on the way the UI requires: a layer with settings is
       //     switched on from its own panel, everything else in one tap.
-      // One click on an icon switches that layer, for every layer, with no switch to
-      // find inside a panel. A layer with filters also opens them; dismiss that panel
-      // so the next click lands on an icon.
+      // One click on any icon switches that layer without opening a panel. The
+      // independent Options control exposes filters for the last-tapped layer.
       const enableRoadLayer = async (id) => {
         const unavailable = await evaluate(
           `document.querySelector('[data-layer="${id}"]')?.dataset.error === 'true'`,
@@ -733,6 +830,9 @@ async function main() {
       //     assertion is that only the chosen connector is drawn — a property that
       //     holds wherever the map is, unlike a raw marker count.
       const evAvailable = await enableRoadLayer("ev");
+      await evaluate(
+        `document.querySelector('[data-testid="layer-options"]').click()`,
+      );
       await sleep(5000);
       // The connector options come from the layer's own features, so they only exist
       // once the EV payload has landed.
@@ -1027,20 +1127,27 @@ async function main() {
     await evaluate(
       `document.querySelector('[data-testid="browse-features"]').click()`,
     );
-    await waitFor(`document.querySelector('#feature-search') && document.activeElement.id === 'atlas-layer-heading'`);
+    await waitFor(
+      `document.querySelector('#feature-search') && document.activeElement.id === 'atlas-layer-heading'`,
+    );
     check(
       "record browser bounds large lists with pagination",
       await evaluate(
         `document.querySelectorAll('.atlas-feature-list li').length <= 30 && Boolean(document.querySelector('.atlas-feature-list nav'))`,
       ),
     );
-    await evaluate(
-      `document.querySelector('#feature-search').focus()`,
-    );
-    await send("Input.insertText", {text: target.ref});
+    await evaluate(`document.querySelector('#feature-search').focus()`);
+    await send("Input.insertText", { text: target.ref });
     await sleep(500);
-    const recordSearch = await evaluate(`({query: document.querySelector('#feature-search').value, first: document.querySelector('.atlas-feature-list li button')?.innerText})`);
-    check("record search filters by reference", recordSearch.query === target.ref && recordSearch.first?.includes(target.road), JSON.stringify(recordSearch));
+    const recordSearch = await evaluate(
+      `({query: document.querySelector('#feature-search').value, first: document.querySelector('.atlas-feature-list li button')?.innerText})`,
+    );
+    check(
+      "record search filters by reference",
+      recordSearch.query === target.ref &&
+        recordSearch.first?.includes(target.road),
+      JSON.stringify(recordSearch),
+    );
     await evaluate(
       `document.querySelector('.atlas-feature-list li button').focus()`,
     );
@@ -1104,10 +1211,14 @@ async function main() {
 
     // 7. mobile viewport
     await send("Emulation.setDeviceMetricsOverride", {
-      width: 390,
-      height: 844,
+      width: 440,
+      height: 956,
       deviceScaleFactor: 2,
       mobile: true,
+    });
+    await send("Emulation.setTouchEmulationEnabled", {
+      enabled: true,
+      maxTouchPoints: 1,
     });
     await send("Page.reload");
     await waitFor("document.querySelector('[data-testid=map] canvas')", 40000);
@@ -1121,21 +1232,93 @@ async function main() {
       overflow <= 0,
       `overflow=${overflow}px`,
     );
+    const headerGeometry = () =>
+      evaluate(`(() => {
+      const header = document.querySelector('header.atlas-header');
+      const box = header.getBoundingClientRect();
+      const buttons = [...header.querySelectorAll('button')].map(b => b.getBoundingClientRect()).filter(r => r.width > 0 && r.height > 0);
+      const centres = buttons.map(r => r.y + r.height / 2);
+      const title = header.querySelector('h1');
+      return {height: box.height, width: box.width, rowSpread: Math.max(...centres) - Math.min(...centres), fits: box.left >= 0 && box.right <= innerWidth, targets: buttons.every(r => r.width >= 44 && r.height >= 44), titleFits: title.scrollWidth <= title.clientWidth + 1};
+    })()`);
+    for (const lang of ["en", "zh"]) {
+      if (
+        (await evaluate("document.documentElement.lang")) !==
+        (lang === "en" ? "en" : "zh-Hant")
+      )
+        await touchTap('[data-testid="mobile-language-toggle"]');
+      const header = await headerGeometry();
+      check(
+        `iPhone 16 Pro Max header fits one row (${lang})`,
+        header.height <= 68 &&
+          header.rowSpread <= 1 &&
+          header.fits &&
+          header.targets &&
+          header.titleFits,
+        JSON.stringify(header),
+      );
+    }
+    await touchTap('[data-testid="mobile-language-toggle"]');
     check(
-      "phone keeps road freshness visible",
+      "mobile language toggle does not collapse the header",
       await evaluate(
-        `(() => { const el = document.querySelector('.atlas-feed-status'); const box = el.getBoundingClientRect(); return box.top > 0 && box.bottom < innerHeight && el.innerText.length > 0; })()`,
+        `document.documentElement.lang === 'en' && Boolean(document.querySelector('[data-testid="header-collapse"]'))`,
+      ),
+    );
+    const phoneDock = await dockGeometry();
+    check(
+      "phone dock is a single icon-only row",
+      phoneDock.height < 90 &&
+        phoneDock.rowSpread <= 2 &&
+        phoneDock.targets &&
+        phoneDock.noLabels,
+      JSON.stringify(phoneDock),
+    );
+    const swipe = await evaluate(`(() => {
+      const rail = document.querySelector('.atlas-rail-scroll'); const box = rail.getBoundingClientRect();
+      return {before: rail.scrollLeft, overflows: rail.scrollWidth > rail.clientWidth, x: box.right - 24, y: box.y + box.height / 2};
+    })()`);
+    await send("Input.dispatchTouchEvent", {
+      type: "touchStart",
+      touchPoints: [{ x: swipe.x, y: swipe.y }],
+    });
+    for (let i = 1; i <= 5; i++) {
+      await send("Input.dispatchTouchEvent", {
+        type: "touchMove",
+        touchPoints: [{ x: swipe.x - 24 * i, y: swipe.y }],
+      });
+      await sleep(30);
+    }
+    await send("Input.dispatchTouchEvent", {
+      type: "touchEnd",
+      touchPoints: [],
+    });
+    await sleep(350);
+    check(
+      "phone dock swipes horizontally without hiding Options or status",
+      swipe.overflows &&
+        (await evaluate(
+          `document.querySelector('.atlas-rail-scroll').scrollLeft`,
+        )) > swipe.before &&
+        (await evaluate(
+          `[...document.querySelectorAll('[data-testid="layer-options"], [data-testid="data-status"]')].every(b => {const r = b.getBoundingClientRect(); return r.right <= innerWidth && r.left >= 0;})`,
+        )),
+    );
+    check(
+      "phone keeps data status reachable",
+      await evaluate(
+        `(() => { const el = document.querySelector('[data-testid="data-status"]'); const box = el.getBoundingClientRect(); return box.top > 0 && box.bottom < innerHeight && el.getAttribute('aria-label').length > 0; })()`,
       ),
     );
     check(
-      "mobile shows the layer sheet",
+      "mobile shows the icon dock",
       await evaluate(`Boolean(document.querySelector('.atlas-layers-phone'))`),
       mobileText.slice(0, 60).replace(/\n/g, " / "),
     );
 
     // The phone control is a coloured icon rail docked at the bottom. All twelve
-    // layers are listed in every build, each with a hover tooltip; tapping a layer
-    // with nothing to configure toggles it, and one with settings opens its panel.
+    // layers are listed in every build, each with a hover/focus/tap tooltip. Layer
+    // taps only toggle visibility; the independent Options icon exposes settings.
     const railIcons = await evaluate(
       `document.querySelectorAll('.atlas-rail-icon').length`,
     );
@@ -1161,18 +1344,11 @@ async function main() {
       missingTips === 0,
       `${railIcons} icons`,
     );
-    const railHover = await evaluate(`(() => {
+    await evaluate(`(() => {
       const b = document.querySelector('.atlas-rail-icon[data-layer="zones"]');
-      b.scrollIntoView({block: 'nearest', inline: 'center'});
-      const r = b.getBoundingClientRect();
-      return { x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2) };
+      document.querySelector('.atlas-rail-scroll').scrollLeft = 0;
+      b.focus();
     })()`);
-    await send("Input.dispatchMouseEvent", {
-      type: "mouseMoved",
-      x: railHover.x,
-      y: railHover.y,
-      button: "none",
-    });
     await sleep(600);
     const railHint = await evaluate(`(() => {
       const el = document.querySelector('.atlas-rail-hint');
@@ -1184,7 +1360,7 @@ async function main() {
       };
     })()`);
     check(
-      "hovering a rail icon shows its tooltip fully on screen",
+      "keyboard focus scrolls to an icon and shows its tooltip fully on screen",
       Boolean(railHint && railHint.onScreen && railHint.text.includes("—")),
       railHint
         ? `${railHint.text} (onScreen=${railHint.onScreen})`
@@ -1204,9 +1380,7 @@ async function main() {
     const railBefore = await evaluate(
       `document.querySelector('.atlas-rail-icon[data-layer="${railSimple}"]')?.getAttribute('aria-pressed')`,
     );
-    await evaluate(
-      `document.querySelector('.atlas-rail-icon[data-layer="${railSimple}"]')?.click()`,
-    );
+    await touchTap(`.atlas-rail-icon[data-layer="${railSimple}"]`);
     await sleep(800);
     const railAfter = await evaluate(`(() => {
       const b = document.querySelector('.atlas-rail-icon[data-layer="${railSimple}"]');
@@ -1220,7 +1394,7 @@ async function main() {
       "rail tap toggles a layer with nothing to configure",
       (railBefore !== railAfter.pressed && !railAfter.popup) ||
         (await evaluate(
-          `document.querySelector('[data-layer="hazards"]').dataset.error === 'true' && Boolean(document.querySelector('.atlas-rail-popup'))`,
+          `document.querySelector('[data-layer="hazards"]').dataset.error === 'true' && Boolean(document.querySelector('.atlas-rail-hint'))`,
         )),
       `${railSimple}: ${railBefore} -> ${railAfter.pressed}, popup=${railAfter.popup}`,
     );
@@ -1229,18 +1403,45 @@ async function main() {
       Boolean(railAfter.tip && railAfter.tip.length > 12),
       railAfter.tip ?? "no tooltip",
     );
+    if (
+      await evaluate(
+        `document.querySelector('[data-layer="hazards"]').dataset.error === 'true'`,
+      )
+    )
+      check(
+        "unavailable layer tooltip does not claim to be loading",
+        railAfter.tip.includes("Unavailable") &&
+          !railAfter.tip.includes("Loading"),
+      );
+    check(
+      "a touch tap briefly shows the layer tooltip",
+      await evaluate(
+        `document.querySelector('[role="tooltip"]')?.innerText.includes('Flood alerts') && !document.querySelector('.atlas-rail-popup')`,
+      ),
+    );
+    await sleep(2800);
+    check(
+      "tap tooltip expires without opening a popup",
+      await evaluate(
+        `!document.querySelector('[role="tooltip"]') && !document.querySelector('.atlas-rail-popup')`,
+      ),
+    );
     await evaluate(
       `document.querySelector('.atlas-popup-heading button')?.click()`,
     );
 
-    // One click on a layer with settings switches it AND opens those settings; the
-    // panel must not contain a second switch.
+    // Tapping only changes visibility. The separate Options action opens filters.
     await evaluate(`(() => {
       const b = document.querySelector('.atlas-rail-icon[data-layer="parking"]');
       if (b && b.getAttribute('aria-pressed') === 'false') b.click();
       return true;
     })()`);
     await sleep(1200);
+    check(
+      "parking tap does not open a popup",
+      await evaluate(`!document.querySelector('.atlas-rail-popup')`),
+    );
+    await touchTap('[data-testid="layer-options"]');
     const popupAfter = await evaluate(`(() => {
       const el = document.querySelector('.atlas-rail-popup');
       const select = el ? el.querySelector('select') : null;
@@ -1254,7 +1455,7 @@ async function main() {
       };
     })()`);
     check(
-      "one click toggles a layer and opens its options (no inner switch)",
+      "Options opens the last-tapped layer without changing visibility",
       (popupAfter.hasSelect &&
         popupAfter.options > 1 &&
         !popupAfter.hasSwitch &&
@@ -1270,13 +1471,13 @@ async function main() {
     await sleep(400);
     // The phone rail retracts to give the map the space back, and restores.
     await evaluate(
-      `document.querySelector('.atlas-layers header button[aria-label="Collapse panel"]')?.click()`,
+      `document.querySelector('.atlas-layers button[aria-label="Collapse panel"]')?.click()`,
     );
     await sleep(700);
     const retracted = await evaluate(`({
       icons: document.querySelectorAll('.atlas-rail-icon').length,
       chip: Boolean(document.querySelector('.atlas-layers-collapsed')),
-      status: Boolean(document.querySelector('.atlas-layers-collapsed .atlas-feed-status')),
+      status: Boolean(document.querySelector('.atlas-layers-collapsed [data-testid="data-status"]')),
     })`);
     await evaluate(
       `document.querySelector('.atlas-layers-collapsed button')?.click()`,
@@ -1304,6 +1505,43 @@ async function main() {
       path.join(OUT, "mobile.png"),
       Buffer.from(shot3.data, "base64"),
     );
+    await touchTap('[data-testid="mobile-language-toggle"]');
+    const shotMobileZh = await send("Page.captureScreenshot", {
+      format: "png",
+    });
+    writeFileSync(
+      path.join(OUT, "mobile-zh.png"),
+      Buffer.from(shotMobileZh.data, "base64"),
+    );
+    for (const [width, height] of [
+      [375, 844],
+      [320, 720],
+      [956, 440],
+    ]) {
+      await send("Emulation.setDeviceMetricsOverride", {
+        width,
+        height,
+        deviceScaleFactor: 1,
+        mobile: true,
+      });
+      await sleep(500);
+      const header = await headerGeometry();
+      const dock = await dockGeometry();
+      check(
+        `compact controls remain single-row at ${width}x${height}`,
+        header.height <= 68 &&
+          header.rowSpread <= 1 &&
+          header.fits &&
+          header.targets &&
+          dock.height < 90 &&
+          dock.rowSpread <= 2 &&
+          dock.targets &&
+          (await evaluate(
+            "document.documentElement.scrollWidth <= innerWidth",
+          )),
+        JSON.stringify({ header, dock }),
+      );
+    }
 
     consoleIssues.push(...collectConsole(events));
     // Live traffic stills come from keyless mirrors that rotate their image URLs,
