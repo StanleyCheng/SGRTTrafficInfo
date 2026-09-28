@@ -10,39 +10,74 @@ const en = {
   "lang.en": "Eng",
   "lang.zh": "繁中",
   "lang.switch": "Switch language",
-  "map.positron": "POSITRON",
-  "map.osm": "OSM",
-  "map.switchToPositron": "Switch basemap to OpenFreeMap Positron",
-  "map.switchToOsm": "Switch basemap to OpenStreetMap",
+  "map.positron": "Simple map",
+  "map.osm": "Street map",
+  "map.switchToPositron": "Switch to the simple map (OpenFreeMap Positron)",
+  "map.switchToOsm": "Switch to the street map (OpenStreetMap)",
 
   "panel.title": "Data layers",
   "panel.collapse": "Collapse panel",
   "panel.expand": "Open layers",
   "panel.close": "Close",
   "panel.summary": "{layers} layers · {points} detection points",
-  "panel.allOff": "All layers are hidden. Turn one on to see points on the map.",
+  "panel.allOff":
+    "All layers are hidden. Turn one on to see points on the map.",
   "header.collapse": "Tap to collapse the bar",
   "header.expand": "Expand the bar",
   "panel.cameraGroup": "Camera locations",
+  "panel.liveGroup": "Live conditions",
+  "panel.tripGroup": "Trip planning",
+  "panel.short.traffic-speed": "Traffic",
+  "panel.short.incidents": "Alerts",
+  "panel.short.hazards": "Hazards",
+  "panel.short.roadworks": "Works",
+  "panel.short.parking": "Parking",
+  "panel.short.erp": "ERP",
+  "panel.short.ev": "EV",
+  "panel.short.zones": "Zones",
+  "panel.short.expressway": "Times",
+  "panel.short.redlight": "Red light",
+  "panel.short.speed": "Speed",
+  "panel.short.snapshot": "Cameras",
+  "panel.details": "Details and filters: {name}",
+  "panel.guide": "Icons show or hide layers. Labels open details and filters.",
+  "panel.more": "Swipe for more layers",
+  "panel.enable":
+    "Turn on this layer using its icon to see its reports and summaries.",
+  "panel.noReports": "No reports were published for this layer.",
+  "panel.reset": "Reset layers and filters",
+  "browse.title": "Browse visible layers",
+  "browse.search": "Find a road, place or record",
+  "browse.placeholder": "Road name or record ID",
+  "browse.count": "{n} matching records",
+  "browse.empty":
+    "No matching records. Clear the search or turn on another layer.",
+  "browse.unmapped": "No published location",
+  "browse.pages": "Result pages",
+  "browse.previous": "Previous",
+  "browse.next": "Next",
+  "browse.page": "Page {n} of {total}",
 
   "road.panel.title": "Road conditions",
   "road.panel.summary": "{mapped} mapped · {total} reports",
   "road.panel.updated": "Road data updated",
-  "road.panel.coverage": "Expressway links only · LTA publishes {n} monitored links",
+  "road.panel.coverage":
+    "Expressway links only · LTA publishes {n} monitored links",
   "road.panel.activeNow": "Active now",
   "road.panel.autoShown": "Shown automatically while an alert is active",
   "road.panel.allOff": "Road-condition layers are hidden.",
   "road.panel.cameraGroup": "Enforcement cameras",
-  "road.panel.serverOnly": "Live road conditions are available in the server-hosted app. This static build keeps them off because the official API requires a private key.",
-  "road.panel.serverOnlyShort": "Available in the server-hosted app",
   "road.layer.traffic-speed.name": "Live congestion",
-  "road.layer.traffic-speed.note": "Road segments coloured green to red by current speed band",
+  "road.layer.traffic-speed.note":
+    "Road segments coloured green to red by current speed band",
   "road.layer.incidents.name": "Accidents & breakdowns",
-  "road.layer.incidents.note": "Accidents, breakdowns, blocks and diversions, filterable by route",
+  "road.layer.incidents.note":
+    "Accidents, breakdowns, blocks and diversions, filterable by route",
   "road.layer.hazards.name": "Flood alerts & signal faults",
   "road.layer.hazards.note": "Appears only while an official alert is active",
   "road.layer.roadworks.name": "Roadworks & planned closures",
-  "road.layer.roadworks.note": "Dates from the permit register; live works add direction and lane",
+  "road.layer.roadworks.note":
+    "Dates from the permit register; live works add direction and lane",
   "road.legend.clear": "Free",
   "road.legend.moderate": "Moderate",
   "road.legend.heavy": "Heavy",
@@ -74,13 +109,16 @@ const en = {
 
   "road.panel.mobilityGroup": "Route, parking & safety",
   "road.layer.parking.name": "Parking availability",
-  "road.layer.parking.note": "Live lots by vehicle type, with the published gantry height",
+  "road.layer.parking.note":
+    "Live lots by vehicle type, with the published gantry height",
   "road.layer.erp.name": "ERP gantries & charges",
-  "road.layer.erp.note": "Route cost summary instead of markers; charges when LTA publishes them",
+  "road.layer.erp.note":
+    "Route cost summary instead of markers; charges when LTA publishes them",
   "road.layer.ev.name": "EV charging",
   "road.layer.ev.note": "Live availability by connector and power rating",
   "road.layer.zones.name": "School & silver zones",
-  "road.layer.zones.note": "Zoom-gated safety overlay with the statutory speed limit",
+  "road.layer.zones.note":
+    "Zoom-gated safety overlay with the statutory speed limit",
   "road.layer.expressway.name": "Expressway times & EMAS",
   "road.layer.expressway.note": "Compact corridor cards and signboard messages",
 
@@ -99,7 +137,8 @@ const en = {
   "road.parking.heightFrom": "Gantry height from HDB Carpark Information",
   "road.parking.noHeight": "Not published",
   "road.parking.lot": "Lot",
-  "road.erp.summaryNote": "Cost summary instead of gantry markers. Gantry spans are drawn on the map from zoom 15.",
+  "road.erp.summaryNote":
+    "Cost summary instead of gantry markers. Gantry spans are drawn on the map from zoom 15.",
   "road.erp.noRates":
     "LTA publishes the ERP rate table as a static file, so no charge is shown right now. The zone names below still come from the official gantry table.",
   "road.erp.ratesDoc": "Official ERP rate table",
@@ -110,7 +149,8 @@ const en = {
     "Statutory zone limit. A silver-zone sign may set 30 km/h on a particular street.",
   "road.expressway.corridors": "Corridor travel times",
   "road.expressway.emas": "EMAS signboards",
-  "road.expressway.noMessages": "No advisory is displayed on any signboard right now.",
+  "road.expressway.noMessages":
+    "No advisory is displayed on any signboard right now.",
   "road.expressway.minutes": "{n} min",
   "road.expressway.wholeRoute": "Whole route",
   "road.expressway.cardsNote": "Shown as cards, never as map clutter",
@@ -118,9 +158,11 @@ const en = {
   "layer.redlight.name": "Red-light cameras",
   "layer.redlight.note": "Junctions enforced for red-running (Traffic Police)",
   "layer.speed.name": "Speed enforcement cameras",
-  "layer.speed.note": "Fixed, digital, laser and mobile speed units (Traffic Police)",
+  "layer.speed.note":
+    "Fixed, digital, laser and mobile speed units (Traffic Police)",
   "layer.snapshot.name": "Traffic snapshot cameras",
-  "layer.snapshot.note": "Every camera currently published by LTA's live image feed",
+  "layer.snapshot.note":
+    "Every camera currently published by LTA's live image feed",
 
   "kind.redlight": "Red-light camera",
   "kind.fixed_speed": "Fixed speed camera",
@@ -152,6 +194,16 @@ const en = {
     "Live source could not be reached. Showing the last successfully loaded copy.",
   "status.retry": "Retry",
   "status.refreshing": "Refreshing",
+  "status.liveRoads": "Road feed observations",
+  "status.notConfigured":
+    "Live feeds aren't configured in this deployment. Camera locations are still available.",
+  "status.feedFailed":
+    "Some road feeds couldn't be refreshed. Available data remains on the map.",
+  "status.useCameras": "Show camera locations",
+  "status.diagnostics": "Technical details",
+  "status.erpGap": "LTA publishes ERP rates separately.",
+  "status.staticRoads":
+    "Road conditions are a saved snapshot, not current traffic. The displayed date is when the snapshot was captured.",
 
   "detail.title": "Location details",
   "detail.road": "Road",
@@ -222,7 +274,7 @@ const en = {
     "Informational only. Camera locations and images are published by the Singapore Government; always obey traffic signals and road signs.",
   "src.basemap": "Basemap",
   "src.staticNote":
-    "Static GitHub Pages build: camera layers are baked from the official datasets at build time; live traffic images are fetched straight from data.gov.sg every 60 seconds.",
+    "GitHub Pages shows a saved road-condition snapshot with its capture date. Camera locations come from official datasets; traffic images refresh from data.gov.sg while their layer is visible.",
   "src.gapNote":
     "Average-speed camera zones (Tanah Merah Coast Road) are published by the Traffic Police only as a web page — not as an open dataset or API — so they are not plotted here:",
   "src.basemapOsm": "OpenStreetMap Standard · © OpenStreetMap contributors",
@@ -232,14 +284,15 @@ const en = {
   "err.map": "The map component failed to load.",
   "err.offline": "No network connection to the data source.",
 
-  "a11y.map": "Map of Singapore showing camera locations",
+  "a11y.map":
+    "Singapore traffic map. Use Browse visible layers to select a record without the map.",
   "a11y.roadMarker": "Road-condition marker",
   "a11y.controls": "Map controls",
   "a11y.zoomIn": "Zoom in",
   "a11y.zoomOut": "Zoom out",
   "a11y.reset": "Reset view",
   "a11y.locate": "My location",
-}
+};
 
 const zh: Record<keyof typeof en, string> = {
   "app.title": "新加坡實時交通資訊",
@@ -251,10 +304,10 @@ const zh: Record<keyof typeof en, string> = {
   "lang.en": "English",
   "lang.zh": "繁中",
   "lang.switch": "切換語言",
-  "map.positron": "POSITRON",
-  "map.osm": "OSM",
-  "map.switchToPositron": "切換至 OpenFreeMap Positron 底圖",
-  "map.switchToOsm": "切換至 OpenStreetMap 底圖",
+  "map.positron": "簡潔地圖",
+  "map.osm": "街道地圖",
+  "map.switchToPositron": "切換至簡潔地圖（OpenFreeMap Positron）",
+  "map.switchToOsm": "切換至街道地圖（OpenStreetMap）",
 
   "panel.title": "資料圖層",
   "panel.collapse": "收起面板",
@@ -265,6 +318,36 @@ const zh: Record<keyof typeof en, string> = {
   "header.collapse": "點擊收合頂部列",
   "header.expand": "展開頂部列",
   "panel.cameraGroup": "攝影機位置",
+  "panel.liveGroup": "道路狀況",
+  "panel.tripGroup": "行程規劃",
+  "panel.short.traffic-speed": "交通",
+  "panel.short.incidents": "事故",
+  "panel.short.hazards": "警報",
+  "panel.short.roadworks": "工程",
+  "panel.short.parking": "泊位",
+  "panel.short.erp": "ERP",
+  "panel.short.ev": "充電",
+  "panel.short.zones": "安全區",
+  "panel.short.expressway": "時間",
+  "panel.short.redlight": "紅燈",
+  "panel.short.speed": "測速",
+  "panel.short.snapshot": "快照",
+  "panel.details": "詳情及篩選：{name}",
+  "panel.guide": "點圖示開關圖層；點名稱查看詳情及篩選。",
+  "panel.more": "滑動查看其他圖層",
+  "panel.enable": "點圖示開啟此圖層，即可查看通報及摘要。",
+  "panel.noReports": "此圖層沒有已公布的通報。",
+  "panel.reset": "重設圖層及篩選",
+  "browse.title": "瀏覽已顯示圖層",
+  "browse.search": "搜尋道路、地點或紀錄",
+  "browse.placeholder": "道路名稱或紀錄編號",
+  "browse.count": "{n} 筆相符紀錄",
+  "browse.empty": "沒有相符紀錄。請清除搜尋或開啟其他圖層。",
+  "browse.unmapped": "未公布位置",
+  "browse.pages": "搜尋結果頁面",
+  "browse.previous": "上一頁",
+  "browse.next": "下一頁",
+  "browse.page": "第 {n} 頁，共 {total} 頁",
 
   "road.panel.title": "道路狀況",
   "road.panel.summary": "已標示 {mapped} 個 · 共 {total} 則通報",
@@ -274,8 +357,6 @@ const zh: Record<keyof typeof en, string> = {
   "road.panel.autoShown": "有警報生效時自動顯示",
   "road.panel.allOff": "道路狀況圖層已隱藏。",
   "road.panel.cameraGroup": "執法攝影機",
-  "road.panel.serverOnly": "實時道路狀況只在伺服器託管版本提供。官方 API 需要私人金鑰，因此此靜態版本不會載入這些圖層。",
-  "road.panel.serverOnlyShort": "只在伺服器版本提供",
   "road.layer.traffic-speed.name": "實時交通擠塞",
   "road.layer.traffic-speed.note": "路段按實時車速級別以綠至紅色顯示",
   "road.layer.incidents.name": "意外及車輛故障",
@@ -340,14 +421,16 @@ const zh: Record<keyof typeof en, string> = {
   "road.parking.heightFrom": "高度限制來自建屋局停車場資料",
   "road.parking.noHeight": "未公布",
   "road.parking.lot": "泊位",
-  "road.erp.summaryNote": "以費用摘要取代閘門標記；閘門結構於放大至 15 級後顯示。",
+  "road.erp.summaryNote":
+    "以費用摘要取代閘門標記；閘門結構於放大至 15 級後顯示。",
   "road.erp.noRates":
     "陸交局以靜態檔案公布 ERP 收費表，因此現時未能顯示收費金額。以下收費區名稱仍來自官方閘門對照表。",
   "road.erp.ratesDoc": "官方 ERP 收費表",
   "road.erp.zoneTable": "官方收費區對照表（ANNEX D）",
   "road.zones.zoomNote": "放大至 {z} 級後顯示範圍",
   "road.zones.limit": "每小時 {n} 公里",
-  "road.zones.limitNote": "法定區域車速限制；個別街道如設有樂齡安全區標誌，可能為每小時 30 公里。",
+  "road.zones.limitNote":
+    "法定區域車速限制；個別街道如設有樂齡安全區標誌，可能為每小時 30 公里。",
   "road.expressway.corridors": "各路段行車時間",
   "road.expressway.emas": "EMAS 電子路牌",
   "road.expressway.noMessages": "目前沒有電子路牌顯示訊息。",
@@ -391,6 +474,14 @@ const zh: Record<keyof typeof en, string> = {
   "status.cachedNote": "未能連接實時資料來源，現顯示最後成功載入的內容。",
   "status.retry": "重試",
   "status.refreshing": "更新中",
+  "status.liveRoads": "道路資料觀測時間",
+  "status.notConfigured": "此版本尚未設定實時資料源；攝影機位置仍可使用。",
+  "status.feedFailed": "部分道路資料源未能更新，仍會顯示可用資料。",
+  "status.useCameras": "顯示攝影機位置",
+  "status.diagnostics": "技術詳情",
+  "status.erpGap": "陸交局另以官方表格公布 ERP 收費。",
+  "status.staticRoads":
+    "道路狀況是已儲存的快照，並非目前實時路況。顯示的日期為快照擷取時間。",
 
   "detail.title": "地點詳情",
   "detail.road": "道路",
@@ -449,7 +540,8 @@ const zh: Record<keyof typeof en, string> = {
   "traffic.error": "交通影像暫時無法提供。",
   "traffic.auto": "每 60 秒自動更新",
   "traffic.refreshNow": "立即更新",
-  "traffic.notStreaming": "已標示 {total} 部陸交局道路攝影機，其中 {live} 部提供實時影像。",
+  "traffic.notStreaming":
+    "已標示 {total} 部陸交局道路攝影機，其中 {live} 部提供實時影像。",
 
   "legend.title": "圖例",
   "legend.cluster": "聚合標記",
@@ -460,7 +552,7 @@ const zh: Record<keyof typeof en, string> = {
     "僅供參考。攝影機位置及影像由新加坡政府發布，駕駛時請時刻遵守交通燈號及標誌。",
   "src.basemap": "底圖",
   "src.staticNote":
-    "此為 GitHub Pages 靜態版本：攝影機圖層於建置時由官方數據集產生；實時交通影像每 60 秒直接從 data.gov.sg 取得。",
+    "GitHub Pages 顯示已儲存的道路狀況快照及抓取日期。攝影機位置來自官方數據集；交通影像只在圖層顯示時從 data.gov.sg 更新。",
   "src.gapNote":
     "平均車速攝影機區域（丹那美拉海岸路）只在交通警察網頁公布，未提供開放數據或 API，因此未顯示於此地圖：",
   "src.basemapOsm": "OpenStreetMap 標準地圖 · © OpenStreetMap 貢獻者",
@@ -470,14 +562,14 @@ const zh: Record<keyof typeof en, string> = {
   "err.map": "地圖元件載入失敗。",
   "err.offline": "無法連接資料來源網絡。",
 
-  "a11y.map": "顯示攝影機位置的新加坡地圖",
+  "a11y.map": "新加坡交通地圖。可使用瀏覽已顯示圖層，在地圖以外選擇紀錄。",
   "a11y.roadMarker": "道路狀況標記",
   "a11y.controls": "地圖控制",
   "a11y.zoomIn": "放大",
   "a11y.zoomOut": "縮小",
   "a11y.reset": "重設視圖",
   "a11y.locate": "我的位置",
-}
+};
 
 export type StringKey = keyof typeof en;
 
@@ -490,7 +582,8 @@ export function translate(
 ): string {
   let s = dict[lang][key] ?? dict.en[key] ?? key;
   if (vars) {
-    for (const [k, v] of Object.entries(vars)) s = s.replaceAll(`{${k}}`, String(v));
+    for (const [k, v] of Object.entries(vars))
+      s = s.replaceAll(`{${k}}`, String(v));
   }
   return s;
 }

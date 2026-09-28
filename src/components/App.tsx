@@ -7,8 +7,13 @@ import { DetailPanel, type DetailImage } from "@/components/detail-panel";
 import { LayerPanel } from "@/components/layer-panel";
 import { RoadConditionDetail } from "@/components/road-condition-detail";
 import { SourcesPanel } from "@/components/sources-panel";
+import { useI18n } from "@/components/i18n-provider";
 import type { BasemapId, MapFocus } from "@/components/MapView";
-import { useCameras, useRoadConditions, useTrafficImages } from "@/hooks/use-live-data";
+import {
+  useCameras,
+  useRoadConditions,
+  useTrafficImages,
+} from "@/hooks/use-live-data";
 import { geometryFocus, geometryZoom } from "@/lib/geometry";
 import { ROAD_LAYER_DEFAULTS, ROAD_LAYER_ORDER } from "@/lib/layers";
 import { withCurrentTrafficCameras } from "@/lib/traffic-images";
@@ -29,21 +34,29 @@ const MapView = dynamic(() => import("@/components/MapView"), {
 // Layers 1 and 2 (live congestion, and accident/breakdown alerts) carry the
 // default view per the agreed layer priority. Which two those are lives in the
 // registry in @/lib/layers, so the panel, the map and this default cannot drift.
-// The four live road layers need the DataMall key, so a static build has none of
-// them. Defaulting every camera layer off as well would open on an empty map,
-// so in static mode the camera layers carry the default view instead.
 // Camera layers never carry the default view, in any build. The agreed default is
 // driver layers 1 and 2 (live congestion, accidents & breakdowns) on and every
 // other layer — including these three camera layers — off.
-const ALL_ON: Record<LayerId, boolean> = { redlight: false, speed: false, snapshot: false };
+const CAMERA_DEFAULTS: Record<LayerId, boolean> = {
+  redlight: false,
+  speed: false,
+  snapshot: false,
+};
 const BASEMAP_STORAGE_KEY = "sgdi.basemap";
 
 export default function App() {
+  const { t } = useI18n();
   const [basemap, setBasemap] = useState<BasemapId>("osm");
   const { cameras, error: cameraError, retry: retryCameras } = useCameras();
-  const { traffic, loading: trafficLoading, reload: reloadTraffic } = useTrafficImages();
-  const [active, setActive] = useState<Record<LayerId, boolean>>(ALL_ON);
-  const [roadActive, setRoadActive] = useState<Record<RoadLayerId, boolean>>(ROAD_LAYER_DEFAULTS);
+  const [active, setActive] =
+    useState<Record<LayerId, boolean>>(CAMERA_DEFAULTS);
+  const {
+    traffic,
+    loading: trafficLoading,
+    reload: reloadTraffic,
+  } = useTrafficImages(active.snapshot);
+  const [roadActive, setRoadActive] =
+    useState<Record<RoadLayerId, boolean>>(ROAD_LAYER_DEFAULTS);
   const [incidentRoute, setIncidentRoute] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedRoadId, setSelectedRoadId] = useState<string | null>(null);
@@ -52,6 +65,8 @@ export default function App() {
   const [filters, setFilters] = useState<LayerFilters>(DEFAULT_LAYER_FILTERS);
   const [sourcesOpen, setSourcesOpen] = useState(false);
   const [mobile, setMobile] = useState(false);
+  const detailRef = useRef<HTMLDivElement>(null);
+  const detailReturnFocus = useRef<HTMLElement | null>(null);
 
   /* ---------------- basemap preference ---------------- */
   useEffect(() => {
@@ -93,15 +108,10 @@ export default function App() {
   } = useRoadConditions(activeRoadLayers);
 
   /* ---------------- responsive defaults ---------------- */
-  const initialised = useRef(false);
   useEffect(() => {
-    if (initialised.current) return;
-    initialised.current = true;
-    const mq = window.matchMedia("(max-width: 640px)");
+    const mq = window.matchMedia("(max-width: 639px)");
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- synchronize a browser media query after hydration
     setMobile(mq.matches);
-    // The rail opens visible everywhere and is retracted on demand; starting it
-    // collapsed hid the whole control behind a chip.
-    setCollapsed(false);
     const onChange = (e: MediaQueryListEvent) => setMobile(e.matches);
     mq.addEventListener("change", onChange);
     return () => mq.removeEventListener("change", onChange);
@@ -121,12 +131,23 @@ export default function App() {
     [visibleCameras, selected],
   );
   const roadFeatureMap = useMemo(
-    () => new Map((roadConditions?.features ?? []).map((feature) => [feature.id, feature])),
+    () =>
+      new Map(
+        (roadConditions?.features ?? []).map((feature) => [
+          feature.id,
+          feature,
+        ]),
+      ),
     [roadConditions],
   );
-  const selectedRoad = selectedRoadId ? (roadFeatureMap.get(selectedRoadId) ?? null) : null;
+  const selectedRoad = selectedRoadId
+    ? (roadFeatureMap.get(selectedRoadId) ?? null)
+    : null;
   const selectedRoadLayer = useMemo(
-    () => roadConditions?.layers.find((layer) => layer.id === selectedRoad?.properties.layer) ?? null,
+    () =>
+      roadConditions?.layers.find(
+        (layer) => layer.id === selectedRoad?.properties.layer,
+      ) ?? null,
     [roadConditions, selectedRoad],
   );
 
@@ -137,7 +158,8 @@ export default function App() {
       traffic.cameras.find((c) => c.cameraId === selected.ref) ??
       traffic.cameras.find(
         (c) =>
-          Math.abs(c.lat - selected.lat) < 0.0015 && Math.abs(c.lng - selected.lng) < 0.0015,
+          Math.abs(c.lat - selected.lat) < 0.0015 &&
+          Math.abs(c.lng - selected.lng) < 0.0015,
       );
     return match ? { url: match.imageUrl, capturedAt: match.imageTime } : null;
   }, [selected, traffic]);
@@ -165,6 +187,8 @@ export default function App() {
 
   const select = useCallback(
     (point: CameraPoint | null) => {
+      if (point)
+        detailReturnFocus.current = document.activeElement as HTMLElement;
       setSelectedId(point?.id ?? null);
       if (point) setSelectedRoadId(null);
       if (point) focusOn(point, mobile ? 16 : undefined);
@@ -193,6 +217,8 @@ export default function App() {
 
   const selectRoad = useCallback(
     (feature: RoadConditionFeature | null) => {
+      if (feature)
+        detailReturnFocus.current = document.activeElement as HTMLElement;
       setSelectedRoadId(feature?.id ?? null);
       if (feature) {
         setSelectedId(null);
@@ -202,26 +228,58 @@ export default function App() {
     [focusOnRoad],
   );
 
-  const toggleLayer = useCallback((id: LayerId) => {
-    setActive((prev) => ({ ...prev, [id]: !prev[id] }));
-    setSelectedId((current) => {
-      const selectedPoint = current ? pointMap.get(current) : null;
-      return selectedPoint?.layer === id ? null : current;
-    });
-  }, [pointMap]);
+  const toggleLayer = useCallback(
+    (id: LayerId) => {
+      setActive((prev) => ({ ...prev, [id]: !prev[id] }));
+      setSelectedId((current) => {
+        const selectedPoint = current ? pointMap.get(current) : null;
+        return selectedPoint?.layer === id ? null : current;
+      });
+    },
+    [pointMap],
+  );
 
-  const toggleRoadLayer = useCallback((id: RoadLayerId) => {
-    setRoadActive((previous) => ({ ...previous, [id]: !previous[id] }));
-    setSelectedRoadId((current) => {
-      const selectedFeature = current ? roadFeatureMap.get(current) : null;
-      return selectedFeature?.properties.layer === id ? null : current;
-    });
-  }, [roadFeatureMap]);
+  const toggleRoadLayer = useCallback(
+    (id: RoadLayerId) => {
+      setRoadActive((previous) => ({ ...previous, [id]: !previous[id] }));
+      setSelectedRoadId((current) => {
+        const selectedFeature = current ? roadFeatureMap.get(current) : null;
+        return selectedFeature?.properties.layer === id ? null : current;
+      });
+    },
+    [roadFeatureMap],
+  );
 
   const showDetail = Boolean(selected || selectedRoad);
 
+  useEffect(() => {
+    if (showDetail) detailRef.current?.focus({ preventScroll: true });
+  }, [showDetail, selectedId, selectedRoadId]);
+
+  const closeDetail = () => {
+    setSelectedId(null);
+    setSelectedRoadId(null);
+    requestAnimationFrame(() =>
+      detailReturnFocus.current?.focus({ preventScroll: true }),
+    );
+  };
+  const reset = () => {
+    setActive(CAMERA_DEFAULTS);
+    setRoadActive(ROAD_LAYER_DEFAULTS);
+    setIncidentRoute(null);
+    setFilters(DEFAULT_LAYER_FILTERS);
+    setSelectedId(null);
+    setSelectedRoadId(null);
+    setFocus({
+      lat: 1.3521,
+      lng: 103.8198,
+      zoom: 11.4,
+      key: `reset:${Date.now()}`,
+    });
+  };
+
   return (
-    <div className="relative h-[100dvh] w-full overflow-hidden bg-paper">
+    <main className="relative h-[100dvh] w-full overflow-hidden bg-paper">
       <MapView
         basemap={basemap}
         points={visibleCameras?.points ?? []}
@@ -252,16 +310,22 @@ export default function App() {
       {/* layer control — docked bottom-centre on both platforms; it retracts while a
           detail card is open, because the card can grow to the bottom of the window */}
       <div
-        className={`absolute z-30 flex transition-transform duration-300 ease-out ${showDetail ? "translate-y-[110%]" : "translate-y-0"} inset-x-0 bottom-[2px] justify-center p-2 sm:bottom-4 sm:p-0`}
+        inert={showDetail}
+        className={`absolute z-30 flex transition-transform duration-300 ease-out ${showDetail ? "translate-y-[110%]" : "translate-y-0"} inset-x-0 bottom-[2px] justify-start p-2 sm:justify-center sm:bottom-4 sm:p-0`}
       >
         <LayerPanel
           layers={visibleCameras?.layers ?? null}
+          points={visibleCameras?.points ?? []}
           active={active}
           onToggle={toggleLayer}
+          onSelect={select}
+          onRoadSelect={selectRoad}
+          onReset={reset}
           loading={!cameras && !cameraError}
           error={cameraError}
           generatedAt={cameras?.generatedAt ?? null}
           onRetry={retryCameras}
+          onSnapshotRetry={() => void reloadTraffic()}
           roadConditions={roadConditions}
           roadActive={roadActive}
           onRoadToggle={toggleRoadLayer}
@@ -270,18 +334,27 @@ export default function App() {
           roadLoading={roadLoading}
           roadError={roadError}
           onRoadRetry={retryRoads}
-          roadAvailable
           collapsed={collapsed}
           onCollapsedChange={setCollapsed}
           mobile={mobile}
           filters={filters}
           onFilterChange={updateFilters}
-          className={`max-h-[68vh] sm:max-h-[calc(100dvh-160px)] ${mobile ? "!w-full !rounded-b-none" : ""}`}
+          className="max-h-[68vh] sm:max-h-[calc(100dvh-160px)]"
         />
       </div>
 
       {/* detail — floating card on desktop, bottom sheet on mobile */}
       <div
+        ref={detailRef}
+        tabIndex={-1}
+        role="region"
+        aria-label={t("detail.title")}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") {
+            event.stopPropagation();
+            closeDetail();
+          }
+        }}
         className={`absolute z-40 inset-x-0 bottom-0 flex justify-center p-2 sm:inset-x-auto sm:right-4 sm:top-4 sm:bottom-auto sm:justify-end sm:p-0 ${
           showDetail ? "rise" : "pointer-events-none hidden"
         }`}
@@ -290,7 +363,7 @@ export default function App() {
           <RoadConditionDetail
             feature={selectedRoad}
             layer={selectedRoadLayer}
-            onClose={() => setSelectedRoadId(null)}
+            onClose={closeDetail}
             onZoom={(feature) => focusOnRoad(feature)}
             className="max-h-[70vh] sm:max-h-[calc(100dvh-32px)]"
           />
@@ -301,7 +374,7 @@ export default function App() {
             image={image}
             imageStatus={imageStatus}
             imageError={traffic?.error ?? null}
-            onClose={() => setSelectedId(null)}
+            onClose={closeDetail}
             onZoom={(p) => focusOn(p, 17)}
             onRetryImage={() => void reloadTraffic()}
             className="max-h-[70vh] sm:max-h-[calc(100dvh-32px)]"
@@ -315,9 +388,10 @@ export default function App() {
       <SourcesPanel
         basemap={basemap}
         layers={visibleCameras?.layers ?? null}
+        roadConditions={roadConditions}
         open={sourcesOpen}
         onClose={() => setSourcesOpen(false)}
       />
-    </div>
+    </main>
   );
 }

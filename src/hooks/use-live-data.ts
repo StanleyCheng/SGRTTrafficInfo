@@ -14,7 +14,7 @@ import type {
   TrafficImagesResponse,
 } from "@/lib/types";
 
-/** Both live feeds are polled once a minute while the app is open. */
+/** Live feeds poll once a minute while their layer and the tab are visible. */
 const TRAFFIC_POLL_MS = 60_000;
 const ROAD_POLL_MS = 60_000;
 
@@ -49,8 +49,8 @@ export function useCameras() {
   return { cameras, error, retry };
 }
 
-/** Live traffic images for the snapshot layer, polled while the app is open. */
-export function useTrafficImages() {
+/** Load inventory once; poll images only while the snapshot layer is visible. */
+export function useTrafficImages(enabled = true) {
   const [traffic, setTraffic] = useState<TrafficImagesResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -67,12 +67,24 @@ export function useTrafficImages() {
     void load(controller.signal).catch((err: Error) => {
       if (err.name !== "AbortError") throw err;
     });
-    const timer = setInterval(() => void load(), TRAFFIC_POLL_MS);
     return () => {
       controller.abort();
-      clearInterval(timer);
     };
   }, [load]);
+
+  useEffect(() => {
+    if (!enabled) return;
+    const refresh = () => {
+      if (document.visibilityState !== "hidden") void load();
+    };
+    refresh();
+    const timer = setInterval(refresh, TRAFFIC_POLL_MS);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [enabled, load]);
 
   // The detail card retries one image by refreshing the whole feed, which is the
   // only way to get a fresh signed URL for it.
@@ -88,7 +100,8 @@ export function useTrafficImages() {
  * an empty map until the next poll.
  */
 export function useRoadConditions(activeLayers: RoadLayerId[]) {
-  const [roadConditions, setRoadConditions] = useState<RoadConditionsResponse | null>(null);
+  const [roadConditions, setRoadConditions] =
+    useState<RoadConditionsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -111,10 +124,15 @@ export function useRoadConditions(activeLayers: RoadLayerId[]) {
         // A newer request has already been issued; this reply is stale.
         if (id !== requestId.current) break;
         setRoadConditions((previous) => {
-          if (next.status !== "error" || next.features.length > 0 || !previous?.features.length) {
+          if (
+            next.status !== "error" ||
+            next.features.length > 0 ||
+            !previous?.features.length
+          ) {
             return next;
           }
-          const message = next.error ?? "Live road conditions are temporarily unavailable";
+          const message =
+            next.error ?? "Live road conditions are temporarily unavailable";
           return {
             ...previous,
             status: "stale",
@@ -135,7 +153,8 @@ export function useRoadConditions(activeLayers: RoadLayerId[]) {
         wanted = pending;
       }
     } catch (err) {
-      if ((err as Error).name !== "AbortError") setError((err as Error).message);
+      if ((err as Error).name !== "AbortError")
+        setError((err as Error).message);
     } finally {
       busy.current = false;
       setLoading(false);
@@ -145,12 +164,18 @@ export function useRoadConditions(activeLayers: RoadLayerId[]) {
   useEffect(() => {
     const initialTimer = window.setTimeout(() => void load(), 0);
     // A static build reads one baked snapshot, so there is nothing to poll.
-    const timer = STATIC_MODE ? undefined : setInterval(() => void load(), ROAD_POLL_MS);
+    const refresh = () => {
+      if (document.visibilityState !== "hidden") void load();
+    };
+    const polling = !STATIC_MODE && activeLayers.length > 0;
+    const timer = polling ? setInterval(refresh, ROAD_POLL_MS) : undefined;
+    if (polling) document.addEventListener("visibilitychange", refresh);
     return () => {
       clearTimeout(initialTimer);
       clearInterval(timer);
+      document.removeEventListener("visibilitychange", refresh);
     };
-  }, [load]);
+  }, [load, activeLayers.length]);
 
   const retry = useCallback(() => {
     setError(null);

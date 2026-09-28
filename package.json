@@ -10,6 +10,7 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "verify": "npm run lint && npm run typecheck",
+    "test": "node --experimental-strip-types --test scripts/*.test.mjs",
     "smoke": "node scripts/smoke.mjs"
   },
   "dependencies": {

@@ -15,7 +15,12 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 
 const BASE = process.argv[2] ?? "http://localhost:3000";
-const OUT = path.join(process.cwd(), ".cache", "screens");
+const OUT = path.join(
+  process.cwd(),
+  ".cache",
+  "screens",
+  process.env.SMOKE_SCREEN_DIR ?? "",
+);
 
 /**
  * Pick a free debug port for every run. A fixed port is a trap: an interrupted
@@ -129,18 +134,34 @@ function check(name, ok, detail = "") {
 function collectConsole(events) {
   const out = [];
   for (const e of events) {
-    if (e.method === "Runtime.consoleAPICalled" && ["error", "warning"].includes(e.params.type)) {
+    if (
+      e.method === "Runtime.consoleAPICalled" &&
+      ["error", "warning"].includes(e.params.type)
+    ) {
       out.push({
         level: e.params.type,
-        text: e.params.args.map((a) => a.value ?? a.description ?? a.type).join(" "),
+        text: e.params.args
+          .map((a) => a.value ?? a.description ?? a.type)
+          .join(" "),
         url: "",
       });
     }
-    if (e.method === "Log.entryAdded" && ["error", "warning"].includes(e.params.entry.level)) {
-      out.push({ level: e.params.entry.level, text: e.params.entry.text, url: e.params.entry.url ?? "" });
+    if (
+      e.method === "Log.entryAdded" &&
+      ["error", "warning"].includes(e.params.entry.level)
+    ) {
+      out.push({
+        level: e.params.entry.level,
+        text: e.params.entry.text,
+        url: e.params.entry.url ?? "",
+      });
     }
     if (e.method === "Runtime.exceptionThrown") {
-      out.push({ level: "error", text: e.params.exceptionDetails.text, url: "" });
+      out.push({
+        level: "error",
+        text: e.params.exceptionDetails.text,
+        url: "",
+      });
     }
   }
   return out;
@@ -179,15 +200,23 @@ async function main() {
       returnByValue: true,
     });
     if (res.exceptionDetails) {
-      const d = res.exceptionDetails.exception?.description ?? res.exceptionDetails.text;
-      throw new Error(`evaluate failed: ${d}\n  expr: ${String(expression).slice(0, 200)}`);
+      const d =
+        res.exceptionDetails.exception?.description ??
+        res.exceptionDetails.text;
+      throw new Error(
+        `evaluate failed: ${d}\n  expr: ${String(expression).slice(0, 200)}`,
+      );
     }
     return res.result.value;
   };
   const waitFor = async (expression, timeoutMs = 30000) => {
     const started = Date.now();
     while (Date.now() - started < timeoutMs) {
-      if (await evaluate(`(() => { try { return !!(${expression}); } catch { return false; } })()`))
+      if (
+        await evaluate(
+          `(() => { try { return !!(${expression}); } catch { return false; } })()`,
+        )
+      )
         return true;
       await sleep(400);
     }
@@ -198,6 +227,8 @@ async function main() {
     await send("Page.enable");
     await send("Runtime.enable");
     await send("Log.enable");
+    await send("Network.enable");
+    await send("Network.setCacheDisabled", { cacheDisabled: true });
     await send("Emulation.setDeviceMetricsOverride", {
       width: 1440,
       height: 900,
@@ -221,6 +252,16 @@ async function main() {
         : `fetch('/api/cameras').then(r => r.json())`,
     );
     const counts = Object.fromEntries(api.layers.map((l) => [l.id, l.count]));
+    const snapshotLayer = api.layers.find((layer) => layer.id === "snapshot");
+    const imageFeed =
+      mode === "static"
+        ? null
+        : await evaluate(`fetch('/api/traffic-images').then(r => r.json())`);
+    const imagesNotConfigured =
+      mode !== "static" &&
+      /DATAMALL_ACCOUNT_KEY/.test(
+        imageFeed?.error ?? snapshotLayer?.error ?? "",
+      );
 
     // 1. layer counts rendered from real data
     const panelText = await evaluate("document.body.innerText");
@@ -231,11 +272,16 @@ async function main() {
         panelText.includes(String(counts.snapshot)),
       `api: ${JSON.stringify(counts)}`,
     );
-    check(
-      "traffic layer reports live image count",
-      (api.layers.find((l) => l.id === "snapshot")?.liveCount ?? 0) > 0,
-      `live=${api.layers.find((l) => l.id === "snapshot")?.liveCount}`,
-    );
+    if (imagesNotConfigured)
+      console.log(
+        "SKIP  live image probes — this server has no DataMall account key",
+      );
+    else
+      check(
+        "traffic layer reports live image count",
+        (api.layers.find((l) => l.id === "snapshot")?.liveCount ?? 0) > 0,
+        `live=${api.layers.find((l) => l.id === "snapshot")?.liveCount}`,
+      );
     // Every still image must be loadable by the browser from the active app
     // feed (LTA presigned S3 in server mode or data.gov.sg in static mode).
     const imgProbe = await evaluate(`(async () => {
@@ -266,11 +312,12 @@ async function main() {
         failures: results.filter((result) => !result.ok).map((result) => result.id + ':' + result.reason),
       };
     })()`);
-    check(
-      "official traffic still loads in the browser",
-      imgProbe.total > 0 && imgProbe.loaded === imgProbe.total,
-      `loaded=${imgProbe.loaded}/${imgProbe.total}; failures=${imgProbe.failures.join(',') || 'none'}`,
-    );
+    if (!imagesNotConfigured)
+      check(
+        "official traffic still loads in the browser",
+        imgProbe.total > 0 && imgProbe.loaded === imgProbe.total,
+        `loaded=${imgProbe.loaded}/${imgProbe.total}; failures=${imgProbe.failures.join(",") || "none"}`,
+      );
     const snapshotCount = await evaluate(`(() => {
       const row = document.querySelector('[data-layer="snapshot"]');
       const value = row?.querySelector('.num')?.textContent?.trim() ?? '';
@@ -288,10 +335,20 @@ async function main() {
     );
     await sleep(600);
     const zhText = await evaluate("document.body.innerText");
-    check("language toggle switches to Traditional Chinese", zhText.includes("資料圖層"), zhText.slice(0, 40));
-    check("html lang attribute follows the toggle", (await evaluate("document.documentElement.lang")) === "zh-Hant");
+    check(
+      "language toggle switches to Traditional Chinese",
+      zhText.includes("資料圖層"),
+      zhText.slice(0, 40),
+    );
+    check(
+      "html lang attribute follows the toggle",
+      (await evaluate("document.documentElement.lang")) === "zh-Hant",
+    );
     const shotZh = await send("Page.captureScreenshot", { format: "png" });
-    writeFileSync(path.join(OUT, "desktop-zh.png"), Buffer.from(shotZh.data, "base64"));
+    writeFileSync(
+      path.join(OUT, "desktop-zh.png"),
+      Buffer.from(shotZh.data, "base64"),
+    );
     await evaluate(
       `[...document.querySelectorAll('button')].find(b => b.textContent.trim() === 'Eng').click()`,
     );
@@ -305,8 +362,13 @@ async function main() {
     //     plus the three camera layers are listed on the rail, and only driver
     //     layers 1 and 2 are on.
     const staticMode = mode === "static";
-    await waitFor(`document.querySelectorAll('.atlas-rail-icon').length === 12`, 90000);
-    const railCount = await evaluate("document.querySelectorAll('.atlas-rail-icon').length");
+    await waitFor(
+      `document.querySelectorAll('.atlas-rail-icon').length === 12`,
+      90000,
+    );
+    const railCount = await evaluate(
+      "document.querySelectorAll('.atlas-rail-icon').length",
+    );
     check(
       "nine driver layers and three camera layers are listed",
       railCount === 12,
@@ -321,27 +383,119 @@ async function main() {
     const layersOn = layerState.filter((row) => row.on).map((row) => row.layer);
     check(
       "only the top two layers are on by default (rest off)",
-      JSON.stringify(layersOn) === JSON.stringify(["traffic-speed", "incidents"]),
+      JSON.stringify(layersOn) ===
+        JSON.stringify(["traffic-speed", "incidents"]),
       "on: " + (layersOn.join(", ") || "none"),
     );
+
+    // Label activation must never hide the default-on incident layer.
+    await evaluate(
+      `document.querySelector('[data-details="incidents"]').click()`,
+    );
+    await sleep(500);
+    const incidentSettings = await evaluate(`({
+      on: document.querySelector('[data-layer="incidents"]').getAttribute('aria-pressed'),
+      routes: document.querySelector('#route-incidents')?.options.length ?? 0,
+      unavailable: document.querySelector('[data-layer="incidents"]').dataset.error === 'true',
+    })`);
+    check(
+      "incident filters open without disabling the layer",
+      incidentSettings.on === "true" &&
+        (incidentSettings.routes > 1 || incidentSettings.unavailable),
+      JSON.stringify(incidentSettings),
+    );
+    await evaluate(
+      `document.querySelector('.atlas-popup-heading button').click()`,
+    );
+
+    // Real key input catches header interception that synthetic clicks miss.
+    await evaluate(
+      `[...document.querySelectorAll('header.atlas-header button')].find(b => b.textContent.trim() === '繁中').focus()`,
+    );
+    await send("Input.dispatchKeyEvent", {
+      type: "keyDown",
+      key: " ",
+      code: "Space",
+      windowsVirtualKeyCode: 32,
+    });
+    await send("Input.dispatchKeyEvent", {
+      type: "keyUp",
+      key: " ",
+      code: "Space",
+      windowsVirtualKeyCode: 32,
+    });
+    await sleep(400);
+    check(
+      "keyboard language activation preserves the expanded header",
+      await evaluate(
+        `document.documentElement.lang === 'zh-Hant' && Boolean(document.querySelector('[data-testid="header-collapse"]'))`,
+      ),
+    );
+    await evaluate(
+      `[...document.querySelectorAll('header.atlas-header button')].find(b => b.textContent.trim() === 'Eng').click()`,
+    );
+
+    const dataState = await evaluate(
+      `document.querySelector('.atlas-feed-status')?.dataset.state`,
+    );
+    check(
+      "road freshness is visible",
+      Boolean(dataState) && (!staticMode || dataState === "stale"),
+      `state=${dataState}`,
+    );
+    if (staticMode) {
+      for (const id of ["erp", "expressway"]) {
+        await evaluate(
+          `document.querySelector('[data-layer="${id}"]').click()`,
+        );
+        await waitFor(
+          id === "erp"
+            ? `document.querySelector('.atlas-rail-popup')?.innerText.includes('Official ERP rate table')`
+            : `Boolean(document.querySelector('.atlas-rail-popup .atlas-corridor'))`,
+          30000,
+        );
+        check(
+          `${id} summary is reachable`,
+          await evaluate(
+            id === "erp"
+              ? `document.querySelector('.atlas-rail-popup')?.innerText.includes('Official ERP rate table')`
+              : `Boolean(document.querySelector('.atlas-rail-popup .atlas-corridor'))`,
+          ),
+        );
+        await evaluate(
+          `document.querySelector('.atlas-popup-heading button').click(); document.querySelector('[data-layer="${id}"]').click()`,
+        );
+      }
+    }
 
     // 3. tapping a layer with nothing to configure switches it, on either layout.
     const toggleProbe = "hazards";
     const pressedBefore = await evaluate(
       `document.querySelector('.atlas-rail-icon[data-layer="${toggleProbe}"]')?.getAttribute('aria-pressed')`,
     );
-    await evaluate(`document.querySelector('.atlas-rail-icon[data-layer="${toggleProbe}"]')?.click()`);
+    await evaluate(
+      `document.querySelector('.atlas-rail-icon[data-layer="${toggleProbe}"]')?.click()`,
+    );
     await sleep(900);
     const pressedAfter = await evaluate(
       `document.querySelector('.atlas-rail-icon[data-layer="${toggleProbe}"]')?.getAttribute('aria-pressed')`,
     );
     check(
       "layer icon toggles a layer on and off",
-      pressedBefore !== pressedAfter && pressedBefore !== null,
+      pressedBefore !== null &&
+        (pressedBefore !== pressedAfter ||
+          (await evaluate(
+            `document.querySelector('[data-layer="hazards"]').dataset.error === 'true' && Boolean(document.querySelector('.atlas-rail-popup'))`,
+          ))),
       `${toggleProbe}: ${pressedBefore} -> ${pressedAfter}`,
     );
-    await evaluate(`document.querySelector('.atlas-rail-icon[data-layer="${toggleProbe}"]')?.click()`);
+    await evaluate(
+      `document.querySelector('.atlas-rail-icon[data-layer="${toggleProbe}"]')?.click()`,
+    );
     await sleep(900);
+    await evaluate(
+      `document.querySelector('.atlas-popup-heading button')?.click()`,
+    );
 
     // 4. clicking a marker opens the detail panel (markers are drawn on the canvas,
     //    so centre the map on a known camera, then dispatch a real click).
@@ -355,20 +509,39 @@ async function main() {
       return true;
     })()`);
     await sleep(1800);
+    if (imagesNotConfigured) {
+      check(
+        "unconfigured image feed explains recovery without Retry",
+        await evaluate(
+          `(() => { const popup = document.querySelector('.atlas-rail-popup'); return popup?.innerText.includes('Show camera locations') && !popup.innerText.includes('Retry'); })()`,
+        ),
+      );
+    }
+    await evaluate(
+      `document.querySelector('.atlas-popup-heading button')?.click()`,
+    );
     const target = api.points
       .filter((p) => p.layer === "redlight")
-      .find((p) => p.lng > 103.79 && p.lng < 103.9 && p.lat > 1.31 && p.lat < 1.4);
+      .find(
+        (p) => p.lng > 103.79 && p.lng < 103.9 && p.lat > 1.31 && p.lat < 1.4,
+      );
     const box = await evaluate(
       `(() => { const r = document.querySelector('[data-testid=map]').getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; })()`,
     );
-    check("map canvas fills the viewport", box.w > 800 && box.h > 500, `${box.w}x${box.h}`);
+    check(
+      "map canvas fills the viewport",
+      box.w > 800 && box.h > 500,
+      `${box.w}x${box.h}`,
+    );
 
     // 3b. the top bar retracts to the app icon alone, then restores. The collapsed
     //     bar is a button rather than a header, so it is found by its class.
     const barWidth = await evaluate(
       `Math.round(document.querySelector('header.atlas-header').getBoundingClientRect().width)`,
     );
-    await evaluate(`document.querySelector('header.atlas-header').click()`);
+    await evaluate(
+      `document.querySelector('[data-testid="header-collapse"]').click()`,
+    );
     await sleep(700);
     const collapsedBar = await evaluate(`(() => {
       const el = document.querySelector('.atlas-header');
@@ -383,7 +556,7 @@ async function main() {
     await sleep(700);
     const restoredBar = await evaluate(`(() => {
       const el = document.querySelector('header.atlas-header');
-      return el ? { width: Math.round(el.getBoundingClientRect().width), expanded: el.getAttribute('aria-expanded') } : null;
+      return el ? { width: Math.round(el.getBoundingClientRect().width), expanded: el.querySelector('[data-testid="header-collapse"]').getAttribute('aria-expanded') } : null;
     })()`);
     check(
       "top bar retracts to the icon only and restores",
@@ -397,122 +570,187 @@ async function main() {
       `width ${barWidth} -> ${collapsedBar?.width} (wordmark ${collapsedBar?.hasWordmark ? "shown" : "hidden"}) -> ${restoredBar?.width}`,
     );
 
-    const hasHook = await waitFor("Boolean(window.__map)", 30000);
+    const hasHook =
+      !staticMode && (await waitFor("Boolean(window.__map)", 30000));
     if (!hasHook) {
       console.log(
         "SKIP  marker interaction checks — no window.__map (production build, or the map never initialised)",
       );
     }
     if (hasHook) {
-    await evaluate(`(() => {
+      await evaluate(`(() => {
       const m = window.__map;
       if (!m) return 'no-map-hook';
       m.jumpTo({ center: [${target.lng}, ${target.lat}], zoom: 16.6 });
       return 'ok';
     })()`);
-    await sleep(2500);
-    const tap = await evaluate(`(() => {
+      await sleep(2500);
+      const tap = await evaluate(`(() => {
       const m = window.__map;
       const p = m.project([${target.lng}, ${target.lat}]);
       const r = document.querySelector('[data-testid=map]').getBoundingClientRect();
       return { x: r.x + p.x, y: r.y + p.y };
     })()`);
-    const px = tap.x;
-    const py = tap.y;
-    await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: px, y: py, button: "none" });
-    await sleep(300);
-    await send("Input.dispatchMouseEvent", { type: "mousePressed", x: px, y: py, button: "left", clickCount: 1 });
-    await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: px, y: py, button: "left", clickCount: 1 });
-    await sleep(1800);
-    const detailText = await evaluate("document.body.innerText");
-    check(
-      "clicking a marker opens location details",
-      detailText.includes("Zoom to") && detailText.includes(target.road.split(" ")[0]),
-      `target=${target.road} (${target.lat},${target.lng})`,
-    );
-    const shot1 = await send("Page.captureScreenshot", { format: "png" });
-    writeFileSync(path.join(OUT, "desktop-detail.png"), Buffer.from(shot1.data, "base64"));
-
-    // 5. a live traffic camera shows its image
-    const live = api.points.find((p) => p.layer === "snapshot" && p.live);
-    check("live traffic camera present in payload", Boolean(live), live?.road ?? "none");
-    if (live) {
-      await evaluate(
-        `(() => { window.__map.jumpTo({ center: [${live.lng}, ${live.lat}], zoom: 17 }); return true; })()`,
+      const px = tap.x;
+      const py = tap.y;
+      await send("Input.dispatchMouseEvent", {
+        type: "mouseMoved",
+        x: px,
+        y: py,
+        button: "none",
+      });
+      await sleep(300);
+      await send("Input.dispatchMouseEvent", {
+        type: "mousePressed",
+        x: px,
+        y: py,
+        button: "left",
+        clickCount: 1,
+      });
+      await send("Input.dispatchMouseEvent", {
+        type: "mouseReleased",
+        x: px,
+        y: py,
+        button: "left",
+        clickCount: 1,
+      });
+      await sleep(1800);
+      const detailText = await evaluate("document.body.innerText");
+      check(
+        "clicking a marker opens location details",
+        detailText.includes("Zoom to") &&
+          detailText.includes(target.road.split(" ")[0]),
+        `target=${target.road} (${target.lat},${target.lng})`,
       );
-      await sleep(2500);
-      const tap = await evaluate(`(() => {
+      const shot1 = await send("Page.captureScreenshot", { format: "png" });
+      writeFileSync(
+        path.join(OUT, "desktop-detail.png"),
+        Buffer.from(shot1.data, "base64"),
+      );
+
+      // 5. a live traffic camera shows its image
+      const live = api.points.find((p) => p.layer === "snapshot" && p.live);
+      if (!imagesNotConfigured)
+        check(
+          "live traffic camera present in payload",
+          Boolean(live),
+          live?.road ?? "none",
+        );
+      if (live) {
+        await evaluate(
+          `(() => { window.__map.jumpTo({ center: [${live.lng}, ${live.lat}], zoom: 17 }); return true; })()`,
+        );
+        await sleep(2500);
+        const tap = await evaluate(`(() => {
         const m = window.__map;
         const p = m.project([${live.lng}, ${live.lat}]);
         const r = document.querySelector('[data-testid=map]').getBoundingClientRect();
         return { x: r.x + p.x, y: r.y + p.y };
       })()`);
-      await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: tap.x, y: tap.y, button: "none" });
-      await sleep(400);
-      await send("Input.dispatchMouseEvent", { type: "mousePressed", x: tap.x, y: tap.y, button: "left", clickCount: 1 });
-      await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: tap.x, y: tap.y, button: "left", clickCount: 1 });
-      await sleep(3000);
-      const img = await evaluate(`(() => {
+        await send("Input.dispatchMouseEvent", {
+          type: "mouseMoved",
+          x: tap.x,
+          y: tap.y,
+          button: "none",
+        });
+        await sleep(400);
+        await send("Input.dispatchMouseEvent", {
+          type: "mousePressed",
+          x: tap.x,
+          y: tap.y,
+          button: "left",
+          clickCount: 1,
+        });
+        await send("Input.dispatchMouseEvent", {
+          type: "mouseReleased",
+          x: tap.x,
+          y: tap.y,
+          button: "left",
+          clickCount: 1,
+        });
+        await sleep(3000);
+        const img = await evaluate(`(() => {
         const el = document.querySelector('img[src*="dm-traffic-camera"], img[src*="traffic-images"], img[src*="amazonaws"]');
         if (!el) return null;
         return { src: el.currentSrc.slice(0, 90), w: el.naturalWidth, h: el.naturalHeight };
       })()`);
-      const liveText = await evaluate("document.body.innerText");
-      check(
-        "live traffic camera renders its still image",
-        Boolean(img) && img.w > 0 && img.h > 0,
-        img ? `${img.w}x${img.h} ${img.src}` : "no <img> found",
-      );
-      check(
-        "image card shows capture time + live badge",
-        liveText.includes("Live") && /Captured/.test(liveText),
-        `panel=${/Traffic image/.test(liveText) ? "open" : "missing"} len=${liveText.length}`,
-      );
-      const shotLive = await send("Page.captureScreenshot", { format: "png" });
-      writeFileSync(path.join(OUT, "desktop-live-camera.png"), Buffer.from(shotLive.data, "base64"));
-    }
-
-    // 5a. turn a driver layer on the way the UI requires: a layer with settings is
-    //     switched on from its own panel, everything else in one tap.
-    // One click on an icon switches that layer, for every layer, with no switch to
-    // find inside a panel. A layer with filters also opens them; dismiss that panel
-    // so the next click lands on an icon.
-    const enableRoadLayer = async (id) => {
-      const pressed = await evaluate(
-        `document.querySelector('.atlas-rail-icon[data-layer="${id}"]')?.getAttribute('aria-pressed')`,
-      );
-      if (pressed === "true") return true;
-      await evaluate(`document.querySelector('.atlas-rail-icon[data-layer="${id}"]')?.click()`);
-      for (let i = 0; i < 40; i++) {
-        const on = await evaluate(
-          `document.querySelector('.atlas-rail-icon[data-layer="${id}"]')?.getAttribute('aria-pressed') === 'true'`,
+        const liveText = await evaluate("document.body.innerText");
+        check(
+          "live traffic camera renders its still image",
+          Boolean(img) && img.w > 0 && img.h > 0,
+          img ? `${img.w}x${img.h} ${img.src}` : "no <img> found",
         );
-        if (on) break;
-        await sleep(1000);
+        check(
+          "image card shows capture time + live badge",
+          liveText.includes("Live") && /Captured/.test(liveText),
+          `panel=${/Traffic image/.test(liveText) ? "open" : "missing"} len=${liveText.length}`,
+        );
+        const shotLive = await send("Page.captureScreenshot", {
+          format: "png",
+        });
+        writeFileSync(
+          path.join(OUT, "desktop-live-camera.png"),
+          Buffer.from(shotLive.data, "base64"),
+        );
       }
-      await sleep(300);
-      return true;
-    };
 
-    // 5b. the EV connector filter must actually take effect on the map, not just in
-    //     the panel. The view is centred on a charger the API reports, and the
-    //     assertion is that only the chosen connector is drawn — a property that
-    //     holds wherever the map is, unlike a raw marker count.
-    await enableRoadLayer("ev");
-    await sleep(5000);
-    // The connector options come from the layer's own features, so they only exist
-    // once the EV payload has landed.
-    await waitFor(`(document.querySelector('#filter-ev-plug')?.options.length ?? 0) > 1`, 60000);
-    await evaluate(`(async () => {
+      // Give the rail focus and pointer access again before testing its controls.
+      await evaluate(
+        `document.querySelector('.atlas-detail button[aria-label]')?.click()`,
+      );
+      await sleep(500);
+
+      // 5a. turn a driver layer on the way the UI requires: a layer with settings is
+      //     switched on from its own panel, everything else in one tap.
+      // One click on an icon switches that layer, for every layer, with no switch to
+      // find inside a panel. A layer with filters also opens them; dismiss that panel
+      // so the next click lands on an icon.
+      const enableRoadLayer = async (id) => {
+        const unavailable = await evaluate(
+          `document.querySelector('[data-layer="${id}"]')?.dataset.error === 'true'`,
+        );
+        if (unavailable) return false;
+        const pressed = await evaluate(
+          `document.querySelector('.atlas-rail-icon[data-layer="${id}"]')?.getAttribute('aria-pressed')`,
+        );
+        if (pressed === "true") return true;
+        await evaluate(
+          `document.querySelector('.atlas-rail-icon[data-layer="${id}"]')?.click()`,
+        );
+        for (let i = 0; i < 40; i++) {
+          const on = await evaluate(
+            `document.querySelector('.atlas-rail-icon[data-layer="${id}"]')?.getAttribute('aria-pressed') === 'true'`,
+          );
+          if (on) break;
+          await sleep(1000);
+        }
+        await sleep(300);
+        return true;
+      };
+
+      // 5b. the EV connector filter must actually take effect on the map, not just in
+      //     the panel. The view is centred on a charger the API reports, and the
+      //     assertion is that only the chosen connector is drawn — a property that
+      //     holds wherever the map is, unlike a raw marker count.
+      const evAvailable = await enableRoadLayer("ev");
+      await sleep(5000);
+      // The connector options come from the layer's own features, so they only exist
+      // once the EV payload has landed.
+      if (evAvailable)
+        await waitFor(
+          `(document.querySelector('#filter-ev-plug')?.options.length ?? 0) > 1`,
+          60000,
+        );
+      await evaluate(`(async () => {
       const j = await fetch('/api/road-conditions?layers=ev').then((r) => r.json());
       const f = (j.features || []).find((x) => x.geometry);
       if (f) window.__map.jumpTo({ center: f.geometry.coordinates, zoom: 15 });
       return Boolean(f);
     })()`);
-    await sleep(3500);
-    // Choose a connector that is actually on screen, so the assertion after
-    // filtering is about the filter, not about an empty viewport.
-    const evBefore = await evaluate(`(() => {
+      await sleep(3500);
+      // Choose a connector that is actually on screen, so the assertion after
+      // filtering is about the filter, not about an empty viewport.
+      const evBefore = await evaluate(`(() => {
       const feats = window.__map.queryRenderedFeatures({ layers: ['road-ev-points'] });
       const counts = new Map();
       for (const f of feats) {
@@ -522,76 +760,103 @@ async function main() {
       const ranked = [...counts.entries()].sort((a, b) => b[1] - a[1]);
       return { count: feats.length, connectors: ranked.map(([k]) => k) };
     })()`);
-    const chosen = evBefore.connectors[0] ?? null;
-    const applied = await evaluate(`(() => {
+      const chosen = evBefore.connectors[0] ?? null;
+      const applied = await evaluate(`(() => {
       const sel = document.querySelector('#filter-ev-plug');
       if (!sel || !${JSON.stringify(chosen)}) return null;
       sel.value = ${JSON.stringify(chosen)};
       sel.dispatchEvent(new Event('change', { bubbles: true }));
       return sel.value;
     })()`);
-    await sleep(3000);
-    const evAfter = await evaluate(
-      `(() => {
+      await sleep(3000);
+      const evAfter = await evaluate(
+        `(() => {
         const feats = window.__map.queryRenderedFeatures({ layers: ['road-ev-points'] });
         return { count: feats.length, connectors: [...new Set(feats.map((f) => f.properties.plugType))] };
       })()`,
-    );
-    if (evBefore.count === 0) {
-      // Only the credentialed EV feed can supply these features, so with no key
-      // there is nothing legitimate to filter. The assertion still runs wherever
-      // the payload does carry geometry.
-      console.log(
-        "SKIP  EV connector filter applies to the map — no EV features with geometry in the payload",
       );
-    } else {
-      check(
-        "EV connector filter applies to the map",
-        evBefore.count > 0 &&
-          evAfter.count > 0 &&
-          chosen !== null &&
-          applied === chosen &&
-          evAfter.connectors.length === 1 &&
-          evAfter.connectors[0] === chosen,
-        `rendered ${evBefore.count} -> ${evAfter.count}; connectors now [${evAfter.connectors.join(
-          ", ",
-        )}]; filtered to ${chosen}`,
-      );
-    }
-    await evaluate(`(() => {
+      if (evBefore.count === 0) {
+        // Only the credentialed EV feed can supply these features, so with no key
+        // there is nothing legitimate to filter. The assertion still runs wherever
+        // the payload does carry geometry.
+        console.log(
+          "SKIP  EV connector filter applies to the map — no EV features with geometry in the payload",
+        );
+      } else {
+        check(
+          "EV connector filter applies to the map",
+          evBefore.count > 0 &&
+            evAfter.count > 0 &&
+            chosen !== null &&
+            applied === chosen &&
+            evAfter.connectors.length === 1 &&
+            evAfter.connectors[0] === chosen,
+          `rendered ${evBefore.count} -> ${evAfter.count}; connectors now [${evAfter.connectors.join(
+            ", ",
+          )}]; filtered to ${chosen}`,
+        );
+      }
+      await evaluate(`(() => {
       const sel = document.querySelector('#filter-ev-plug');
       if (sel) { sel.value = ''; sel.dispatchEvent(new Event('change', { bubbles: true })); }
       return true;
     })()`);
-    await sleep(800);
-
-    // 5b2. A tooltip must be fully on screen and must not cover the icons it
-    //      describes — in either language, since the copy differs in length.
-    //      A settings panel suppresses the hover tooltip (they would overlap), and the
-    //      rail retracts while a detail card is open, so dismiss both first and wait for
-    //      the tile to actually be on screen before pointing at it.
-    await evaluate(`document.querySelector('.atlas-rail-popup button')?.click()`);
-    await evaluate(`document.querySelector('.atlas-detail button[aria-label]')?.click()`);
-    await send("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
-    await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
-    await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: 5, y: 5, button: "none" });
-    await sleep(700);
-    await waitFor(
-      `(() => { const b = document.querySelector('.atlas-rail-icon[data-layer="zones"]'); if (!b) return false; const r = b.getBoundingClientRect(); return r.top > 0 && r.bottom < window.innerHeight; })()`,
-      15000,
-    );
-    const tipReport = {};
-    for (const [label, buttonText] of [["en", "Eng"], ["zh", "\u7e41\u4e2d"]]) {
-      await evaluate(
-        `[...document.querySelectorAll('button')].find((b) => b.textContent.trim() === ${JSON.stringify(buttonText)})?.click()`,
-      );
-      await sleep(700);
-      const tipIcon = await evaluate(
-        `(() => { const b = document.querySelector('.atlas-rail-icon[data-layer="zones"]'); const r = b.getBoundingClientRect(); return { x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2) }; })()`,
-      );
-      await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: tipIcon.x, y: tipIcon.y, button: "none" });
       await sleep(800);
-      tipReport[label] = await evaluate(`(() => {
+
+      // 5b2. A tooltip must be fully on screen and must not cover the icons it
+      //      describes — in either language, since the copy differs in length.
+      //      A settings panel suppresses the hover tooltip (they would overlap), and the
+      //      rail retracts while a detail card is open, so dismiss both first and wait for
+      //      the tile to actually be on screen before pointing at it.
+      await evaluate(
+        `document.querySelector('.atlas-rail-popup button')?.click()`,
+      );
+      await evaluate(
+        `document.querySelector('.atlas-detail button[aria-label]')?.click()`,
+      );
+      await send("Input.dispatchKeyEvent", {
+        type: "keyDown",
+        key: "Escape",
+        code: "Escape",
+        windowsVirtualKeyCode: 27,
+      });
+      await send("Input.dispatchKeyEvent", {
+        type: "keyUp",
+        key: "Escape",
+        code: "Escape",
+        windowsVirtualKeyCode: 27,
+      });
+      await send("Input.dispatchMouseEvent", {
+        type: "mouseMoved",
+        x: 5,
+        y: 5,
+        button: "none",
+      });
+      await sleep(700);
+      await waitFor(
+        `(() => { const b = document.querySelector('.atlas-rail-icon[data-layer="zones"]'); if (!b) return false; const r = b.getBoundingClientRect(); return r.top > 0 && r.bottom < window.innerHeight; })()`,
+        15000,
+      );
+      const tipReport = {};
+      for (const [label, buttonText] of [
+        ["en", "Eng"],
+        ["zh", "\u7e41\u4e2d"],
+      ]) {
+        await evaluate(
+          `[...document.querySelectorAll('button')].find((b) => b.textContent.trim() === ${JSON.stringify(buttonText)})?.click()`,
+        );
+        await sleep(700);
+        const tipIcon = await evaluate(
+          `(() => { const b = document.querySelector('.atlas-rail-icon[data-layer="zones"]'); const r = b.getBoundingClientRect(); return { x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2) }; })()`,
+        );
+        await send("Input.dispatchMouseEvent", {
+          type: "mouseMoved",
+          x: tipIcon.x,
+          y: tipIcon.y,
+          button: "none",
+        });
+        await sleep(800);
+        tipReport[label] = await evaluate(`(() => {
         const el = document.querySelector('.atlas-rail-hint');
         if (!el) return { ok: false, reason: 'no tooltip' };
         const r = el.getBoundingClientRect();
@@ -604,78 +869,127 @@ async function main() {
           abovePanel: r.bottom <= panel.top + 1,
         };
       })()`);
-      await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: 5, y: 5, button: "none" });
-      await sleep(300);
-    }
-    // Back to English for the remaining checks.
-    await evaluate(`[...document.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Eng')?.click()`);
-    await sleep(600);
-    check(
-      "tooltip is fully visible and clear of the icons (EN + ZH)",
-      ["en", "zh"].every(
-        (k) => tipReport[k].insideViewport && tipReport[k].clearsIcons && tipReport[k].abovePanel,
-      ),
-      JSON.stringify(tipReport),
-    );
-
-    // 5c. every driver layer must mark the map when it is switched on — the
-    //     regression this rail was reported for was an ON layer that changed
-    //     nothing. A layer whose badge shows no mapped features is skipped, since
-    //     there would be nothing legitimate to draw.
-    const layerMapLayers = {
-      "traffic-speed": ["road-traffic-speed-line"],
-      incidents: ["road-incidents-points"],
-      hazards: ["road-hazards-points"],
-      roadworks: ["road-roadworks-points"],
-      parking: ["road-parking-points"],
-      erp: ["road-erp-line"],
-      ev: ["road-ev-points"],
-      zones: ["road-zones-fill", "road-zones-pin"],
-      expressway: ["road-expressway-points"],
-    };
-    const marks = {};
-    const skipped = [];
-    const measure = [];
-    // Back to the island view first: queryRenderedFeatures only counts what is in
-    // the viewport, and the EV filter check left the map on a single charger.
-    await evaluate(`(() => { window.__map.jumpTo({ center: [103.8198, 1.3521], zoom: 11.4 }); return true; })()`);
-    await sleep(6000);
-    for (const [id, mapLayers] of Object.entries(layerMapLayers)) {
-      const badge = await evaluate(
-        `document.querySelector('.atlas-rail-icon[data-layer="${id}"] .atlas-rail-count')?.textContent ?? null`,
-      );
-      if (!badge || badge === "0") {
-        skipped.push(id);
-        continue;
+        await send("Input.dispatchMouseEvent", {
+          type: "mouseMoved",
+          x: 5,
+          y: 5,
+          button: "none",
+        });
+        await sleep(300);
       }
-      await enableRoadLayer(id);
-      measure.push([id, mapLayers]);
-    }
-    // Switch everything on first, then measure: each toggle refetches the whole
-    // set, so the last layer's payload would otherwise still be tiling.
-    await sleep(14000);
-    for (const [id, mapLayers] of measure) {
-      marks[id] = await evaluate(
-        `(() => { const m = window.__map; return ${JSON.stringify(mapLayers)}.reduce((n, x) => n + (m.getLayer(x) ? m.queryRenderedFeatures({ layers: [x] }).length : 0), 0); })()`,
+      // Back to English for the remaining checks.
+      await evaluate(
+        `[...document.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Eng')?.click()`,
       );
-    }
-    const notMarked = Object.entries(marks).filter(([, n]) => n === 0).map(([id]) => id);
-    check(
-      "every layer with published geometry marks the map when switched on",
-      Object.keys(marks).length >= 1 && notMarked.length === 0,
-      `rendered ${JSON.stringify(marks)}${skipped.length ? `; no mapped data: ${skipped.join(",")}` : ""}`,
-    );
+      await sleep(600);
+      check(
+        "tooltip is fully visible and clear of the icons (EN + ZH)",
+        ["en", "zh"].every(
+          (k) =>
+            tipReport[k].insideViewport &&
+            tipReport[k].clearsIcons &&
+            tipReport[k].abovePanel,
+        ),
+        JSON.stringify(tipReport),
+      );
+
+      // 5c. every driver layer must mark the map when it is switched on — the
+      //     regression this rail was reported for was an ON layer that changed
+      //     nothing. A layer whose badge shows no mapped features is skipped, since
+      //     there would be nothing legitimate to draw.
+      const layerMapLayers = {
+        "traffic-speed": ["road-traffic-speed-line"],
+        incidents: ["road-incidents-points"],
+        hazards: ["road-hazards-points"],
+        roadworks: ["road-roadworks-points"],
+        parking: ["road-parking-points"],
+        erp: ["road-erp-line"],
+        ev: ["road-ev-points"],
+        zones: ["road-zones-fill", "road-zones-pin"],
+        expressway: ["road-expressway-points"],
+      };
+      const marks = {};
+      const skipped = [];
+      const measure = [];
+      // Back to the island view first: queryRenderedFeatures only counts what is in
+      // the viewport, and the EV filter check left the map on a single charger.
+      await evaluate(
+        `(() => { window.__map.jumpTo({ center: [103.8198, 1.3521], zoom: 11.4 }); return true; })()`,
+      );
+      await sleep(6000);
+      for (const [id, mapLayers] of Object.entries(layerMapLayers)) {
+        const badge = await evaluate(
+          `document.querySelector('.atlas-rail-icon[data-layer="${id}"] .atlas-rail-count')?.textContent ?? null`,
+        );
+        if (!badge || badge === "0" || badge === "—") {
+          skipped.push(id);
+          continue;
+        }
+        await enableRoadLayer(id);
+        measure.push([id, mapLayers]);
+      }
+      // Switch everything on first, then measure: each toggle refetches the whole
+      // set, so the last layer's payload would otherwise still be tiling.
+      await sleep(14000);
+      for (const [id, mapLayers] of measure) {
+        marks[id] = await evaluate(
+          `(() => { const m = window.__map; return ${JSON.stringify(mapLayers)}.reduce((n, x) => n + (m.getLayer(x) ? m.queryRenderedFeatures({ layers: [x] }).length : 0), 0); })()`,
+        );
+      }
+      const notMarked = Object.entries(marks)
+        .filter(([, n]) => n === 0)
+        .map(([id]) => id);
+      check(
+        "every layer with published geometry marks the map when switched on",
+        Object.keys(marks).length >= 1 && notMarked.length === 0,
+        `rendered ${JSON.stringify(marks)}${skipped.length ? `; no mapped data: ${skipped.join(",")}` : ""}`,
+      );
     }
 
     // 6. sources panel
     await evaluate(
-      `[...document.querySelectorAll('button')].find(b => (b.getAttribute('data-tip')||'').includes('Data sources')).click()`,
+      `(() => { const button = [...document.querySelectorAll('button')].find(b => (b.getAttribute('data-tip')||'').includes('Data sources')); button.focus(); button.click(); })()`,
     );
     await sleep(700);
     const srcText = await evaluate("document.body.innerText");
     check(
       "sources panel lists official datasets",
-      srcText.includes("data.gov.sg") || srcText.includes("Singapore Police Force"),
+      srcText.includes("data.gov.sg") ||
+        srcText.includes("Singapore Police Force"),
+    );
+    check(
+      "sources dialog includes all nine road layers",
+      await evaluate(
+        `document.querySelectorAll('dialog[open] [data-source-layer]').length === 9`,
+      ),
+    );
+    check(
+      "sources dialog receives focus",
+      await evaluate(`Boolean(document.activeElement.closest('dialog[open]'))`),
+    );
+    const shot2 = await send("Page.captureScreenshot", { format: "png" });
+    writeFileSync(
+      path.join(OUT, "desktop-sources.png"),
+      Buffer.from(shot2.data, "base64"),
+    );
+    await evaluate(
+      `(() => { const buttons = document.querySelectorAll('dialog[open] a, dialog[open] button'); buttons[buttons.length - 1].focus(); })()`,
+    );
+    await send("Input.dispatchKeyEvent", {
+      type: "keyDown",
+      key: "Tab",
+      code: "Tab",
+      windowsVirtualKeyCode: 9,
+    });
+    await send("Input.dispatchKeyEvent", {
+      type: "keyUp",
+      key: "Tab",
+      code: "Tab",
+      windowsVirtualKeyCode: 9,
+    });
+    check(
+      "sources dialog contains keyboard focus",
+      await evaluate(`Boolean(document.activeElement.closest('dialog[open]'))`),
     );
     if (mode === "static") {
       // The driver layers now carry a baked DataMall snapshot, so the page legitimately
@@ -687,11 +1001,106 @@ async function main() {
         srcText.replace(/\n+/g, " | ").slice(0, 120),
       );
     }
-    const shot2 = await send("Page.captureScreenshot", { format: "png" });
-    writeFileSync(path.join(OUT, "desktop-sources.png"), Buffer.from(shot2.data, "base64"));
-    await send("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
-    await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+    await send("Input.dispatchKeyEvent", {
+      type: "keyDown",
+      key: "Escape",
+      code: "Escape",
+      windowsVirtualKeyCode: 27,
+    });
+    await send("Input.dispatchKeyEvent", {
+      type: "keyUp",
+      key: "Escape",
+      code: "Escape",
+      windowsVirtualKeyCode: 27,
+    });
     await sleep(500);
+
+    check(
+      "sources dialog restores focus",
+      await evaluate(
+        `document.activeElement.getAttribute('data-tip') === 'Data sources'`,
+      ),
+      await evaluate(
+        `JSON.stringify({open: Boolean(document.querySelector('dialog[open]')), focus: document.activeElement.outerHTML.slice(0, 180)})`,
+      ),
+    );
+    await evaluate(
+      `document.querySelector('[data-testid="browse-features"]').click()`,
+    );
+    await waitFor(`document.querySelector('#feature-search') && document.activeElement.id === 'atlas-layer-heading'`);
+    check(
+      "record browser bounds large lists with pagination",
+      await evaluate(
+        `document.querySelectorAll('.atlas-feature-list li').length <= 30 && Boolean(document.querySelector('.atlas-feature-list nav'))`,
+      ),
+    );
+    await evaluate(
+      `document.querySelector('#feature-search').focus()`,
+    );
+    await send("Input.insertText", {text: target.ref});
+    await sleep(500);
+    const recordSearch = await evaluate(`({query: document.querySelector('#feature-search').value, first: document.querySelector('.atlas-feature-list li button')?.innerText})`);
+    check("record search filters by reference", recordSearch.query === target.ref && recordSearch.first?.includes(target.road), JSON.stringify(recordSearch));
+    await evaluate(
+      `document.querySelector('.atlas-feature-list li button').focus()`,
+    );
+    await send("Input.dispatchKeyEvent", {
+      type: "keyDown",
+      key: "Enter",
+      code: "Enter",
+      windowsVirtualKeyCode: 13,
+      text: "\r",
+      unmodifiedText: "\r",
+    });
+    await send("Input.dispatchKeyEvent", {
+      type: "keyUp",
+      key: "Enter",
+      code: "Enter",
+      windowsVirtualKeyCode: 13,
+    });
+    await sleep(500);
+    check(
+      "record list selects details without the map",
+      await evaluate(
+        `document.querySelector('.atlas-detail')?.innerText.includes(${JSON.stringify(target.road)}) && document.querySelector('.atlas-detail').closest('[role="region"]').contains(document.activeElement)`,
+      ),
+      await evaluate(
+        `JSON.stringify({detail: Boolean(document.querySelector('.atlas-detail')), focus: document.activeElement.outerHTML.slice(0, 180)})`,
+      ),
+    );
+    await send("Input.dispatchKeyEvent", {
+      type: "keyDown",
+      key: "Escape",
+      code: "Escape",
+      windowsVirtualKeyCode: 27,
+    });
+    await send("Input.dispatchKeyEvent", {
+      type: "keyUp",
+      key: "Escape",
+      code: "Escape",
+      windowsVirtualKeyCode: 27,
+    });
+    await sleep(500);
+    check(
+      "detail dismissal restores list focus",
+      await evaluate(
+        `Boolean(document.activeElement.closest('.atlas-feature-list'))`,
+      ),
+    );
+    await evaluate(
+      `document.querySelector('.atlas-popup-heading button')?.click()`,
+    );
+    await evaluate(
+      `document.querySelector('button[aria-label="Reset layers and filters"]').click()`,
+    );
+    check(
+      "reset restores the default layers",
+      JSON.stringify(
+        (await readLayerState())
+          .filter((row) => row.on)
+          .map((row) => row.layer),
+      ) === JSON.stringify(["traffic-speed", "incidents"]),
+    );
 
     // 7. mobile viewport
     await send("Emulation.setDeviceMetricsOverride", {
@@ -704,11 +1113,23 @@ async function main() {
     await waitFor("document.querySelector('[data-testid=map] canvas')", 40000);
     await sleep(4000);
     const mobileText = await evaluate("document.body.innerText");
-    const overflow = await evaluate("document.documentElement.scrollWidth - window.innerWidth");
-    check("mobile viewport renders without horizontal overflow", overflow <= 0, `overflow=${overflow}px`);
+    const overflow = await evaluate(
+      "document.documentElement.scrollWidth - window.innerWidth",
+    );
+    check(
+      "mobile viewport renders without horizontal overflow",
+      overflow <= 0,
+      `overflow=${overflow}px`,
+    );
+    check(
+      "phone keeps road freshness visible",
+      await evaluate(
+        `(() => { const el = document.querySelector('.atlas-feed-status'); const box = el.getBoundingClientRect(); return box.top > 0 && box.bottom < innerHeight && el.innerText.length > 0; })()`,
+      ),
+    );
     check(
       "mobile shows the layer sheet",
-      /data layers/i.test(mobileText) || mobileText.includes(String(counts.redlight)),
+      await evaluate(`Boolean(document.querySelector('.atlas-layers-phone'))`),
       mobileText.slice(0, 60).replace(/\n/g, " / "),
     );
 
@@ -716,27 +1137,42 @@ async function main() {
     // layers are listed in every build, each with a hover tooltip; tapping a layer
     // with nothing to configure toggles it, and one with settings opens its panel.
     const railIcons = await evaluate(
-      `(() => { const rail = document.querySelector('.atlas-rail'); return rail ? rail.children.length : 0; })()`,
+      `document.querySelectorAll('.atlas-rail-icon').length`,
     );
     const railLayers = await evaluate(
       `(() => [...document.querySelectorAll('.atlas-rail-icon')].map((b) => b.getAttribute('data-layer')))()`,
     );
     check(
       "phone rail lists all nine driver layers and three camera layers",
-      railIcons === 12 && ["traffic-speed", "incidents", "zones", "expressway", "snapshot"].every((id) => railLayers.includes(id)),
+      railIcons === 12 &&
+        ["traffic-speed", "incidents", "zones", "expressway", "snapshot"].every(
+          (id) => railLayers.includes(id),
+        ),
       `icons=${railIcons}: ${railLayers.join(",")}`,
     );
 
     // Every icon must describe itself on hover: the rail shows one shared bubble
     // above the bar, since a per-icon bubble is clipped or hidden by the next row.
-    const missingTips = railLayers.filter((id) => id === null).length;
-    check("every rail icon declares its tooltip text", missingTips === 0, `${railIcons} icons`);
+    const missingTips = await evaluate(
+      `[...document.querySelectorAll('.atlas-rail-icon')].filter((b) => !b.getAttribute('data-tip') || b.getAttribute('data-tip').length < 12).length`,
+    );
+    check(
+      "every rail icon declares its tooltip text",
+      missingTips === 0,
+      `${railIcons} icons`,
+    );
     const railHover = await evaluate(`(() => {
       const b = document.querySelector('.atlas-rail-icon[data-layer="zones"]');
+      b.scrollIntoView({block: 'nearest', inline: 'center'});
       const r = b.getBoundingClientRect();
       return { x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2) };
     })()`);
-    await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: railHover.x, y: railHover.y, button: "none" });
+    await send("Input.dispatchMouseEvent", {
+      type: "mouseMoved",
+      x: railHover.x,
+      y: railHover.y,
+      button: "none",
+    });
     await sleep(600);
     const railHint = await evaluate(`(() => {
       const el = document.querySelector('.atlas-rail-hint');
@@ -750,9 +1186,16 @@ async function main() {
     check(
       "hovering a rail icon shows its tooltip fully on screen",
       Boolean(railHint && railHint.onScreen && railHint.text.includes("—")),
-      railHint ? `${railHint.text} (onScreen=${railHint.onScreen})` : "no tooltip",
+      railHint
+        ? `${railHint.text} (onScreen=${railHint.onScreen})`
+        : "no tooltip",
     );
-    await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: 5, y: 5, button: "none" });
+    await send("Input.dispatchMouseEvent", {
+      type: "mouseMoved",
+      x: 5,
+      y: 5,
+      button: "none",
+    });
     await sleep(300);
 
     // A tap on a layer with nothing to configure switches it: no card, and no
@@ -775,7 +1218,10 @@ async function main() {
     })()`);
     check(
       "rail tap toggles a layer with nothing to configure",
-      railBefore !== railAfter.pressed && !railAfter.popup,
+      (railBefore !== railAfter.pressed && !railAfter.popup) ||
+        (await evaluate(
+          `document.querySelector('[data-layer="hazards"]').dataset.error === 'true' && Boolean(document.querySelector('.atlas-rail-popup'))`,
+        )),
       `${railSimple}: ${railBefore} -> ${railAfter.pressed}, popup=${railAfter.popup}`,
     );
     check(
@@ -783,8 +1229,11 @@ async function main() {
       Boolean(railAfter.tip && railAfter.tip.length > 12),
       railAfter.tip ?? "no tooltip",
     );
+    await evaluate(
+      `document.querySelector('.atlas-popup-heading button')?.click()`,
+    );
 
-        // One click on a layer with settings switches it AND opens those settings; the
+    // One click on a layer with settings switches it AND opens those settings; the
     // panel must not contain a second switch.
     await evaluate(`(() => {
       const b = document.querySelector('.atlas-rail-icon[data-layer="parking"]');
@@ -806,53 +1255,89 @@ async function main() {
     })()`);
     check(
       "one click toggles a layer and opens its options (no inner switch)",
-      popupAfter.pressed === "true" && popupAfter.hasSelect && popupAfter.options > 1 && !popupAfter.hasSwitch,
+      (popupAfter.hasSelect &&
+        popupAfter.options > 1 &&
+        !popupAfter.hasSwitch &&
+        popupAfter.pressed === "true") ||
+        (await evaluate(
+          `document.querySelector('[data-layer="parking"]').dataset.error === 'true' && document.querySelector('.atlas-rail-popup')?.innerText.includes("Live feeds aren't configured")`,
+        )),
       JSON.stringify(popupAfter),
     );
-    await evaluate(`document.querySelector('.atlas-rail-popup button')?.click()`);
+    await evaluate(
+      `document.querySelector('.atlas-rail-popup button')?.click()`,
+    );
     await sleep(400);
     // The phone rail retracts to give the map the space back, and restores.
-    await evaluate(`document.querySelector('.atlas-layers header button')?.click()`);
+    await evaluate(
+      `document.querySelector('.atlas-layers header button[aria-label="Collapse panel"]')?.click()`,
+    );
     await sleep(700);
     const retracted = await evaluate(`({
       icons: document.querySelectorAll('.atlas-rail-icon').length,
       chip: Boolean(document.querySelector('.atlas-layers-collapsed')),
+      status: Boolean(document.querySelector('.atlas-layers-collapsed .atlas-feed-status')),
     })`);
-    await evaluate(`document.querySelector('.atlas-layers-collapsed button')?.click()`);
+    await evaluate(
+      `document.querySelector('.atlas-layers-collapsed button')?.click()`,
+    );
     await sleep(800);
-    const restoredIcons = await evaluate(`document.querySelectorAll('.atlas-rail-icon').length`);
+    const restoredIcons = await evaluate(
+      `document.querySelectorAll('.atlas-rail-icon').length`,
+    );
     check(
       "phone rail retracts to a chip and restores",
-      retracted.icons === 0 && retracted.chip && restoredIcons === 12,
+      retracted.icons === 0 &&
+        retracted.chip &&
+        retracted.status &&
+        restoredIcons === 12,
       `${JSON.stringify(retracted)} -> ${restoredIcons} icons`,
     );
 
     const shotRail = await send("Page.captureScreenshot", { format: "png" });
-    writeFileSync(path.join(OUT, "mobile-rail.png"), Buffer.from(shotRail.data, "base64"));
+    writeFileSync(
+      path.join(OUT, "mobile-rail.png"),
+      Buffer.from(shotRail.data, "base64"),
+    );
     const shot3 = await send("Page.captureScreenshot", { format: "png" });
-    writeFileSync(path.join(OUT, "mobile.png"), Buffer.from(shot3.data, "base64"));
+    writeFileSync(
+      path.join(OUT, "mobile.png"),
+      Buffer.from(shot3.data, "base64"),
+    );
 
     consoleIssues.push(...collectConsole(events));
     // Live traffic stills come from keyless mirrors that rotate their image URLs,
     // so an image can expire between the feed fetch and the browser load. That is a
     // property of the mirror, not an app fault, and the dedicated "still loads in
     // the browser" check above owns image health; everything else must be clean.
-    const EXPECTED_IMAGE_HOSTS = /images\.data\.gov\.sg|dm-traffic-camera-itsc\.s3/;
+    const EXPECTED_IMAGE_HOSTS =
+      /images\.data\.gov\.sg|dm-traffic-camera-itsc\.s3/;
     const errors = consoleIssues.filter(
       (c) =>
         c.level === "error" &&
         !/favicon|net::ERR_/i.test(c.text) &&
-        !(EXPECTED_IMAGE_HOSTS.test(c.url) || /Failed to load resource/.test(c.text)),
+        !(
+          EXPECTED_IMAGE_HOSTS.test(c.url) ||
+          /Failed to load resource/.test(c.text)
+        ),
     );
-    check("no runtime console errors", errors.length === 0, errors.slice(0, 4).join(" | ").slice(0, 400));
+    check(
+      "no runtime console errors",
+      errors.length === 0,
+      errors.slice(0, 4).join(" | ").slice(0, 400),
+    );
     if (consoleIssues.length) {
       console.log(`\nconsole messages (${consoleIssues.length}):`);
       for (const c of consoleIssues.slice(0, 12)) {
-        console.log(`  [${c.level}] ${c.text.slice(0, 180)}${c.url ? ` (${c.url.slice(0, 90)})` : ""}`);
+        console.log(
+          `  [${c.level}] ${c.text.slice(0, 180)}${c.url ? ` (${c.url.slice(0, 90)})` : ""}`,
+        );
       }
     }
     const failed2 = results.filter((r) => !r.ok);
-    console.log(`\n${results.length - failed2.length}/${results.length} checks passed`);
+    console.log(
+      `\n${results.length - failed2.length}/${results.length} checks passed`,
+    );
     console.log(`screenshots: ${OUT}`);
     process.exitCode = failed2.length ? 1 : 0;
   } finally {

@@ -78,30 +78,31 @@ export function AppHeader({
         // the top of the window, where a hover bubble would be clipped off-screen.
         className={`panel atlas-header inline-flex items-center px-3 py-2.5 sm:px-4 ${className}`}
       >
-        <LogoMark />
+        <span className="atlas-logo-button" aria-hidden="true">
+          <LogoMark />
+        </span>
       </button>
     );
   }
 
   return (
     <header
-      // The bar itself retracts; the controls inside opt out via stopPropagation.
-      role="button"
-      tabIndex={0}
-      aria-expanded
-      aria-label={t("header.collapse")}
-      onClick={() => setCollapsed(true)}
-      onKeyDown={(event) => {
-        if (event.key !== "Enter" && event.key !== " ") return;
-        event.preventDefault();
-        setCollapsed(true);
-      }}
-      className={`panel atlas-header flex min-w-0 max-w-full cursor-pointer items-center gap-3 px-3 py-2.5 sm:gap-5 sm:px-4 ${className}`}
+      className={`panel atlas-header atlas-app-header flex min-w-0 max-w-full items-center gap-3 px-3 py-2.5 sm:gap-5 sm:px-4 ${className}`}
     >
       <div className="flex min-w-0 items-center gap-2.5">
-        <LogoMark />
+        <button
+          type="button"
+          className="atlas-logo-button"
+          aria-expanded
+          aria-label={t("header.collapse")}
+          data-testid="header-collapse"
+          onClick={() => setCollapsed(true)}
+        >
+          <LogoMark />
+        </button>
         <h1 className="atlas-wordmark min-w-0 truncate font-display text-[17px] leading-tight text-ink sm:text-[23px]">
-          {t("app.title")}
+          <span className="sm:hidden">{t("app.short")}</span>
+          <span className="hidden sm:inline">{t("app.title")}</span>
         </h1>
       </div>
 
@@ -111,18 +112,22 @@ export function AppHeader({
       >
         <div className="atlas-clock hidden flex-col gap-1 lg:flex">
           <span className="label text-muted">SGT</span>
-          <span className="num text-[13px] font-medium text-ink-2">{clock}</span>
+          <span className="num text-[13px] font-medium text-ink-2">
+            {clock}
+          </span>
         </div>
 
         <div
           role="group"
           aria-label={t("lang.switch")}
-          className="relative flex h-10 w-[100px] shrink-0 items-center rounded-full border border-line-strong/50 bg-surface/60 p-0.5"
+          className="relative flex h-11 w-[100px] shrink-0 items-center rounded-full border border-line-strong/50 bg-surface/60 p-0.5"
         >
           <span
             aria-hidden="true"
             className="absolute top-0.5 bottom-0.5 left-0.5 w-[46px] rounded-full bg-accent transition-transform duration-200 ease-out motion-reduce:transition-none"
-            style={{ transform: lang === "zh" ? "translateX(48px)" : "translateX(0)" }}
+            style={{
+              transform: lang === "zh" ? "translateX(48px)" : "translateX(0)",
+            }}
           />
           {LANGS.map((l) => (
             <button
@@ -131,7 +136,7 @@ export function AppHeader({
               onClick={() => setLang(l.id)}
               aria-pressed={lang === l.id}
               aria-label={l.id === "en" ? t("lang.en") : t("lang.zh")}
-              className={`relative z-10 h-10 flex-1 rounded-full text-[11px] font-semibold leading-none transition-colors ${
+              className={`relative z-10 h-11 flex-1 rounded-full text-[12px] font-semibold leading-none transition-colors ${
                 lang === l.id ? "text-accent-ink" : "text-ink-2 hover:text-ink"
               }`}
             >
@@ -146,13 +151,17 @@ export function AppHeader({
             onClick={onToggleBasemap}
             aria-pressed={basemap === "positron"}
             aria-label={
-              basemap === "osm" ? t("map.switchToPositron") : t("map.switchToOsm")
+              basemap === "osm"
+                ? t("map.switchToPositron")
+                : t("map.switchToOsm")
             }
             className="tip tip-below atlas-basemap-button"
             data-basemap={basemap}
             data-testid="basemap-toggle"
             data-tip={
-              basemap === "osm" ? t("map.switchToPositron") : t("map.switchToOsm")
+              basemap === "osm"
+                ? t("map.switchToPositron")
+                : t("map.switchToOsm")
             }
           >
             {basemap === "osm" ? t("map.positron") : t("map.osm")}

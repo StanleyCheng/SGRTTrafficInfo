@@ -1,7 +1,10 @@
 "use client";
 
 import { ROAD_LAYER_ORDER } from "./layers";
-import { normaliseDataGovTraffic, retargetSourcesForStatic } from "./traffic-images";
+import {
+  normaliseDataGovTraffic,
+  retargetSourcesForStatic,
+} from "./traffic-images";
 import type {
   CamerasResponse,
   RoadConditionLayerInfo,
@@ -22,18 +25,35 @@ const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
 const DATA_GOV_TRAFFIC = "https://api.data.gov.sg/v1/transport/traffic-images";
 
-export async function loadCameras(options: { refresh?: boolean; signal?: AbortSignal } = {}) {
-  const url = STATIC_MODE ? `${BASE}/data/cameras.json` : `/api/cameras${options.refresh ? "?refresh=1" : ""}`;
-  const res = await fetch(url, { signal: options.signal, cache: STATIC_MODE ? "no-cache" : "no-store" });
+export async function loadCameras(
+  options: { refresh?: boolean; signal?: AbortSignal } = {},
+) {
+  const url = STATIC_MODE
+    ? `${BASE}/data/cameras.json`
+    : `/api/cameras${options.refresh ? "?refresh=1" : ""}`;
+  const res = await fetch(url, {
+    signal: options.signal,
+    cache: STATIC_MODE ? "no-cache" : "no-store",
+  });
   const body = await res.json();
-  if (!res.ok) throw new Error((body as { error?: string })?.error ?? `HTTP ${res.status}`);
+  if (!res.ok)
+    throw new Error(
+      (body as { error?: string })?.error ?? `HTTP ${res.status}`,
+    );
   const data = body as CamerasResponse;
   return STATIC_MODE
-    ? { ...data, layers: retargetSourcesForStatic(data.layers) as CamerasResponse["layers"] }
+    ? {
+        ...data,
+        layers: retargetSourcesForStatic(
+          data.layers,
+        ) as CamerasResponse["layers"],
+      }
     : data;
 }
 
-export async function loadTrafficImages(signal?: AbortSignal): Promise<TrafficImagesResponse> {
+export async function loadTrafficImages(
+  signal?: AbortSignal,
+): Promise<TrafficImagesResponse> {
   const generatedAt = new Date().toISOString();
   try {
     const url = STATIC_MODE ? DATA_GOV_TRAFFIC : "/api/traffic-images";
@@ -44,7 +64,12 @@ export async function loadTrafficImages(signal?: AbortSignal): Promise<TrafficIm
     return { generatedAt, status: "ok", ...normalised };
   } catch (err) {
     if ((err as Error).name === "AbortError") throw err;
-    return { generatedAt, status: "error", error: (err as Error).message, cameras: [] };
+    return {
+      generatedAt,
+      status: "error",
+      error: (err as Error).message,
+      cameras: [],
+    };
   }
 }
 
@@ -80,21 +105,36 @@ export async function loadRoadConditions(
 ): Promise<RoadConditionsResponse> {
   if (STATIC_MODE) {
     try {
-      const indexResponse = await fetch(`${BASE}/data/road-conditions/index.json`, {
-        signal: options.signal,
-        cache: "no-cache",
-      });
+      const indexResponse = await fetch(
+        `${BASE}/data/road-conditions/index.json`,
+        {
+          signal: options.signal,
+          cache: "no-cache",
+        },
+      );
       if (!indexResponse.ok) throw new Error(`HTTP ${indexResponse.status}`);
       const index = (await indexResponse.json()) as RoadConditionsResponse;
       const wanted = options.layers ?? ROAD_LAYER_ORDER;
       const parts = await Promise.all(
         wanted.map(async (id) => {
-          const response = await fetch(`${BASE}/data/road-conditions/${id}.json`, {
-            signal: options.signal,
-            cache: "no-cache",
-          });
-          if (!response.ok) return [];
-          return ((await response.json()) as { features: RoadConditionsResponse["features"] }).features;
+          try {
+            const response = await fetch(
+              `${BASE}/data/road-conditions/${id}.json`,
+              { signal: options.signal, cache: "no-cache" },
+            );
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return {
+              id,
+              features: (
+                (await response.json()) as {
+                  features: RoadConditionsResponse["features"];
+                }
+              ).features,
+            };
+          } catch (error) {
+            if ((error as Error).name === "AbortError") throw error;
+            return { id, features: [], error: (error as Error).message };
+          }
         }),
       );
       return {
@@ -103,7 +143,27 @@ export async function loadRoadConditions(
         // copy note next to the snapshot's own timestamp.
         status: "stale",
         fromCache: true,
-        features: parts.flat(),
+        features: parts.flatMap((part) => part.features),
+        layers: index.layers.map((layer) => {
+          const failed = parts.find(
+            (part) => part.id === layer.id && part.error,
+          );
+          return failed
+            ? {
+                ...layer,
+                status: "error",
+                count: 0,
+                mappedCount: 0,
+                error: failed.error,
+              }
+            : layer;
+        }),
+        error: parts.some((part) => part.error)
+          ? parts
+              .filter((part) => part.error)
+              .map((part) => `${part.id}: ${part.error}`)
+              .join("; ")
+          : index.error,
       };
     } catch (error) {
       if ((error as Error).name === "AbortError") throw error;

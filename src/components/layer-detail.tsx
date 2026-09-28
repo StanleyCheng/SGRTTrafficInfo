@@ -32,7 +32,7 @@ export interface RoadInfoProps {
 }
 
 const EXTERNAL_LINK =
-  "inline-flex items-center gap-1 text-[10px] font-semibold underline underline-offset-2";
+  "inline-flex items-center gap-1 text-[12px] font-semibold underline underline-offset-2";
 
 function byLayer(features: RoadConditionFeature[], id: RoadLayerId) {
   return features.filter((feature) => feature.properties.layer === id);
@@ -57,14 +57,14 @@ function FilterSelect({
 }) {
   return (
     <span className="mt-2 block">
-      <label className="label mb-1 block text-[9px] text-muted" htmlFor={id}>
+      <label className="label mb-1 block text-[12px] text-muted" htmlFor={id}>
         {label}
       </label>
       <select
         id={id}
         value={value ?? ""}
         onChange={(event) => onChange(event.target.value || null)}
-        className="h-10 w-full rounded-[var(--radius-control)] border border-line bg-surface px-2 text-[11px] text-ink"
+        className="h-11 w-full rounded-[var(--radius-control)] border border-line bg-surface px-2 text-[16px] text-ink"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
@@ -86,7 +86,7 @@ function Toggle({
   onChange: (checked: boolean) => void;
 }) {
   return (
-    <label className="mt-2 flex min-h-10 items-center gap-2 text-[11px] text-ink-2">
+    <label className="mt-2 flex min-h-10 items-center gap-2 text-[13px] text-ink-2">
       <input
         type="checkbox"
         checked={checked}
@@ -116,10 +116,36 @@ function SpeedLegend() {
   const { t } = useI18n();
   return (
     <div className="atlas-speed-legend mt-2" aria-label={t("legend.title")}>
-      <span style={{ "--speed-color": "var(--c-traffic-free)" } as CSSProperties}><i />{t("road.legend.clear")}<b>60+ km/h</b></span>
-      <span style={{ "--speed-color": "var(--c-traffic-moderate)" } as CSSProperties}><i />{t("road.legend.moderate")}<b>40–59 km/h</b></span>
-      <span style={{ "--speed-color": "var(--c-traffic-heavy)" } as CSSProperties}><i />{t("road.legend.heavy")}<b>20–39 km/h</b></span>
-      <span style={{ "--speed-color": "var(--c-traffic-severe)" } as CSSProperties}><i />{t("road.legend.severe")}<b>0–19 km/h</b></span>
+      <span
+        style={{ "--speed-color": "var(--c-traffic-free)" } as CSSProperties}
+      >
+        <i />
+        {t("road.legend.clear")}
+        <b>60+ km/h</b>
+      </span>
+      <span
+        style={
+          { "--speed-color": "var(--c-traffic-moderate)" } as CSSProperties
+        }
+      >
+        <i />
+        {t("road.legend.moderate")}
+        <b>40–59 km/h</b>
+      </span>
+      <span
+        style={{ "--speed-color": "var(--c-traffic-heavy)" } as CSSProperties}
+      >
+        <i />
+        {t("road.legend.heavy")}
+        <b>20–39 km/h</b>
+      </span>
+      <span
+        style={{ "--speed-color": "var(--c-traffic-severe)" } as CSSProperties}
+      >
+        <i />
+        {t("road.legend.severe")}
+        <b>0–19 km/h</b>
+      </span>
     </div>
   );
 }
@@ -145,20 +171,27 @@ function routeOptions(features: RoadConditionFeature[]) {
 
 function ParkingSummary({ features }: { features: RoadConditionFeature[] }) {
   const { t } = useI18n();
-  const rows = features.filter((feature) => feature.properties.kind === "parking-lot");
+  const rows = features.filter(
+    (feature) => feature.properties.kind === "parking-lot",
+  );
   const lots = useMemo(() => {
     const byType = new Map<string, { lots: number; carparks: Set<string> }>();
     for (const feature of rows) {
       const type = feature.properties.lotType;
       if (!type) continue;
-      const entry = byType.get(type) ?? { lots: 0, carparks: new Set<string>() };
+      const entry = byType.get(type) ?? {
+        lots: 0,
+        carparks: new Set<string>(),
+      };
       entry.lots += feature.properties.availableLots ?? 0;
       entry.carparks.add(feature.properties.sourceId);
       byType.set(type, entry);
     }
     return [...byType.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   }, [rows]);
-  const withHeight = rows.filter((feature) => feature.properties.gantryHeightM != null).length;
+  const withHeight = rows.filter(
+    (feature) => feature.properties.gantryHeightM != null,
+  ).length;
 
   if (!rows.length) return null;
   return (
@@ -174,7 +207,7 @@ function ParkingSummary({ features }: { features: RoadConditionFeature[] }) {
           </span>
         ))}
       </span>
-      <span className="mt-1.5 block text-[9px] leading-relaxed text-muted">
+      <span className="mt-1.5 block text-[12px] leading-relaxed text-muted">
         {t("road.parking.reporting", { n: rows.length })}
         {withHeight > 0 && (
           <>
@@ -200,13 +233,17 @@ function ParkingSummary({ features }: { features: RoadConditionFeature[] }) {
 
 function ErpSummary({ features }: { features: RoadConditionFeature[] }) {
   const { t } = useI18n();
-  const rates = features.filter((feature) => feature.properties.kind === "erp-rate");
+  const rates = features.filter(
+    (feature) => feature.properties.kind === "erp-rate",
+  );
   const money = (value: number) => `$${value.toFixed(2)}`;
-  const sorted = [...rates].sort((a, b) => (b.properties.charge ?? -1) - (a.properties.charge ?? -1));
+  const sorted = [...rates].sort(
+    (a, b) => (b.properties.charge ?? -1) - (a.properties.charge ?? -1),
+  );
 
   return (
     <>
-      <span className="mt-1.5 block text-[9px] leading-relaxed text-muted">
+      <span className="mt-1.5 block text-[12px] leading-relaxed text-muted">
         {t("road.erp.summaryNote")}
       </span>
       {sorted.length ? (
@@ -230,7 +267,10 @@ function ErpSummary({ features }: { features: RoadConditionFeature[] }) {
                   )}
                   {properties.nextCharge != null && (
                     <em>
-                      {t("road.detail.nextCharge")} <span className="num">{money(properties.nextCharge)}</span>{" "}
+                      {t("road.detail.nextCharge")}{" "}
+                      <span className="num">
+                        {money(properties.nextCharge)}
+                      </span>{" "}
                       {properties.nextWindow}
                     </em>
                   )}
@@ -240,15 +280,27 @@ function ErpSummary({ features }: { features: RoadConditionFeature[] }) {
           })}
         </ul>
       ) : (
-        <span className="mt-2 block rounded-[var(--radius-control)] border border-line bg-surface px-2.5 py-2 text-[10px] leading-relaxed text-muted">
+        <span className="mt-2 block rounded-[var(--radius-control)] border border-line bg-surface px-2.5 py-2 text-[12px] leading-relaxed text-muted">
           {t("road.erp.noRates")}
         </span>
       )}
       <span className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
-        <a href={DOC_LINKS.erpRates} target="_blank" rel="noreferrer" className={EXTERNAL_LINK} style={{ color: "var(--c-erp)" }}>
+        <a
+          href={DOC_LINKS.erpRates}
+          target="_blank"
+          rel="noreferrer"
+          className={EXTERNAL_LINK}
+          style={{ color: "var(--c-erp)" }}
+        >
           {t("road.erp.ratesDoc")} ↗
         </a>
-        <a href={DOC_LINKS.datamallGuide} target="_blank" rel="noreferrer" className={EXTERNAL_LINK} style={{ color: "var(--c-erp)" }}>
+        <a
+          href={DOC_LINKS.datamallGuide}
+          target="_blank"
+          rel="noreferrer"
+          className={EXTERNAL_LINK}
+          style={{ color: "var(--c-erp)" }}
+        >
           {t("road.erp.zoneTable")} ↗
         </a>
       </span>
@@ -264,22 +316,36 @@ const ZONE_ZOOM = 14;
 
 function ZonesSummary({ features }: { features: RoadConditionFeature[] }) {
   const { t } = useI18n();
-  const school = features.filter((feature) => feature.properties.kind === "school-zone");
-  const silver = features.filter((feature) => feature.properties.kind === "silver-zone");
-  const limit = school[0]?.properties.speedLimitKmh ?? silver[0]?.properties.speedLimitKmh;
+  const school = features.filter(
+    (feature) => feature.properties.kind === "school-zone",
+  );
+  const silver = features.filter(
+    (feature) => feature.properties.kind === "silver-zone",
+  );
+  const limit =
+    school[0]?.properties.speedLimitKmh ?? silver[0]?.properties.speedLimitKmh;
   return (
     <>
       <span className="mt-2 flex flex-wrap gap-1.5">
         {school.length > 0 && (
-          <Chip color="var(--c-zones)">{t("road.kind.school-zone")} {school.length}</Chip>
+          <Chip color="var(--c-zones)">
+            {t("road.kind.school-zone")} {school.length}
+          </Chip>
         )}
         {silver.length > 0 && (
-          <Chip color="var(--c-zones)">{t("road.kind.silver-zone")} {silver.length}</Chip>
+          <Chip color="var(--c-zones)">
+            {t("road.kind.silver-zone")} {silver.length}
+          </Chip>
         )}
-        {limit != null && <Chip color="var(--c-zones)">{t("road.zones.limit", { n: limit })}</Chip>}
+        {limit != null && (
+          <Chip color="var(--c-zones)">
+            {t("road.zones.limit", { n: limit })}
+          </Chip>
+        )}
       </span>
-      <span className="mt-1.5 block text-[9px] leading-relaxed text-muted">
-        {t("road.zones.zoomNote", { z: ZONE_ZOOM })} · {t("road.zones.limitNote")}
+      <span className="mt-1.5 block text-[12px] leading-relaxed text-muted">
+        {t("road.zones.zoomNote", { z: ZONE_ZOOM })} ·{" "}
+        {t("road.zones.limitNote")}
       </span>
     </>
   );
@@ -300,28 +366,41 @@ function CorridorCards({ features }: { features: RoadConditionFeature[] }) {
     >();
     for (const feature of features) {
       if (feature.properties.kind !== "travel-time") continue;
-      const { corridor, directionLabel, farEndPoint, endPoint, estMinutes } = feature.properties;
+      const { corridor, directionLabel, farEndPoint, endPoint, estMinutes } =
+        feature.properties;
       if (!corridor) continue;
       const key = `${corridor}\u001f${directionLabel ?? ""}`;
-      const entry =
-        grouped.get(key) ??
-        { corridor, minutes: 0, end: farEndPoint ?? endPoint ?? "", direction: directionLabel };
+      const entry = grouped.get(key) ?? {
+        corridor,
+        minutes: 0,
+        end: farEndPoint ?? endPoint ?? "",
+        direction: directionLabel,
+      };
       entry.minutes += estMinutes ?? 0;
       if (!entry.end) entry.end = farEndPoint ?? endPoint ?? "";
       grouped.set(key, entry);
     }
-    return [...grouped.values()].sort((a, b) => a.corridor.localeCompare(b.corridor)).slice(0, 12);
+    return [...grouped.values()]
+      .sort((a, b) => a.corridor.localeCompare(b.corridor))
+      .slice(0, 12);
   }, [features]);
 
   if (!corridors.length) return null;
   return (
     <span className="mt-2 block">
-      <span className="label mb-1 block text-[9px] text-muted">{t("road.expressway.corridors")}</span>
+      <span className="label mb-1 block text-[12px] text-muted">
+        {t("road.expressway.corridors")}
+      </span>
       <span className="atlas-corridor-grid">
         {corridors.map((corridor, index) => (
-          <span key={`${corridor.corridor}-${corridor.direction ?? ""}-${index}`} className="atlas-mini-card atlas-corridor">
+          <span
+            key={`${corridor.corridor}-${corridor.direction ?? ""}-${index}`}
+            className="atlas-mini-card atlas-corridor"
+          >
             <b>{corridor.corridor}</b>
-            <em className="num">{t("road.expressway.minutes", { n: corridor.minutes })}</em>
+            <em className="num">
+              {t("road.expressway.minutes", { n: corridor.minutes })}
+            </em>
             <i>{corridor.end || t("road.expressway.wholeRoute")}</i>
           </span>
         ))}
@@ -332,10 +411,14 @@ function CorridorCards({ features }: { features: RoadConditionFeature[] }) {
 
 function EmasList({ features }: { features: RoadConditionFeature[] }) {
   const { t } = useI18n();
-  const messages = features.filter((feature) => feature.properties.kind === "emas-message");
+  const messages = features.filter(
+    (feature) => feature.properties.kind === "emas-message",
+  );
   return (
     <span className="mt-2 block">
-      <span className="label mb-1 block text-[9px] text-muted">{t("road.expressway.emas")}</span>
+      <span className="label mb-1 block text-[12px] text-muted">
+        {t("road.expressway.emas")}
+      </span>
       {messages.length ? (
         <ul className="space-y-1.5">
           {messages.slice(0, 6).map((feature) => (
@@ -346,11 +429,11 @@ function EmasList({ features }: { features: RoadConditionFeature[] }) {
           ))}
         </ul>
       ) : (
-        <span className="block rounded-[var(--radius-control)] border border-line bg-surface px-2.5 py-2 text-[10px] leading-relaxed text-muted">
+        <span className="block rounded-[var(--radius-control)] border border-line bg-surface px-2.5 py-2 text-[12px] leading-relaxed text-muted">
           {t("road.expressway.noMessages")}
         </span>
       )}
-      <span className="mt-1.5 block text-[9px] leading-relaxed text-muted">
+      <span className="mt-1.5 block text-[12px] leading-relaxed text-muted">
         {t("road.expressway.cardsNote")}
       </span>
     </span>
@@ -376,28 +459,41 @@ export function RoadLayerInfo({
   const own = useMemo(() => byLayer(features, id), [features, id]);
   const routes = id === "incidents" && active ? routeOptions(features) : [];
   const upstream =
-    info?.sources.reduce((max, source) => Math.max(max, source.upstreamCount ?? 0), 0) ?? 0;
+    info?.sources.reduce(
+      (max, source) => Math.max(max, source.upstreamCount ?? 0),
+      0,
+    ) ?? 0;
 
   const evConnectors = id === "ev" ? connectorValues(own) : [];
 
   return (
     <>
-      <span className="mt-1 flex flex-wrap items-center gap-1.5 text-[9px] text-muted">
-        <span className="num font-semibold text-ink-2">{info?.mappedCount ?? "—"}</span>
+      <span className="mt-1 flex flex-wrap items-center gap-1.5 text-[12px] text-muted">
+        <span className="num font-semibold text-ink-2">
+          {info?.mappedCount ?? "—"}
+        </span>
         <span>{t("common.mapped")}</span>
-        {info && <span>· {info.count} {t("common.reports")}</span>}
-        {status && <span style={{ color: status.color }}>· {t(status.key)}</span>}
+        {info && (
+          <span>
+            · {info.count} {t("common.reports")}
+          </span>
+        )}
+        {status && (
+          <span style={{ color: status.color }}>· {t(status.key)}</span>
+        )}
       </span>
 
       {info && info.sources.length > 0 && (
-        <span className="mt-1.5 block text-[9px] leading-relaxed text-muted">
-          <span className="label mr-1 text-[9px]">{t("road.detail.source")}</span>
+        <span className="mt-1.5 block text-[12px] leading-relaxed text-muted">
+          <span className="label mr-1 text-[12px]">
+            {t("road.detail.source")}
+          </span>
           {info.sources.map((source) => source.name).join(" · ")}
         </span>
       )}
 
       {id === "hazards" && Boolean(info?.count) && (
-        <span className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-[color-mix(in_srgb,var(--c-hazard)_12%,transparent)] px-2 py-0.5 text-[10px] font-semibold text-[var(--c-hazard)]">
+        <span className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-[color-mix(in_srgb,var(--c-hazard)_12%,transparent)] px-2 py-0.5 text-[12px] font-semibold text-[var(--c-hazard)]">
           <span className="pulse h-1.5 w-1.5 rounded-full bg-[var(--c-hazard)]" />
           {t("road.panel.activeNow")}
         </span>
@@ -405,7 +501,7 @@ export function RoadLayerInfo({
 
       {id === "traffic-speed" && active && <SpeedLegend />}
       {id === "traffic-speed" && upstream > 0 && (
-        <span className="mt-1.5 block text-[9px] leading-relaxed text-muted">
+        <span className="mt-1.5 block text-[12px] leading-relaxed text-muted">
           {t("road.panel.coverage", { n: upstream.toLocaleString("en-GB") })}
         </span>
       )}
@@ -445,11 +541,18 @@ export function RoadLayerInfo({
           <FilterSelect
             id="filter-ev-power"
             label={t("road.filter.power")}
-            value={filters.minPowerKw != null ? String(filters.minPowerKw) : null}
-            onChange={(value) => onFilterChange({ minPowerKw: value ? Number(value) : null })}
+            value={
+              filters.minPowerKw != null ? String(filters.minPowerKw) : null
+            }
+            onChange={(value) =>
+              onFilterChange({ minPowerKw: value ? Number(value) : null })
+            }
             options={[
               { value: "", label: t("road.filter.allPower") },
-              ...[7.4, 22, 50, 100].map((kw) => ({ value: String(kw), label: `≥ ${kw} kW` })),
+              ...[7.4, 22, 50, 100].map((kw) => ({
+                value: String(kw),
+                label: `≥ ${kw} kW`,
+              })),
             ]}
           />
           <Toggle
@@ -477,7 +580,10 @@ export function RoadLayerInfo({
           onChange={onIncidentRouteChange}
           options={[
             { value: "", label: t("road.filter.allRoutes") },
-            ...routes.map(([route, count]) => ({ value: route, label: `${route} (${count})` })),
+            ...routes.map(([route, count]) => ({
+              value: route,
+              label: `${route} (${count})`,
+            })),
           ]}
         />
       )}

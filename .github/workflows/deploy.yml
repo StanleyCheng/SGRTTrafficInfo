@@ -29,6 +29,8 @@ jobs:
         run: npm ci
       - name: Verify source
         run: npm run verify
+      - name: Test feed status
+        run: npm test
       - name: Setup Pages
         id: pages
         uses: actions/configure-pages@v5

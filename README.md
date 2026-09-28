@@ -72,27 +72,29 @@ particular street), with the limitation stated in the panel.
 
 ### Static GitHub Pages behaviour
 
-Static hosting has no server-side credential proxy, so it never ships the private DataMall key or
-attempts a credentialed browser request. All nine driver layers are still listed — on desktop and on
-the phone rail — but marked *Available in the server-hosted app* and shown without counts, rather
-than being hidden. Because the camera layers are no longer on by default either, a static build opens
-on an empty map until a layer is switched on; the keyless live traffic-image mirror still works.
+Static hosting has no server-side credential proxy and never ships the private DataMall key.
+It loads a saved official road-condition snapshot, split into one file per layer. A persistent
+**Cached copy** label shows the original snapshot date on desktop and phone; these road conditions
+must not be interpreted as current traffic. Layers 1–2 still start on and the camera layers start off.
+Traffic images use the keyless data.gov.sg feed and refresh while that layer is visible.
 
 ### Phone and desktop controls
 
-- **Phone:** the layer control is a rail of coloured icons docked at the bottom of the window, listing
-  all nine driver layers and the three camera layers. Hovering (or focusing) an icon shows a shared
-  tooltip bubble above the rail with the layer name and what it does — one bubble, because a bubble
-  anchored to a single icon in a two-row rail is either clipped or hidden behind the next row.
-  Tapping an icon **toggles** that layer — always, including a layer with settings, which opens its
-  filters alongside the toggle rather than behind a second switch. A failing feed opens a popup with
-  the reason and Retry. The rail retracts while a detail card is open.
-- **Desktop:** one floating card, grouped into live road conditions, the route-aware extras, and
-  camera locations; it collapses to a single chip. Every driver row is numbered (#1–#9) in the agreed
-  priority order and names the official feed behind it.
+- **Both layouts:** icons toggle visibility; the short labels beneath them independently open
+  details, legends and filters. Opening the incident filter never disables the default-on layer.
+  The rail groups live conditions, trip planning and cameras; the phone version scrolls horizontally
+  with a swipe cue. Both versions collapse to a chip that retains data freshness.
+- **Browse visible layers:** a searchable, paginated text list provides a keyboard-accessible way to
+  select a camera or road record, including reports with no published coordinates. Map and list use
+  the same property filters. Escape dismisses details and returns focus to the selecting control.
+- **Feed failures:** an actionable summary appears first. Raw upstream diagnostics live in a
+  disclosure; missing deployment credentials offer available cameras instead of an ineffective Retry.
+- **Sources:** a native modal contains the nine road-layer sources and three camera-layer sources,
+  with keyboard focus containment, Escape dismissal and focus return.
 - **Default view:** driver layers 1 (live congestion) and 2 (accidents & breakdowns) are on; layers
   3–9 and all three camera layers are off, in every build.
-- **Top bar:** click it to retract to the app icon, which keeps its exact position, click again to restore.
+- **Top bar:** the app-icon button retracts the header and restores it in the same position. The
+  language, basemap and source buttons remain independent keyboard controls.
 
 ## Data sources (all official, no mock data)
 
@@ -135,12 +137,13 @@ in the browser; neither basemap needs configuration or an API key.
 | `npm run build` / `npm start` | production build / serve (server mode) |
 | `npm run build:static` | static export for GitHub Pages → `out/` |
 | `npm run verify` | lint + type check (what CI runs before deploying) |
+| `npm test` | regression tests for capture dates and actionable feed errors |
 | `npm run lint` / `npm run typecheck` | individually |
 | `node scripts/smoke.mjs [url]` | end-to-end browser checks via Chrome DevTools Protocol (screenshots → `.cache/screens/`) |
 
 ### Deployment
 
-`.github/workflows/deploy.yml` runs `npm ci` → `npm run verify` → `npm run build:static` and
+`.github/workflows/deploy.yml` runs `npm ci` → `npm run verify` → `npm test` → `npm run build:static` and
 publishes `out/` to GitHub Pages on every push to `main`. The static build bakes the camera
 datasets into `public/data/cameras.json` from `src/data/cameras-seed.json`, temporarily moves
 `src/app/api` aside (route handlers are incompatible with `output: 'export'`) and sets the
@@ -155,8 +158,9 @@ git commit -am "Refresh camera data snapshot" && git push
 ```
 
 `scripts/smoke.mjs` drives a real Chrome/Edge (set `CHROME_PATH` if none is found). Run it
-against `npm run dev` for the full suite (22 checks, including marker clicks, the phone layer rail
-and the default layer state); against a production server the marker checks are skipped because the
+against `npm run dev` for the full suite, including marker clicks, record selection, keyboard
+focus return, the phone layer rail and the default layer state. Against a production server
+the marker checks are skipped because the
 `window.__map` debug handle is dev-only.
 
 ## Data pipeline notes
@@ -166,7 +170,7 @@ and the default layer state); against a production server the marker checks are 
   the background. `GET /api/cameras?refresh=1` forces a re-download; a cold refresh takes
   ~60–70 s because data.gov.sg allows about one anonymous request every 10 s.
 - Live traffic images come from LTA DataMall (`Traffic-Imagesv2`), cached 45 s and polled by
-  the client every 60 s. The feed itself drives snapshot marker IDs, locations and counts,
+  the client every 60 s while the image layer and browser tab are visible. The feed itself drives snapshot marker IDs, locations and counts,
   so static deployments follow camera additions/removals without rebuilding. Cached signed
   image URLs are discarded before their documented 15-minute expiry.
 - Live driver overlays use eleven credentialled LTA DataMall feeds plus four keyless data.gov.sg
@@ -180,6 +184,7 @@ endpoints.
   reports `partial`, links to the official table and shows no amount. No official per-road
   speed-limit dataset is published, so only the statutory zone limits are shown.
 - The HDB carpark gantry-height table and the LTA gantry/zones GeoJSON are keyless data.gov.sg
-datasets shared by both server and static builds, but the overlays themselves are server-only.
+datasets shared by both server and static builds. Static road overlays use a saved snapshot;
+server-mode road polling pauses when the browser tab is hidden or all road layers are off.
 - Reset the cache with `rm -rf .cache`; re-seed the bundled snapshot with
   `cp .cache/cameras.json src/data/cameras-seed.json`.

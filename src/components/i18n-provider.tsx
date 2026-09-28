@@ -1,6 +1,13 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { translate, type StringKey } from "@/lib/i18n";
 import type { Lang } from "@/lib/types";
 
@@ -19,8 +26,18 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const fromUrl = new URLSearchParams(window.location.search).get("lang");
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    const initial: Lang = fromUrl === "zh" || fromUrl === "en" ? fromUrl : stored === "zh" ? "zh" : "en";
+    let stored: string | null = null;
+    try {
+      stored = window.localStorage.getItem(STORAGE_KEY);
+    } catch {
+      /* private mode */
+    }
+    const initial: Lang =
+      fromUrl === "zh" || fromUrl === "en"
+        ? fromUrl
+        : stored === "zh"
+          ? "zh"
+          : "en";
     // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time read of the persisted language after hydration
     setLangState(initial);
   }, []);
