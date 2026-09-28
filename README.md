@@ -87,6 +87,7 @@ Traffic images use the keyless data.gov.sg feed and refresh while that layer is 
   The row scrolls horizontally, with a chevron indicating more controls. Browse, Reset and
   Collapse are icon controls in the same row; Options and data status stay reachable while scrolling.
   The collapsed dock retains the data-status icon, which explains feed health and capture dates.
+  On phones the expanded dock spans the available width, with map controls and attribution above it.
 - **Browse visible layers:** a searchable, paginated text list provides a keyboard-accessible way to
   select a camera or road record, including reports with no published coordinates. Map and list use
   the same property filters. Escape dismisses details and returns focus to the selecting control.
@@ -99,6 +100,7 @@ Traffic images use the keyless data.gov.sg feed and refresh while that layer is 
 - **Top bar:** the app-icon button retracts the header and restores it in the same position. The
   language, basemap and source buttons remain independent keyboard controls. On phones the header
   stays on one row: logo, short title, one EN/中 language toggle, and icon-only basemap/Sources buttons.
+  Both languages keep the Chinese title's bar width and the three action buttons aligned to its right.
 
 ## Data sources (all official, no mock data)
 

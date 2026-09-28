@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useI18n } from "@/components/i18n-provider";
 import type { BasemapId } from "@/components/MapView";
-import { LANGS } from "@/lib/i18n";
+import { LANGS, translate } from "@/lib/i18n";
 import { MapIcon } from "./icons";
 
 export interface AppHeaderProps {
@@ -114,7 +114,14 @@ export function AppHeader({
           <LogoMark />
         </button>
         <h1 className="atlas-wordmark min-w-0 truncate font-display text-[17px] leading-tight text-ink sm:text-[23px]">
-          <span className="sm:hidden">{t("app.short")}</span>
+          <span className="inline-grid sm:hidden">
+            {/* Reserve the Chinese title's width in both languages, without
+                exposing a second title to assistive technology. */}
+            <span aria-hidden="true" className="invisible col-start-1 row-start-1">
+              {translate("zh", "app.short")}
+            </span>
+            <span className="col-start-1 row-start-1">{t("app.short")}</span>
+          </span>
           <span className="hidden sm:inline">{t("app.title")}</span>
         </h1>
       </div>

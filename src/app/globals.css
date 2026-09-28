@@ -825,9 +825,12 @@ button,
 }
 
 @media (max-width: 639px) {
+  .maplibregl-map .maplibregl-ctrl-bottom-right {
+    /* 72 px dock + 10 px bottom inset + 8 px breathing room. */
+    bottom: 90px;
+  }
   .maplibregl-ctrl-attrib.maplibregl-compact {
-    /* Clear the docked phone layer rail so the OSM attribution stays visible. */
-    margin: 0 4px 76px 0 !important;
+    margin: 0 4px 0 0 !important;
   }
 }
 
@@ -976,16 +979,15 @@ button,
 @media (max-width: 639px) {
   .atlas-app-header { flex-wrap: nowrap; gap: 8px; }
   .atlas-header-identity { flex: 1; gap: 8px; }
-  .atlas-header-actions { gap: 4px; }
+  .atlas-header-actions { justify-content: flex-end; gap: 4px; }
   .atlas-language-toggle { display: grid; font-size: 12px; font-weight: 700; }
   .atlas-basemap-button { min-width: 44px; width: 44px; padding: 0; }
-  .atlas-layers-phone { width: calc(100vw - 68px); }
   .atlas-layers-phone .atlas-rail { gap: 8px; }
   .atlas-rail-popup { max-height: min(60dvh, calc(100dvh - 170px)); }
   .atlas-layers-collapsed .atlas-rail-popup,
   .atlas-layers-collapsed .atlas-rail-hint {
     left: 0;
-    width: calc(100vw - 68px);
+    width: calc(100vw - 16px);
     transform: none;
   }
 }

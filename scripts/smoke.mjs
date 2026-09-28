@@ -266,8 +266,16 @@ async function main() {
     const buttons = [...dock.querySelectorAll('.atlas-rail button, [data-testid="layer-options"], [data-testid="data-status"]')];
     const boxes = buttons.map(b => b.getBoundingClientRect());
     const centres = boxes.map(r => r.y + r.height / 2);
+    const box = dock.getBoundingClientRect();
+    const parent = dock.parentElement;
+    const parentBox = parent.getBoundingClientRect();
+    const style = getComputedStyle(parent);
+    const left = parentBox.left + parseFloat(style.paddingLeft);
+    const right = parentBox.right - parseFloat(style.paddingRight);
     return {
-      height: dock.getBoundingClientRect().height,
+      height: box.height,
+      width: box.width,
+      fillsRow: Math.abs(box.left - left) <= 1 && Math.abs(box.right - right) <= 1,
       rowSpread: Math.max(...centres) - Math.min(...centres),
       targets: boxes.every(r => r.width >= 44 && r.height >= 44),
       noLabels: !dock.querySelector('.atlas-rail-label, .atlas-group-name, .atlas-layer-toolbar, footer'),
@@ -1239,8 +1247,12 @@ async function main() {
       const buttons = [...header.querySelectorAll('button')].map(b => b.getBoundingClientRect()).filter(r => r.width > 0 && r.height > 0);
       const centres = buttons.map(r => r.y + r.height / 2);
       const title = header.querySelector('h1');
-      return {height: box.height, width: box.width, rowSpread: Math.max(...centres) - Math.min(...centres), fits: box.left >= 0 && box.right <= innerWidth, targets: buttons.every(r => r.width >= 44 && r.height >= 44), titleFits: title.scrollWidth <= title.clientWidth + 1};
+      const actions = [...header.querySelectorAll('.atlas-header-actions button')].map(b => b.getBoundingClientRect()).filter(r => r.width > 0 && r.height > 0);
+      const style = getComputedStyle(header);
+      const inset = parseFloat(style.paddingRight) + parseFloat(style.borderRightWidth);
+      return {height: box.height, width: box.width, rowSpread: Math.max(...centres) - Math.min(...centres), fits: box.left >= 0 && box.right <= innerWidth, targets: buttons.every(r => r.width >= 44 && r.height >= 44), titleFits: title.scrollWidth <= title.clientWidth + 1, actionLefts: actions.map(r => r.left), actionsRightAligned: Math.abs(box.right - actions.at(-1).right - inset) <= 1};
     })()`);
+    const mobileHeaders = {};
     for (const lang of ["en", "zh"]) {
       if (
         (await evaluate("document.documentElement.lang")) !==
@@ -1248,16 +1260,27 @@ async function main() {
       )
         await touchTap('[data-testid="mobile-language-toggle"]');
       const header = await headerGeometry();
+      mobileHeaders[lang] = header;
       check(
         `iPhone 16 Pro Max header fits one row (${lang})`,
         header.height <= 68 &&
           header.rowSpread <= 1 &&
           header.fits &&
           header.targets &&
-          header.titleFits,
+          header.titleFits &&
+          header.actionLefts.length === 3 &&
+          header.actionsRightAligned,
         JSON.stringify(header),
       );
     }
+    check(
+      "mobile header keeps the Chinese width and right-aligned buttons in both languages",
+      Math.abs(mobileHeaders.en.width - mobileHeaders.zh.width) <= 1 &&
+        mobileHeaders.en.actionLefts.every(
+          (left, index) => Math.abs(left - mobileHeaders.zh.actionLefts[index]) <= 1,
+        ),
+      JSON.stringify(mobileHeaders),
+    );
     await touchTap('[data-testid="mobile-language-toggle"]');
     check(
       "mobile language toggle does not collapse the header",
@@ -1273,6 +1296,25 @@ async function main() {
         phoneDock.targets &&
         phoneDock.noLabels,
       JSON.stringify(phoneDock),
+    );
+    check(
+      "phone dock occupies the entire available row",
+      phoneDock.fillsRow,
+      JSON.stringify(phoneDock),
+    );
+    const mapControls = await evaluate(`(() => {
+      const dock = document.querySelector('.atlas-layers').getBoundingClientRect();
+      const controls = [...document.querySelectorAll('.maplibregl-ctrl-bottom-right > .maplibregl-ctrl')].map(el => el.getBoundingClientRect()).filter(r => r.width > 0 && r.height > 0);
+      const targets = [...document.querySelectorAll('.maplibregl-ctrl-bottom-right button, .maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib-button')].filter(el => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; });
+      return {count: controls.length, gap: dock.top - Math.max(...controls.map(r => r.bottom)), visible: controls.every(r => r.top >= 0 && r.right <= innerWidth), reachable: targets.every(el => { const r = el.getBoundingClientRect(); const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2); return el === hit || el.contains(hit); })};
+    })()`);
+    check(
+      "phone map controls and attribution remain above the full-width dock and reachable",
+      mapControls.count === 3 &&
+        mapControls.gap >= 8 &&
+        mapControls.visible &&
+        mapControls.reachable,
+      JSON.stringify(mapControls),
     );
     const swipe = await evaluate(`(() => {
       const rail = document.querySelector('.atlas-rail-scroll'); const box = rail.getBoundingClientRect();
@@ -1536,6 +1578,7 @@ async function main() {
           dock.height < 90 &&
           dock.rowSpread <= 2 &&
           dock.targets &&
+          (width >= 640 || dock.fillsRow) &&
           (await evaluate(
             "document.documentElement.scrollWidth <= innerWidth",
           )),

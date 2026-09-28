@@ -61,8 +61,10 @@ shimmer for loading, 200 ms colour/transform transitions on controls. Everything
   right-hand gutter (`calc(100vw - 150px)` at its widest) so the single-row icon dock scrolls instead of
   painting over the zoom/geolocate controls, and it retracts while a detail card is open.
 - Phone: header pinned to the top, the layer control is a **rail of coloured icons docked at the
-  bottom of the window**, listing all twelve layers in every build. Both platforms use one
-  icon-only row: no visible group headings, layer labels, action labels or status strip. A layer
+  bottom of the window**, spanning the available width with 8 px side insets and listing all twelve
+  layers in every build. Map controls and attribution sit above the full-width dock, not beside it.
+  Both platforms use one icon-only row: no visible group headings, layer labels, action labels or
+  status strip. A layer
   the running build cannot reach is still listed, and its tooltip reports unavailability.
   Hovering or focusing an icon shows **one shared tooltip bubble above the rail**; tapping toggles
   visibility and briefly shows the layer name, state, count and description, without opening a popup.
@@ -81,7 +83,9 @@ shimmer for loading, 200 ms colour/transform transitions on controls. Everything
   sliver; controls inside it use `.tip-below` so their bubbles open downwards. The header is not
   an interactive wrapper: each control owns its keyboard activation.
   On phones it stays strictly one row with the logo, short title, one EN/中 language toggle,
-  icon-only basemap and Sources controls. Titles can truncate on unusually narrow screens;
+  icon-only basemap and Sources controls. Both languages reserve the Chinese short title's width,
+  so switching language never resizes the bar or shifts its three right-aligned action buttons.
+  Titles can truncate on unusually narrow screens;
   controls retain 44 px targets and the full title fits the iPhone 16 Pro Max portrait viewport.
 - Floating cards use `.panel` (96% ivory surface + 16 px blur + hairline + shadow) and one
   of two radii: card `20px`, control `12px`. Inset layer cards use `14px`. Cards never position themselves — the parent
