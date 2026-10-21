@@ -36,8 +36,17 @@ import {
 } from "./layer-ui";
 import { FeedIssue, FeedStatus } from "./feed-status";
 import { FeatureList } from "./feature-list";
+import { isTransitMode, TRANSIT_ICONS, TRANSIT_MODES, type TransitActive, type TransitMode, type TransitVehicle } from "@/lib/transit";
+import type { TransitState } from "@/hooks/use-transit";
+import { TransitOptions, VehicleArtwork } from "./transit-ui";
 
 export interface LayerPanelProps {
+  transit: TransitState;
+  transitActive: TransitActive;
+  onTransitToggle: (mode: TransitMode) => void;
+  selectedTransitRoute: string | null;
+  onTransitRoute: (id: string | null) => void;
+  onTransitVehicle: (vehicle: TransitVehicle) => void;
   layers: LayerInfo[] | null;
   points: CameraPoint[];
   active: Record<LayerId, boolean>;
@@ -66,7 +75,7 @@ export interface LayerPanelProps {
   className?: string;
 }
 
-type EntryId = LayerId | RoadLayerId;
+type EntryId = LayerId | RoadLayerId | TransitMode;
 const HINT_ID = "atlas-layer-hint";
 const POPUP_ID = "atlas-layer-details";
 const GUIDE_ID = "atlas-layer-guide";
@@ -74,6 +83,7 @@ const GUIDE_ID = "atlas-layer-guide";
 interface Entry {
   id: EntryId;
   name: string;
+  label: string;
   note: string;
   color: string;
   on: boolean;
@@ -84,6 +94,12 @@ interface Entry {
 }
 
 export function LayerPanel({
+  transit,
+  transitActive,
+  onTransitToggle,
+  selectedTransitRoute,
+  onTransitRoute,
+  onTransitVehicle,
   layers,
   points,
   active,
@@ -130,6 +146,7 @@ export function LayerPanel({
     roadConditions && (STATIC_MODE || roadConditions.status === "stale"),
   );
   const anyOn =
+    Object.values(transitActive).some(Boolean) ||
     Object.values(active).some(Boolean) ||
     Object.values(roadActive).some(Boolean);
   const groups = [
@@ -155,6 +172,11 @@ export function LayerPanel({
             ? `road.layer.${def.id as RoadLayerId}.name`
             : `layer.${def.id as LayerId}.name`,
         ),
+        label: t(
+          road
+            ? `road.layer.${def.id as RoadLayerId}.label`
+            : `layer.${def.id as LayerId}.label`,
+        ),
         note: t(
           road
             ? `road.layer.${def.id as RoadLayerId}.note`
@@ -172,6 +194,12 @@ export function LayerPanel({
       };
     }),
   );
+  entries.splice(ROAD_LAYER_ORDER.length, 0, ...TRANSIT_MODES.map((id): Entry => ({
+    id, name: t(`transit.${id}.name`), label: t(`transit.${id}.label`), note: t(`transit.${id}.note`),
+    color: `var(--c-${id})`, on: transitActive[id],
+    count: transit.catalog ? transit.catalog.routes.filter((route) => route.mode === id).length : null,
+    unavailable: false,
+  })));
   const current = entries.find((entry) => entry.id === open);
   const selected = entries.find((entry) => entry.id === selectedEntry)!;
   const status = roadFeedStatus(
@@ -201,6 +229,18 @@ export function LayerPanel({
     },
     [],
   );
+  useEffect(() => {
+    if (!mobile || !hint) return;
+    const dismissOutsideHint = (event: globalThis.PointerEvent) => {
+      if (
+        event.target instanceof Node &&
+        !panelRef.current?.contains(event.target)
+      )
+        setHint(null);
+    };
+    document.addEventListener("pointerdown", dismissOutsideHint);
+    return () => document.removeEventListener("pointerdown", dismissOutsideHint);
+  }, [mobile, hint]);
   useEffect(() => {
     const rail = railRef.current;
     if (!rail) return;
@@ -247,8 +287,8 @@ export function LayerPanel({
   const handlePointerEnter = (event: PointerEvent<HTMLButtonElement>) => {
     if (event.pointerType !== "touch") hintForTarget(event.currentTarget);
   };
-  const handlePointerLeave = () => {
-    if (!hintTimer.current) setHint(null);
+  const handlePointerLeave = (event: PointerEvent<HTMLButtonElement>) => {
+    if (event.pointerType !== "touch" && !hintTimer.current) setHint(null);
   };
   const handleFocus = (event: FocusEvent<HTMLButtonElement>) => {
     const target = event.currentTarget;
@@ -280,10 +320,10 @@ export function LayerPanel({
         ? t("status.error")
         : t(entry.on ? "panel.visible" : "panel.hidden"),
       entry.count != null
-        ? `${entry.count} ${t(entry.info ? "common.reports" : UNIT[entry.id as LayerId])}`
+        ? `${entry.count} ${t(isTransitMode(entry.id) ? "transit.routes" : entry.info ? "common.reports" : UNIT[entry.id as LayerId])}`
         : entry.unavailable
           ? ""
-          : t("status.loading"),
+          : t(isTransitMode(entry.id) && !entry.on ? "transit.notLoaded" : "status.loading"),
       entry.note,
       entry.info?.sources.map((source) => source.name).join(" · "),
     ]
@@ -363,7 +403,14 @@ export function LayerPanel({
                 setMore(
                   rail.scrollLeft + rail.clientWidth < rail.scrollWidth - 4,
                 );
-                clearHint();
+                const focused = document.activeElement;
+                if (
+                  focused instanceof HTMLButtonElement &&
+                  rail.contains(focused) &&
+                  focused.matches(":focus-visible")
+                )
+                  hintForTarget(focused);
+                else clearHint();
               }}
             >
               <ul className="atlas-rail">
@@ -385,7 +432,7 @@ export function LayerPanel({
                       data-error={entry.unavailable}
                       data-selected={selectedEntry === entry.id}
                       aria-pressed={entry.on}
-                      aria-label={`${entry.name} · ${entry.unavailable ? t("status.error") : entry.count != null ? `${entry.count} ${t(entry.info ? "common.reports" : UNIT[entry.id as LayerId])}` : t("status.loading")}`}
+                      aria-label={`${entry.label}${entry.label === entry.name ? "" : ` · ${entry.name}`} · ${entry.unavailable ? t("status.error") : entry.count != null ? `${entry.count} ${t(isTransitMode(entry.id) ? "transit.routes" : entry.info ? "common.reports" : UNIT[entry.id as LayerId])}` : t("status.loading")}`}
                       {...tooltipProps(entry.id, describe(entry))}
                       onPointerEnter={handlePointerEnter}
                       onPointerLeave={handlePointerLeave}
@@ -395,7 +442,8 @@ export function LayerPanel({
                         setSelectedEntry(entry.id);
                         setOpen(null);
                         if (!entry.unavailable || entry.on) {
-                          if (
+                          if (isTransitMode(entry.id)) onTransitToggle(entry.id);
+                          else if (
                             ROAD_LAYER_ORDER.includes(entry.id as RoadLayerId)
                           )
                             onRoadToggle(entry.id as RoadLayerId);
@@ -408,15 +456,16 @@ export function LayerPanel({
                             on: entry.unavailable ? entry.on : !entry.on,
                           }),
                           event.currentTarget,
-                          true,
+                          !mobile,
                         );
                       }}
                     >
-                      <AnyLayerGlyph
+                      {isTransitMode(entry.id) ? <VehicleArtwork name={TRANSIT_ICONS[entry.id]} className="atlas-transit-glyph" /> : <AnyLayerGlyph
                         id={entry.id}
                         color={entry.color}
                         size={22}
-                      />
+                      />}
+                      <span className="atlas-rail-label">{entry.label}</span>
                       <span className="atlas-rail-count num">
                         {entry.count ?? "—"}
                       </span>
@@ -610,6 +659,8 @@ export function LayerPanel({
                     : ""}
               </p>
             </>
+          ) : isTransitMode(open) ? (
+            <TransitOptions mode={open} state={transit} selectedRouteId={selectedTransitRoute} onRoute={onTransitRoute} onVehicle={onTransitVehicle} />
           ) : (
             current && (
               <>

@@ -1,18 +1,17 @@
-name: Deploy to GitHub Pages
+name: Verify application
 
 on:
   push:
     branches: ["main"]
+  pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
-  group: "pages"
-  cancel-in-progress: false
+  group: "verify-${{ github.ref }}"
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -29,28 +28,7 @@ jobs:
         run: npm ci
       - name: Verify source
         run: npm run verify
-      - name: Test feed status
+      - name: Test feed and transit behaviour
         run: npm test
-      - name: Setup Pages
-        id: pages
-        uses: actions/configure-pages@v5
-      - name: Static export build
-        # The base path comes from Pages itself, so renaming the repository can
-        # never leave the deploy serving assets from a path that no longer exists.
-        env:
-          BASE_PATH: ${{ steps.pages.outputs.base_path }}
-        run: npm run build:static
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: "out"
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Deploy to GitHub Pages
-        uses: actions/deploy-pages@v4
-        id: deployment
+      - name: Production build
+        run: npm run build

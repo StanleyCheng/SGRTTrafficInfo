@@ -25,6 +25,9 @@ import type {
   RoadLayerId,
 } from "@/lib/types";
 import { useI18n } from "./i18n-provider";
+import { applyMapMode, type MapMode } from "./map-3d";
+import { renderTransit } from "./transit-map";
+import type { TransitViewport } from "@/lib/transit";
 
 const TILES = ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"];
 const POSITRON_STYLE_URL = "https://tiles.openfreemap.org/styles/positron";
@@ -34,7 +37,7 @@ export type BasemapId = "osm" | "positron";
 /** Default and fallback style, so a failed Positron request never leaves the map blank. */
 const OSM_STYLE = {
   version: 8 as const,
-  glyphs: "https://fonts.openmaptiles.org/{fontstack}/{range}.pbf",
+  glyphs: "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf",
   sources: {
     basemap: {
       type: "raster" as const,
@@ -94,6 +97,9 @@ export interface MapFocus {
 
 export interface MapViewProps {
   basemap?: BasemapId;
+  mapMode?: MapMode;
+  transit: Parameters<typeof renderTransit>[1];
+  onViewportChange: (viewport: TransitViewport) => void;
   points: CameraPoint[];
   active: Record<LayerId, boolean>;
   selectedId: string | null;
@@ -112,6 +118,9 @@ export interface MapViewProps {
 
 export default function MapView({
   basemap = "osm",
+  mapMode = "2d",
+  transit,
+  onViewportChange,
   points,
   active,
   selectedId,
@@ -140,6 +149,9 @@ export default function MapView({
   const roadFeaturesById = useRef(new Map<string, RoadConditionFeature>());
   const iso = useRef({ onSelect, onRoadSelect, t, selectedId, selectedRoadId });
   const [ready, setReady] = useState(false);
+  const modeRef = useRef(mapMode);
+  const viewportCallback = useRef(onViewportChange);
+  useEffect(() => { modeRef.current = mapMode; viewportCallback.current = onViewportChange; }, [mapMode, onViewportChange]);
   const pointsMap = useMemo(() => new Map(points.map((p) => [p.id, p])), [points]);
   const roadFeatureMap = useMemo(
     () => new Map(roadFeatures.map((feature) => [feature.id, feature])),
@@ -312,7 +324,7 @@ export default function MapView({
           filter: ["has", "point_count"],
           layout: {
             "text-field": ["get", "point_count_abbreviated"],
-            "text-font": ["Open Sans Semibold"],
+            "text-font": ["Noto Sans Bold"],
             "text-size": 12,
           },
           paint: { "text-color": "#ffffff" },
@@ -466,7 +478,7 @@ export default function MapView({
         "icon-size": ["interpolate", ["linear"], ["zoom"], 9, 0.3, 12, 0.42, 17, 0.6],
         "icon-allow-overlap": true,
         "text-field": ["to-string", ["coalesce", ["get", "availableLots"], 0]],
-        "text-font": ["Open Sans Semibold"],
+        "text-font": ["Noto Sans Bold"],
         "text-size": ["interpolate", ["linear"], ["zoom"], 9, 9, 12, 10, 17, 13],
         "text-anchor": "top",
         "text-offset": [0, 1.2],
@@ -501,7 +513,7 @@ export default function MapView({
           "/",
           ["to-string", ["coalesce", ["get", "totalPoints"], 0]],
         ],
-        "text-font": ["Open Sans Semibold"],
+        "text-font": ["Noto Sans Bold"],
         "text-size": ["interpolate", ["linear"], ["zoom"], 9, 9, 12, 10, 17, 13],
         "text-anchor": "top",
         "text-offset": [0, 1.2],
@@ -580,7 +592,7 @@ export default function MapView({
       minzoom: ZONE_LABEL_MIN_ZOOM,
       layout: {
         "text-field": ["get", "road"],
-        "text-font": ["Open Sans Semibold"],
+        "text-font": ["Noto Sans Bold"],
         "text-size": 11,
         "text-allow-overlap": false,
       },
@@ -726,8 +738,9 @@ export default function MapView({
     });
 
     mapInstance.on("click", (event) => {
+      const transitInteractive = ["transit-route-lines"].filter((id) => Boolean(mapInstance.getLayer(id)));
       const hits = mapInstance.queryRenderedFeatures(event.point, {
-        layers: [...cameraInteractive, ...roadInteractive],
+        layers: [...cameraInteractive, ...roadInteractive, ...transitInteractive],
       });
       if (hits.length === 0) {
         iso.current.onSelect(null);
@@ -773,7 +786,7 @@ export default function MapView({
         (window as unknown as { __map?: MlMap }).__map = mapInstance;
       }
 
-      mapInstance.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
+      mapInstance.addControl(new maplibregl.NavigationControl({ showCompass: true, visualizePitch: true }), "bottom-right");
       mapInstance.addControl(
         new maplibregl.GeolocateControl({
           positionOptions: { enableHighAccuracy: true },
@@ -783,7 +796,16 @@ export default function MapView({
         "bottom-right",
       );
 
-      mapInstance.on("load", () => void addSourcesAndLayers(mapInstance));
+      mapInstance.on("load", () => {
+        applyMapMode(mapInstance, modeRef.current, false);
+        void addSourcesAndLayers(mapInstance);
+        const bounds = mapInstance.getBounds();
+        viewportCallback.current({ west: bounds.getWest(), south: bounds.getSouth(), east: bounds.getEast(), north: bounds.getNorth(), zoom: mapInstance.getZoom() });
+      });
+      mapInstance.on("moveend", () => {
+        const bounds = mapInstance.getBounds();
+        viewportCallback.current({ west: bounds.getWest(), south: bounds.getSouth(), east: bounds.getEast(), north: bounds.getNorth(), zoom: mapInstance.getZoom() });
+      });
     })();
 
     return () => {
@@ -939,6 +961,17 @@ export default function MapView({
     });
   }, [selectedRoadId, roadFeatureMap, roadActive, ready]);
 
+  useEffect(() => {
+    if (map.current?.isStyleLoaded()) {
+      applyMapMode(map.current, mapMode, !window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    }
+  }, [mapMode]);
+
+  useEffect(() => {
+    if (!map.current || !ready) return;
+    return renderTransit(map.current, transit);
+  }, [transit, ready]);
+
   /* ---------------- fly to ---------------- */
   useEffect(() => {
     const mapInstance = map.current;
@@ -965,6 +998,7 @@ export default function MapView({
       role="application"
       aria-label={t("a11y.map")}
       data-basemap={basemap}
+      data-map-mode={mapMode}
       data-testid="map"
     />
   );

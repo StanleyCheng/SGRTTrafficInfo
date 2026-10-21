@@ -272,13 +272,27 @@ async function main() {
     const style = getComputedStyle(parent);
     const left = parentBox.left + parseFloat(style.paddingLeft);
     const right = parentBox.right - parseFloat(style.paddingRight);
+    const labels = [...dock.querySelectorAll('.atlas-rail-label')];
     return {
       height: box.height,
       width: box.width,
       fillsRow: Math.abs(box.left - left) <= 1 && Math.abs(box.right - right) <= 1,
       rowSpread: Math.max(...centres) - Math.min(...centres),
       targets: boxes.every(r => r.width >= 44 && r.height >= 44),
-      noLabels: !dock.querySelector('.atlas-rail-label, .atlas-group-name, .atlas-layer-toolbar, footer'),
+      labelsFit: labels.length === 15 && labels.every(label => {
+        const labelBox = label.getBoundingClientRect();
+        const button = label.closest('button');
+        const buttonBox = button.getBoundingClientRect();
+        const glyphBox = button.querySelector('svg, img').getBoundingClientRect();
+        const lineHeight = parseFloat(getComputedStyle(label).lineHeight);
+        return label.textContent.trim() &&
+          button.getAttribute('aria-label').includes(label.textContent.trim()) &&
+          labelBox.top >= glyphBox.bottom &&
+          labelBox.bottom <= buttonBox.bottom &&
+          labelBox.height <= lineHeight * 2 + 1 &&
+          label.scrollWidth <= label.clientWidth;
+      }),
+      noExtraText: !dock.querySelector('.atlas-group-name, .atlas-layer-toolbar, footer'),
     };
   })()`);
 
@@ -426,15 +440,15 @@ async function main() {
     //     layers 1 and 2 are on.
     const staticMode = mode === "static";
     await waitFor(
-      `document.querySelectorAll('.atlas-rail-icon').length === 12`,
+      `document.querySelectorAll('.atlas-rail-icon').length === 15`,
       90000,
     );
     const railCount = await evaluate(
       "document.querySelectorAll('.atlas-rail-icon').length",
     );
     check(
-      "nine driver layers and three camera layers are listed",
-      railCount === 12,
+      "road, transit and camera layers are listed",
+      railCount === 15,
       `icons=${railCount}${staticMode ? " (static build)" : ""}`,
     );
     const readLayerState = () =>
@@ -452,11 +466,12 @@ async function main() {
     );
     const desktopDock = await dockGeometry();
     check(
-      "desktop dock is a single icon-only row",
-      desktopDock.height < 90 &&
+      "desktop dock is a single row of labelled icons",
+      desktopDock.height <= 104 &&
         desktopDock.rowSpread <= 2 &&
         desktopDock.targets &&
-        desktopDock.noLabels,
+        desktopDock.labelsFit &&
+        desktopDock.noExtraText,
       JSON.stringify(desktopDock),
     );
     check(
@@ -1268,7 +1283,7 @@ async function main() {
           header.fits &&
           header.targets &&
           header.titleFits &&
-          header.actionLefts.length === 3 &&
+          header.actionLefts.length === 4 &&
           header.actionsRightAligned,
         JSON.stringify(header),
       );
@@ -1290,11 +1305,12 @@ async function main() {
     );
     const phoneDock = await dockGeometry();
     check(
-      "phone dock is a single icon-only row",
-      phoneDock.height < 90 &&
+      "phone dock is a single row of labelled icons",
+      phoneDock.height <= 104 &&
         phoneDock.rowSpread <= 2 &&
         phoneDock.targets &&
-        phoneDock.noLabels,
+        phoneDock.labelsFit &&
+        phoneDock.noExtraText,
       JSON.stringify(phoneDock),
     );
     check(
@@ -1358,7 +1374,7 @@ async function main() {
       mobileText.slice(0, 60).replace(/\n/g, " / "),
     );
 
-    // The phone control is a coloured icon rail docked at the bottom. All twelve
+    // The phone control is a coloured icon rail docked at the bottom. All fifteen
     // layers are listed in every build, each with a hover/focus/tap tooltip. Layer
     // taps only toggle visibility; the independent Options icon exposes settings.
     const railIcons = await evaluate(
@@ -1368,9 +1384,9 @@ async function main() {
       `(() => [...document.querySelectorAll('.atlas-rail-icon')].map((b) => b.getAttribute('data-layer')))()`,
     );
     check(
-      "phone rail lists all nine driver layers and three camera layers",
-      railIcons === 12 &&
-        ["traffic-speed", "incidents", "zones", "expressway", "snapshot"].every(
+      "phone rail lists road, transit and camera layers",
+      railIcons === 15 &&
+        ["traffic-speed", "incidents", "zones", "expressway", "bus", "train", "ferry", "snapshot"].every(
           (id) => railLayers.includes(id),
         ),
       `icons=${railIcons}: ${railLayers.join(",")}`,
@@ -1387,10 +1403,11 @@ async function main() {
       `${railIcons} icons`,
     );
     await evaluate(`(() => {
-      const b = document.querySelector('.atlas-rail-icon[data-layer="zones"]');
+      const b = document.querySelector('.atlas-rail-icon[data-layer="ev"]');
       document.querySelector('.atlas-rail-scroll').scrollLeft = 0;
       b.focus();
     })()`);
+    await keyPress("Tab", "Tab", 9);
     await sleep(600);
     const railHint = await evaluate(`(() => {
       const el = document.querySelector('.atlas-rail-hint');
@@ -1456,14 +1473,21 @@ async function main() {
           !railAfter.tip.includes("Loading"),
       );
     check(
-      "a touch tap briefly shows the layer tooltip",
+      "a touch tap shows the full layer tooltip",
       await evaluate(
         `document.querySelector('[role="tooltip"]')?.innerText.includes('Flood alerts') && !document.querySelector('.atlas-rail-popup')`,
       ),
     );
     await sleep(2800);
     check(
-      "tap tooltip expires without opening a popup",
+      "phone tap tooltip stays readable without opening a popup",
+      await evaluate(
+        `document.querySelector('[role="tooltip"]')?.innerText.includes('Flood alerts') && !document.querySelector('.atlas-rail-popup')`,
+      ),
+    );
+    await touchTap("h1");
+    check(
+      "outside tap dismisses the phone tooltip",
       await evaluate(
         `!document.querySelector('[role="tooltip"]') && !document.querySelector('.atlas-rail-popup')`,
       ),
@@ -1533,7 +1557,7 @@ async function main() {
       retracted.icons === 0 &&
         retracted.chip &&
         retracted.status &&
-        restoredIcons === 12,
+        restoredIcons === 15,
       `${JSON.stringify(retracted)} -> ${restoredIcons} icons`,
     );
 
@@ -1575,9 +1599,10 @@ async function main() {
           header.rowSpread <= 1 &&
           header.fits &&
           header.targets &&
-          dock.height < 90 &&
+          dock.height <= 104 &&
           dock.rowSpread <= 2 &&
           dock.targets &&
+          dock.labelsFit &&
           (width >= 640 || dock.fillsRow) &&
           (await evaluate(
             "document.documentElement.scrollWidth <= innerWidth",

@@ -58,16 +58,20 @@ shimmer for loading, 200 ms colour/transform transitions on controls. Everything
 
 - Desktop: map fills the viewport; mint header top-left, detail card top-right, MapLibre
   controls bottom-right, and the **layer rail docked bottom-centre**. The dock reserves a
-  right-hand gutter (`calc(100vw - 150px)` at its widest) so the single-row icon dock scrolls instead of
+  right-hand gutter (`calc(100vw - 150px)` at its widest) so the single-row labelled dock scrolls instead of
   painting over the zoom/geolocate controls, and it retracts while a detail card is open.
 - Phone: header pinned to the top, the layer control is a **rail of coloured icons docked at the
   bottom of the window**, spanning the available width with 8 px side insets and listing all twelve
   layers in every build. Map controls and attribution sit above the full-width dock, not beside it.
-  Both platforms use one icon-only row: no visible group headings, layer labels, action labels or
-  status strip. A layer
+  Both platforms use one horizontally scrolling row of icons with short, persistent captions below
+  them. Captions follow the EN/中 language switch, use at most two lines, and stay inside the same
+  visibility-toggle button as the icon. Full names remain in tooltips and details. Utility buttons
+  stay icon-only; no group headings, action labels or status strip are added. A layer
   the running build cannot reach is still listed, and its tooltip reports unavailability.
   Hovering or focusing an icon shows **one shared tooltip bubble above the rail**; tapping toggles
-  visibility and briefly shows the layer name, state, count and description, without opening a popup.
+  visibility and shows the full layer name, state, count and description, without opening a popup.
+  On phones this tap hint stays until the next layer selection, scroll, outside tap, or Options action,
+  so reading descriptions never requires hover. Desktop tap feedback is brief.
   The pinned Options icon opens the last-tapped layer's details, filters, legends or summaries.
   Opening Options never changes visibility. Browse, Reset and Collapse are icons in the scrolling
   row; Options and data status are pinned at its edge. Closing a popup returns focus to its trigger.
@@ -135,7 +139,8 @@ shimmer for loading, 200 ms colour/transform transitions on controls. Everything
 
 - The dock preserves the live conditions, trip planning and camera order, separated by small
   spacing breaks. It scrolls horizontally without wrapping, and its chevron signals more controls.
-  All layer and utility actions have at least 44 px touch targets.
+  All layer and utility actions have at least 44 px touch targets. Phone map controls and attribution
+  clear the taller labelled dock using its shared height tokens.
 - A persistent data-status icon retains feed health through its color, tooltip and accessible name;
   tapping it opens capture dates and actionable feed issues. Static deployments identify their
   saved snapshot as a cached copy. Status remains available even when the dock is collapsed.

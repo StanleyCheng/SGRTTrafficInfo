@@ -6,10 +6,13 @@ import { useI18n } from "@/components/i18n-provider";
 import type { BasemapId } from "@/components/MapView";
 import { LANGS, translate } from "@/lib/i18n";
 import { MapIcon } from "./icons";
+import type { MapMode } from "./map-3d";
 
 export interface AppHeaderProps {
   basemap?: BasemapId;
   onToggleBasemap?: () => void;
+  mapMode?: MapMode;
+  onToggleMapMode?: () => void;
   onOpenSources: () => void;
   className?: string;
 }
@@ -58,6 +61,8 @@ function SourcesIcon() {
 export function AppHeader({
   basemap = "osm",
   onToggleBasemap,
+  mapMode = "2d",
+  onToggleMapMode,
   onOpenSources,
   className = "",
 }: AppHeaderProps) {
@@ -177,6 +182,19 @@ export function AppHeader({
           ))}
         </div>
 
+        {onToggleMapMode && (
+          <button
+            type="button"
+            onClick={onToggleMapMode}
+            aria-pressed={mapMode === "3d"}
+            aria-label={t(mapMode === "2d" ? "map.switchTo3d" : "map.switchTo2d")}
+            data-testid="map-mode-toggle"
+            data-tip={t(mapMode === "2d" ? "map.switchTo3d" : "map.switchTo2d")}
+            className="tip tip-below atlas-icon-button atlas-map-mode"
+          >
+            {mapMode === "2d" ? "3D" : "2D"}
+          </button>
+        )}
         {onToggleBasemap && (
           <button
             type="button"

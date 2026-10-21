@@ -12,6 +12,11 @@ const staticExport = process.env.STATIC_EXPORT === "1";
 const basePath = process.env.BASE_PATH ?? "/SGRTTrafficInfo";
 
 const nextConfig: NextConfig = {
+  // The transit handler validates stops from this runtime catalogue. Explicit
+  // tracing also makes it available inside Vercel's serverless function bundle.
+  outputFileTracingIncludes: {
+    "/api/transit": ["./public/transit/catalog.json"],
+  },
   ...(staticExport && {
     output: "export" as const,
     basePath,

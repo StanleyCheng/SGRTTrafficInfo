@@ -1,0 +1,627 @@
+{
+  "schemaVersion": 1,
+  "createdDate": "2026-10-22",
+  "purpose": "Representative researched Singapore public-transport 3D cutout sprites for SGRTTrafficInfo. Vehicle livery is separate from map route identity.",
+  "limitations": [
+    "Generated illustrations are representative fleet/type symbols, not photographs or proof of the actual vehicle serving a trip.",
+    "Bus and rail fleets include other liveries and models; feed type/line alone does not identify a precise unit.",
+    "Ferry icons represent their named service or photographed vessel type; privately managed bumboats and other domestic operators may use different shapes and liveries.",
+    "These fixed-view PNG sprites are not interactive 3D models. All source photos are references only and are not redistributed here.",
+    "Model version is not exposed by the built-in ImageGen tool; no specific model version is claimed."
+  ],
+  "assets": [
+    {
+      "id": "bus-single-deck",
+      "file": "bus-single-deck.png",
+      "publicPath": "/transit/bus-single-deck.png",
+      "label": "Singapore single-deck public bus",
+      "representative": true,
+      "description": "LTA Mercedes-Benz Citaro shape; representative bus type, not exact unit",
+      "observedLivery": "Lush green low-floor bus with dark glazing and silver trim",
+      "referenceSources": [
+        {
+          "title": "LTA unified bus livery and official single-deck photograph",
+          "url": "https://www.lta.gov.sg/content/ltagov/en/who_we_are/our_work/public_transport_system/bus/upgrading_bus_fleets.html"
+        },
+        {
+          "title": "LTA green single-deck bus photo",
+          "url": "https://www.lta.gov.sg/content/ltagov/en/who_we_are/our_work/public_transport_system/bus/upgrading_bus_fleets/_jcr_content/par/textimage/image.img.jpg/1567021859490.jpg"
+        }
+      ],
+      "generation": {
+        "tool": "built-in ImageGen",
+        "model": "not exposed by tool",
+        "transparentBackgroundRequested": true,
+        "prompt": "Use case: stylized-concept\nAsset type: transparent PNG sprite for a Singapore public transport map; isolated single vehicle, recognisable at 40 pixels.\nStyle/medium: precise, polished miniature 3D product render, restrained realistic materials, clean simplified details, crisp silhouette. Orthographic isometric three-quarter view from above. Entire vehicle visible, centred, filling about 82% of a square canvas with safe padding. Every vehicle in this set must point toward the upper-right/northeast: its FRONT at upper-right, rear at lower-left. Show roof, front, and near side. Soft neutral lighting within the object only.\nScene/backdrop: genuinely transparent alpha background, empty cutout. No floor, platform, road, track, water, wake, scenery, people, drop shadow, cast shadow, title, caption, legend, border or watermark. No legible logos, route numbers or signage; retain livery colours and physical proportions. Preserve opaque white paint; only empty space is transparent.\nSubject: one representative Singapore public single-deck bus, with the recognisable boxy Mercedes-Benz Citaro low-floor shape seen in LTA's official green-bus photograph: https://www.lta.gov.sg/content/ltagov/en/who_we_are/our_work/public_transport_system/bus/upgrading_bus_fleets/_jcr_content/par/textimage/image.img.jpg/1567021859490.jpg . Lush lime-green opaque body, one long row of near-black side windows, tall almost-flat black front windshield, slim pale-silver front surround above a green bumper, black window pillars, rectangular white headlights at lower corners, two axles with black tyres and small silver wheel hubs, grey roof HVAC unit, black wing mirrors. Singapore left-hand traffic bus, passenger doors on left side. No advertisement. IMPORTANT CAMERA: front at the UPPER-RIGHT of square, rear at LOWER-LEFT; long axis ascends from left to right. One deck only."
+      },
+      "format": {
+        "width": 256,
+        "height": 256,
+        "channels": "RGBA",
+        "paddingPx": 16,
+        "maxSourceCanvasPx": 224,
+        "headingNote": "Fixed isometric artwork has no geographic heading. Use the separate travel-direction arrow; do not derive movement direction from the sprite.",
+        "artworkAxis": "lower-left to upper-right in image space",
+        "observedOrientation": "Rear engine panel, rear window and red tail lamps at lower-left; front passenger door and wing mirror at upper-right. The front windshield is mostly hidden by this rear-side camera view.",
+        "visuallyDistinctFront": "upper-right, mostly occluded"
+      },
+      "validation": {
+        "transparentPixelFraction": 0.6936,
+        "alphaMin": 0,
+        "alphaMax": 255,
+        "cornerPixelsTransparent": true,
+        "opaqueNearWhitePixels": 3,
+        "visuallyInspectedOn": [
+          "#fffef9",
+          "#203b36"
+        ],
+        "promptEmbedded": true
+      },
+      "bytes": 45499,
+      "sha256": "e451def754641c76e48f955553c54a6619f242b5ab2f385b79babb139c7bb1b0"
+    },
+    {
+      "id": "bus-double-deck",
+      "file": "bus-double-deck.png",
+      "publicPath": "/transit/bus-double-deck.png",
+      "label": "Singapore double-deck public bus",
+      "representative": true,
+      "description": "Representative MAN A95 / Enviro500 fleet type; details simplified",
+      "observedLivery": "Lush green three-axle double decker with two dark window rows",
+      "referenceSources": [
+        {
+          "title": "LTA three-door double-deck fleet",
+          "url": "https://www.lta.gov.sg/content/ltagov/en/newsroom/2021/1/news-releases/LTA_to_deploy_three_door_double_deck_buses.html"
+        },
+        {
+          "title": "LTA unified lush-green livery",
+          "url": "https://www.lta.gov.sg/content/ltagov/en/who_we_are/our_work/public_transport_system/bus/upgrading_bus_fleets.html"
+        }
+      ],
+      "generation": {
+        "tool": "built-in ImageGen",
+        "model": "not exposed by tool",
+        "transparentBackgroundRequested": true,
+        "prompt": "Use case: stylized-concept\nAsset type: transparent PNG sprite for a Singapore public transport map; isolated single vehicle, recognisable at 40 pixels.\nStyle/medium: precise, polished miniature 3D product render, restrained realistic materials, clean simplified details, crisp silhouette. Orthographic isometric three-quarter view from above. Entire vehicle visible, centred, filling about 82% of a square canvas with safe padding. Every vehicle in this set must point toward the upper-right/northeast: its FRONT at upper-right, rear at lower-left. Show roof, front, and near side. Soft neutral lighting within the object only.\nScene/backdrop: genuinely transparent alpha background, empty cutout. No floor, platform, road, track, water, wake, scenery, people, drop shadow, cast shadow, title, caption, legend, border or watermark. No legible logos, route numbers or signage; retain livery colours and physical proportions. Preserve opaque white paint; only empty space is transparent.\nSubject: one representative Singapore public three-axle double-deck bus in lush green unified SG bus livery, based on a MAN A95 / Alexander Dennis Enviro500 type actually operated in Singapore. Tall rectangular double-decker body, two stacked rows of broad near-black windows, lush lime-green body panels and green lower bumper, black front windshield on BOTH decks, grey roof, three axles with black tyres and silver hubs, black wing mirrors, narrow angular lower headlights. Passenger doors on left for Singapore left-hand traffic. White opaque interior window reflections only, no advertisement, no red London bus features. IMPORTANT CAMERA: front at the UPPER-RIGHT of square, rear at LOWER-LEFT; long axis ascends from left to right. Two decks clearly visible, no open top."
+      },
+      "format": {
+        "width": 256,
+        "height": 256,
+        "channels": "RGBA",
+        "paddingPx": 16,
+        "maxSourceCanvasPx": 224,
+        "headingNote": "Fixed isometric artwork has no geographic heading. Use the separate travel-direction arrow; do not derive movement direction from the sprite.",
+        "artworkAxis": "lower-left to upper-right in image space",
+        "observedOrientation": "Rear engine panel, rear window and red tail lamps at lower-left; front passenger door and wing mirror at upper-right. The front windshield is mostly hidden by this rear-side camera view.",
+        "visuallyDistinctFront": "upper-right, mostly occluded"
+      },
+      "validation": {
+        "transparentPixelFraction": 0.6207,
+        "alphaMin": 0,
+        "alphaMax": 255,
+        "cornerPixelsTransparent": true,
+        "opaqueNearWhitePixels": 0,
+        "visuallyInspectedOn": [
+          "#fffef9",
+          "#203b36"
+        ],
+        "promptEmbedded": true
+      },
+      "bytes": 60403,
+      "sha256": "8ef809b7046fb5676a42cc00ee96513e98cbb5055e02d868d95febed3fa9be10"
+    },
+    {
+      "id": "bus-articulated",
+      "file": "bus-articulated.png",
+      "publicPath": "/transit/bus-articulated.png",
+      "label": "Singapore articulated public bus",
+      "representative": true,
+      "description": "Representative MAN A24-type vehicle; not an identified vehicle",
+      "observedLivery": "Lush green single-deck articulated bus with grey accordion joint",
+      "referenceSources": [
+        {
+          "title": "SMRT announcement of MAN A24 fleet procurement",
+          "url": "https://links.sgx.com/1.0.0/corporate-announcements/3O1J8G4THA226YZM/295130_NR_SMRT_MAN_Bus_Contract_FINAL.pdf"
+        },
+        {
+          "title": "LTA unified lush-green livery",
+          "url": "https://www.lta.gov.sg/content/ltagov/en/who_we_are/our_work/public_transport_system/bus/upgrading_bus_fleets.html"
+        },
+        {
+          "title": "Original photographer record of green MAN A24",
+          "url": "https://commons.wikimedia.org/wiki/File:MAN_A24_TowerTransit_SMB8038A_@_858,_Yishun_Ave2_20250419_(54539488406)_-_cropped.jpg"
+        }
+      ],
+      "generation": {
+        "tool": "built-in ImageGen",
+        "model": "not exposed by tool",
+        "transparentBackgroundRequested": true,
+        "prompt": "Use case: stylized-concept\nAsset type: transparent PNG sprite for a Singapore public transport map; isolated single vehicle, recognisable at 40 pixels.\nStyle/medium: precise, polished miniature 3D product render, restrained realistic materials, clean simplified details, crisp silhouette. Orthographic isometric three-quarter view from above. Entire vehicle visible, centred, filling about 82% of a square canvas with safe padding. Every vehicle in this set must point toward the upper-right/northeast: its FRONT at upper-right, rear at lower-left. Show roof, front, and near side. Soft neutral lighting within the object only.\nScene/backdrop: genuinely transparent alpha background, empty cutout. No floor, platform, road, track, water, wake, scenery, people, drop shadow, cast shadow, title, caption, legend, border or watermark. No legible logos, route numbers or signage; retain livery colours and physical proportions. Preserve opaque white paint; only empty space is transparent.\nSubject: one representative Singapore MAN A24-type articulated public bus in lush lime-green SG bus unified livery. Long single-deck low-floor bus, two rigid green passenger body segments joined by a clearly visible dark-grey accordion bellows in the middle; THREE axles total, two sections only. Near-black continuous side window band and black front windshield, rectangular modern nose with green bumper and angular headlights, grey roof HVAC, black wing mirrors, black tyres silver hubs. Left-side passenger doors for Singapore left-hand traffic. Straight or only slightly bent articulation. IMPORTANT CAMERA: front at the UPPER-RIGHT of square, rear at LOWER-LEFT; long axis ascends from left to right. One deck only, not two separate buses."
+      },
+      "format": {
+        "width": 256,
+        "height": 256,
+        "channels": "RGBA",
+        "paddingPx": 16,
+        "maxSourceCanvasPx": 224,
+        "headingNote": "Fixed isometric artwork has no geographic heading. Use the separate travel-direction arrow; do not derive movement direction from the sprite.",
+        "artworkAxis": "lower-left to upper-right in image space",
+        "observedOrientation": "Rear engine panel, rear window and red tail lamps at lower-left; front passenger door and wing mirror at upper-right. The front windshield is mostly hidden by this rear-side camera view.",
+        "visuallyDistinctFront": "upper-right, mostly occluded"
+      },
+      "validation": {
+        "transparentPixelFraction": 0.7552,
+        "alphaMin": 0,
+        "alphaMax": 255,
+        "cornerPixelsTransparent": true,
+        "opaqueNearWhitePixels": 0,
+        "visuallyInspectedOn": [
+          "#fffef9",
+          "#203b36"
+        ],
+        "promptEmbedded": true
+      },
+      "bytes": 44245,
+      "sha256": "aac8f73d53e3154be7e7923caf6dbf7724b9b0eef1c20bc04f802ed95b6ae399"
+    },
+    {
+      "id": "train-nsew",
+      "file": "train-nsew.png",
+      "publicPath": "/transit/train-nsew.png",
+      "label": "North-South / East-West MRT",
+      "representative": true,
+      "description": "Representative Alstom MOVIA R151 leading carriage; one-car symbol for a longer train",
+      "observedLivery": "White/silver, black glazing, red upper stripe and green lower stripe",
+      "referenceSources": [
+        {
+          "title": "LTA R151 rolling stock photograph",
+          "url": "https://www.lta.gov.sg/content/ltagov/en/getting_around/public_transport/rail_network/north_south_line/_jcr_content/par/tab_yellow_new/tab-content-tab_yellow_new/textimage_2032893586/image.img.jpg/1665641457145.jpg"
+        },
+        {
+          "title": "LTA NSEW fleet",
+          "url": "https://www.lta.gov.sg/content/ltagov/en/getting_around/public_transport/rail_network/north_south_line.html"
+        }
+      ],
+      "generation": {
+        "tool": "built-in ImageGen",
+        "model": "not exposed by tool",
+        "transparentBackgroundRequested": true,
+        "prompt": "Use case: precise-object-edit\nAsset type: transparent 3D Singapore MRT map sprite\nImage 1 is the EDIT TARGET: the accurate white R151 NSEW leading-car cutout with red upper window band and green lower window band. Image 2 is only the CAMERA DIRECTION reference: the orange Circle Line carriage.\nChange ONLY the target R151 camera direction, so its front nose is at the UPPER-RIGHT and its rear gangway at the LOWER-LEFT, with its long axis ascending left-to-right exactly like Image 2. Render its shape in that orientation naturally; do not vertically flip pixels. Keep target R151 rounded cab, physical body, red AND green livery bands, white opaque paint, grey roof and realistic miniature style. Keep every part fully visible with 10% margin. Do not copy orange livery or angular nose from Image 2. Genuinely transparent alpha background, no ground, cast shadow, scenery, labels, text, tracks or watermark. One carriage only.",
+        "initialPrompt": "Use case: stylized-concept\nAsset type: transparent PNG sprite for a Singapore public transport map; isolated single vehicle, recognisable at 40 pixels.\nStyle/medium: precise, polished miniature 3D product render, restrained realistic materials, clean simplified details, crisp silhouette. Orthographic isometric three-quarter view from above. Entire vehicle visible, centred, filling about 82% of a square canvas with safe padding. Every vehicle in this set must point toward the upper-right/northeast: its FRONT at upper-right, rear at lower-left. Show roof, front, and near side. Soft neutral lighting within the object only.\nScene/backdrop: genuinely transparent alpha background, empty cutout. No floor, platform, road, track, water, wake, scenery, people, drop shadow, cast shadow, title, caption, legend, border or watermark. No legible logos, route numbers or signage; retain livery colours and physical proportions. Preserve opaque white paint; only empty space is transparent.\nSubject: one representative Singapore NSEW Alstom MOVIA R151 MRT leading carriage with a short rear gangway hint, no following cars. Follow the official LTA R151 photo at https://www.lta.gov.sg/content/ltagov/en/getting_around/public_transport/rail_network/north_south_line/_jcr_content/par/tab_yellow_new/tab-content-tab_yellow_new/textimage_2032893586/image.img.jpg/1665641457145.jpg. Long white/silver metro body, rounded tapered modern nose with broad glossy black curved windshield panel, white sweeping cheeks and small triangular low headlights; grey roof and undercarriage, continuous dark side window band. Thin RED stripe ABOVE side windows and thin GREEN stripe at the LOWER edge of the dark window band, both stepping around door areas as observed. Side sliding double doors. No solid red or green body. Represent a real fleet's livery, not the red/green map route identity."
+      },
+      "format": {
+        "width": 256,
+        "height": 256,
+        "channels": "RGBA",
+        "paddingPx": 16,
+        "maxSourceCanvasPx": 224,
+        "headingNote": "Fixed isometric artwork has no geographic heading. Use the separate travel-direction arrow; do not derive movement direction from the sprite.",
+        "artworkAxis": "lower-left to upper-right in image space",
+        "observedOrientation": "Rear inter-car gangway is at lower-left; rounded or sloped leading cab is at upper-right. The cab face is partly occluded in this fixed side/rear view.",
+        "visuallyDistinctFront": "upper-right cab, partly occluded"
+      },
+      "validation": {
+        "transparentPixelFraction": 0.7239,
+        "alphaMin": 0,
+        "alphaMax": 255,
+        "cornerPixelsTransparent": true,
+        "opaqueNearWhitePixels": 1,
+        "visuallyInspectedOn": [
+          "#fffef9",
+          "#203b36"
+        ],
+        "promptEmbedded": true
+      },
+      "bytes": 47063,
+      "sha256": "e895409f6ebe0d4960fd761d089d6818818a96307befd7ae06bb7ea755f86536"
+    },
+    {
+      "id": "train-north-east",
+      "file": "train-north-east.png",
+      "publicPath": "/transit/train-north-east.png",
+      "label": "North East MRT",
+      "representative": true,
+      "description": "Representative newer Alstom Metropolis C851E leading carriage; fleets on the same line vary",
+      "observedLivery": "White/silver body with black glazing and purple lower band",
+      "referenceSources": [
+        {
+          "title": "LTA operating fleet",
+          "url": "https://www.lta.gov.sg/content/ltagov/en/getting_around/public_transport/rail_network/north_east_line.html"
+        },
+        {
+          "title": "LTA introduction of newer NEL trains",
+          "url": "https://www.lta.gov.sg/content/ltagov/en/newsroom/2023/7/news-releases/new-trains-for-north-east-line-to-be-rolled-out-for-passenger-se.html"
+        },
+        {
+          "title": "LTA-supplied C851E photo reproduced by SGTrains",
+          "url": "https://blog.sgtrains.com/2021/04/arrival-of-new-c851e-nel-trains/"
+        }
+      ],
+      "generation": {
+        "tool": "built-in ImageGen",
+        "model": "not exposed by tool",
+        "transparentBackgroundRequested": true,
+        "prompt": "Use case: stylized-concept\nAsset type: transparent PNG sprite for a Singapore public transport map; isolated single vehicle, recognisable at 40 pixels.\nStyle/medium: precise, polished miniature 3D product render, restrained realistic materials, clean simplified details, crisp silhouette. Orthographic isometric three-quarter view from above. Entire vehicle visible, centred, filling about 82% of a square canvas with safe padding. Every vehicle in this set must point toward the upper-right/northeast: its FRONT at upper-right, rear at lower-left. Show roof, front, and near side. Soft neutral lighting within the object only.\nScene/backdrop: genuinely transparent alpha background, empty cutout. No floor, platform, road, track, water, wake, scenery, people, drop shadow, cast shadow, title, caption, legend, border or watermark. No legible logos, route numbers or signage; retain livery colours and physical proportions. Preserve opaque white paint; only empty space is transparent.\nSubject: one representative Singapore North East Line Alstom Metropolis C851E leading MRT carriage with short rear gangway hint, no following cars. Correct real LTA livery of newer NEL trains: white/silver metro body, near-black continuous side window band, large PURPLE band down the lower half below the windows. Angular steeply slanted nose front, very wide black windshield, purple band continuing low across nose, grey roof equipment and dark grey train bogies/undercarriage. Side silver double sliding doors. Same family proportions as Singapore Circle Line C851E but purple lower band, not orange. IMPORTANT CAMERA: front at UPPER-RIGHT, rear at LOWER-LEFT; long axis ascends left to right, the front nose and windshield visible at the upper-right. Representative fleet miniature, no branding text."
+      },
+      "format": {
+        "width": 256,
+        "height": 256,
+        "channels": "RGBA",
+        "paddingPx": 16,
+        "maxSourceCanvasPx": 224,
+        "headingNote": "Fixed isometric artwork has no geographic heading. Use the separate travel-direction arrow; do not derive movement direction from the sprite.",
+        "artworkAxis": "lower-left to upper-right in image space",
+        "observedOrientation": "Rear inter-car gangway is at lower-left; rounded or sloped leading cab is at upper-right. The cab face is partly occluded in this fixed side/rear view.",
+        "visuallyDistinctFront": "upper-right cab, partly occluded"
+      },
+      "validation": {
+        "transparentPixelFraction": 0.7096,
+        "alphaMin": 0,
+        "alphaMax": 255,
+        "cornerPixelsTransparent": true,
+        "opaqueNearWhitePixels": 0,
+        "visuallyInspectedOn": [
+          "#fffef9",
+          "#203b36"
+        ],
+        "promptEmbedded": true
+      },
+      "bytes": 46836,
+      "sha256": "cdccb732ce9c41acc2c8d4105d76f0a0a2f5a4a0af33a04b22f0bb1cc36b9647"
+    },
+    {
+      "id": "train-circle",
+      "file": "train-circle.png",
+      "publicPath": "/transit/train-circle.png",
+      "label": "Circle MRT",
+      "representative": true,
+      "description": "Representative newer Alstom Metropolis C851E leading carriage; fleets on the same line vary",
+      "observedLivery": "White/silver body with black glazing and orange lower band",
+      "referenceSources": [
+        {
+          "title": "LTA C851E rolling stock photograph",
+          "url": "https://www.lta.gov.sg/content/ltagov/en/getting_around/public_transport/rail_network/circle_line/_jcr_content/par/tab_yellow_new/tab-content-tab_yellow_new/textimage_1819530082/image.img.jpg/1681180492796.jpg"
+        },
+        {
+          "title": "LTA Circle Line fleet",
+          "url": "https://www.lta.gov.sg/content/ltagov/en/getting_around/public_transport/rail_network/circle_line.html"
+        }
+      ],
+      "generation": {
+        "tool": "built-in ImageGen",
+        "model": "not exposed by tool",
+        "transparentBackgroundRequested": true,
+        "prompt": "Use case: stylized-concept\nAsset type: transparent PNG sprite for a Singapore public transport map; isolated single vehicle, recognisable at 40 pixels.\nStyle/medium: precise, polished miniature 3D product render, restrained realistic materials, clean simplified details, crisp silhouette. Orthographic isometric three-quarter view from above. Entire vehicle visible, centred, filling about 82% of a square canvas with safe padding. Every vehicle in this set must point toward the upper-right/northeast: its FRONT at upper-right, rear at lower-left. Show roof, front, and near side. Soft neutral lighting within the object only.\nScene/backdrop: genuinely transparent alpha background, empty cutout. No floor, platform, road, track, water, wake, scenery, people, drop shadow, cast shadow, title, caption, legend, border or watermark. No legible logos, route numbers or signage; retain livery colours and physical proportions. Preserve opaque white paint; only empty space is transparent.\nSubject: one representative Singapore Circle Line Alstom Metropolis C851E MRT leading carriage with short rear gangway hint, no following cars. Follow official LTA photo https://www.lta.gov.sg/content/ltagov/en/getting_around/public_transport/rail_network/circle_line/_jcr_content/par/tab_yellow_new/tab-content-tab_yellow_new/textimage_1819530082/image.img.jpg/1681180492796.jpg. White/silver narrow metro carriage; angular steeply slanted nose front, very wide black windshield, dark charcoal window band, large ORANGE band below windows and along the lower nose. Grey roof with low equipment boxes; dark grey undercarriage and small train bogies. Side sliding double doors framed in silver. A straight, detailed one-car metro train miniature, not a bus."
+      },
+      "format": {
+        "width": 256,
+        "height": 256,
+        "channels": "RGBA",
+        "paddingPx": 16,
+        "maxSourceCanvasPx": 224,
+        "headingNote": "Fixed isometric artwork has no geographic heading. Use the separate travel-direction arrow; do not derive movement direction from the sprite.",
+        "artworkAxis": "lower-left to upper-right in image space",
+        "observedOrientation": "Rear inter-car gangway is at lower-left; rounded or sloped leading cab is at upper-right. The cab face is partly occluded in this fixed side/rear view.",
+        "visuallyDistinctFront": "upper-right cab, partly occluded"
+      },
+      "validation": {
+        "transparentPixelFraction": 0.7092,
+        "alphaMin": 0,
+        "alphaMax": 255,
+        "cornerPixelsTransparent": true,
+        "opaqueNearWhitePixels": 0,
+        "visuallyInspectedOn": [
+          "#fffef9",
+          "#203b36"
+        ],
+        "promptEmbedded": true
+      },
+      "bytes": 48371,
+      "sha256": "1f3d2be0acf0b0d1cf32420d8b7102cbcd83558e93cf969ba131725c06cd44bb"
+    },
+    {
+      "id": "train-downtown",
+      "file": "train-downtown.png",
+      "publicPath": "/transit/train-downtown.png",
+      "label": "Downtown MRT",
+      "representative": true,
+      "description": "Representative Bombardier MOVIA C951/C951A leading carriage, with simplified details",
+      "observedLivery": "White/silver body, black glazing and turquoise-green / blue bands",
+      "referenceSources": [
+        {
+          "title": "LTA Downtown Line blue and green livery",
+          "url": "https://www.lta.gov.sg/content/ltagov/en/getting_around/public_transport/rail_network/downtown_line.html"
+        }
+      ],
+      "generation": {
+        "tool": "built-in ImageGen",
+        "model": "not exposed by tool",
+        "transparentBackgroundRequested": true,
+        "prompt": "Use case: stylized-concept\nAsset type: transparent PNG sprite for a Singapore public transport map; isolated single vehicle, recognisable at 40 pixels.\nStyle/medium: precise, polished miniature 3D product render, restrained realistic materials, clean simplified details, crisp silhouette. Orthographic isometric three-quarter view from above. Entire vehicle visible, centred, filling about 82% of a square canvas with safe padding. Every vehicle in this set must point toward the upper-right/northeast: its FRONT at upper-right, rear at lower-left. Show roof, front, and near side. Soft neutral lighting within the object only.\nScene/backdrop: genuinely transparent alpha background, empty cutout. No floor, platform, road, track, water, wake, scenery, people, drop shadow, cast shadow, title, caption, legend, border or watermark. No legible logos, route numbers or signage; retain livery colours and physical proportions. Preserve opaque white paint; only empty space is transparent.\nSubject: one representative Singapore Downtown Line Bombardier MOVIA C951/C951A leading MRT carriage with short rear gangway hint, no following cars. Correct real LTA livery: white/silver body, continuous near-black side window band, TWO adjoining horizontal bands below windows in turquoise-green and medium blue, the blue band below the turquoise band. Rounded modern white nose cheeks enclosing a tall black front windshield and central evacuation door, grey roof with low HVAC boxes, dark bogies and undercarriage, side double sliding doors. Do not paint the whole body route-blue. IMPORTANT CAMERA: front at UPPER-RIGHT, rear at LOWER-LEFT; long axis ascends left to right, the front nose and its windshield are visible at the upper-right. No solid blue train, no red stripe."
+      },
+      "format": {
+        "width": 256,
+        "height": 256,
+        "channels": "RGBA",
+        "paddingPx": 16,
+        "maxSourceCanvasPx": 224,
+        "headingNote": "Fixed isometric artwork has no geographic heading. Use the separate travel-direction arrow; do not derive movement direction from the sprite.",
+        "artworkAxis": "lower-left to upper-right in image space",
+        "observedOrientation": "Rear inter-car gangway is at lower-left; rounded or sloped leading cab is at upper-right. The cab face is partly occluded in this fixed side/rear view.",
+        "visuallyDistinctFront": "upper-right cab, partly occluded"
+      },
+      "validation": {
+        "transparentPixelFraction": 0.7398,
+        "alphaMin": 0,
+        "alphaMax": 255,
+        "cornerPixelsTransparent": true,
+        "opaqueNearWhitePixels": 0,
+        "visuallyInspectedOn": [
+          "#fffef9",
+          "#203b36"
+        ],
+        "promptEmbedded": true
+      },
+      "bytes": 46737,
+      "sha256": "695e04ee73750bbe0f06c26eef92fa655aec90d0ac55be8e9176ce9137dd5862"
+    },
+    {
+      "id": "train-thomson-east-coast",
+      "file": "train-thomson-east-coast.png",
+      "publicPath": "/transit/train-thomson-east-coast.png",
+      "label": "Thomson-East Coast MRT",
+      "representative": true,
+      "description": "Representative Kawasaki / CRRC Sifang T251 leading carriage; details simplified",
+      "observedLivery": "White/silver body, black glazing and warm brown / yellow accent bands",
+      "referenceSources": [
+        {
+          "title": "LTA TEL trains and train illustration",
+          "url": "https://www.lta.gov.sg/content/ltagov/en/getting_around/public_transport/rail_network/thomson_east_coast_line.html"
+        },
+        {
+          "title": "LTA TEL exterior and features infographic",
+          "url": "https://www.lta.gov.sg/content/ltagov/en/getting_around/public_transport/rail_network/thomson_east_coast_line/_jcr_content/par/tab_yellow_new/tab-content-tab_yellow_new/textimage_2147039379/image.img.png/1580282384676.png"
+        }
+      ],
+      "generation": {
+        "tool": "built-in ImageGen",
+        "model": "not exposed by tool",
+        "transparentBackgroundRequested": true,
+        "prompt": "Use case: stylized-concept\nAsset type: transparent PNG sprite for a Singapore public transport map; isolated single vehicle, recognisable at 40 pixels.\nStyle/medium: precise, polished miniature 3D product render, restrained realistic materials, clean simplified details, crisp silhouette. Orthographic isometric three-quarter view from above. Entire vehicle visible, centred, filling about 82% of a square canvas with safe padding. Every vehicle in this set must point toward the upper-right/northeast: its FRONT at upper-right, rear at lower-left. Show roof, front, and near side. Soft neutral lighting within the object only.\nScene/backdrop: genuinely transparent alpha background, empty cutout. No floor, platform, road, track, water, wake, scenery, people, drop shadow, cast shadow, title, caption, legend, border or watermark. No legible logos, route numbers or signage; retain livery colours and physical proportions. Preserve opaque white paint; only empty space is transparent.\nSubject: one representative Singapore Thomson-East Coast Line Kawasaki/CRRC Sifang T251 MRT leading carriage with short rear gangway hint, no following cars. Correct observed LTA real livery: white body, very wide near-black side window band, horizontal warm BROWN stripe directly below the dark window band plus a separate narrow YELLOW stripe underneath, grey undercarriage. Modern angular slightly tapering cab nose, large slanted black windshield, white outer cheeks, low roof HVAC boxes, five passenger door pairs per full carriage with silver frames. These are the black-and-white TEL trains shown in LTA's TEL train infographic, with brown and yellow accents. IMPORTANT CAMERA: front at UPPER-RIGHT, rear at LOWER-LEFT; long axis ascends left to right, front nose and windshield visible at upper-right. Not a brown all-over body."
+      },
+      "format": {
+        "width": 256,
+        "height": 256,
+        "channels": "RGBA",
+        "paddingPx": 16,
+        "maxSourceCanvasPx": 224,
+        "headingNote": "Fixed isometric artwork has no geographic heading. Use the separate travel-direction arrow; do not derive movement direction from the sprite.",
+        "artworkAxis": "lower-left to upper-right in image space",
+        "observedOrientation": "Rear inter-car gangway is at lower-left; rounded or sloped leading cab is at upper-right. The cab face is partly occluded in this fixed side/rear view.",
+        "visuallyDistinctFront": "upper-right cab, partly occluded"
+      },
+      "validation": {
+        "transparentPixelFraction": 0.7309,
+        "alphaMin": 0,
+        "alphaMax": 255,
+        "cornerPixelsTransparent": true,
+        "opaqueNearWhitePixels": 18,
+        "visuallyInspectedOn": [
+          "#fffef9",
+          "#203b36"
+        ],
+        "promptEmbedded": true
+      },
+      "bytes": 49565,
+      "sha256": "8a9952d0a568b1da7aea631ab39287387c85044c5bb10d7bca98a44b07f92d2b"
+    },
+    {
+      "id": "train-lrt",
+      "file": "train-lrt.png",
+      "publicPath": "/transit/train-lrt.png",
+      "label": "Bukit Panjang LRT",
+      "representative": true,
+      "description": "Representative new Alstom Innovia APM 300R C801B car; do not reuse as Sengkang-Punggol fleet",
+      "observedLivery": "White body, broad black glazing and cyan-blue / grey hexagon accents",
+      "referenceSources": [
+        {
+          "title": "Alstom BPLRT fleet launch",
+          "url": "https://www.alstom.com/press-releases-news/2024/8/alstoms-automated-innovia-apm-train-enters-revenue-service-singapores-bukit-panjang-lrt"
+        },
+        {
+          "title": "Alstom launch photograph",
+          "url": "https://www.alstom.com/sites/alstom.com/files/2024/08/01/BPLRT_Singapore_Launch.jpg"
+        }
+      ],
+      "generation": {
+        "tool": "built-in ImageGen",
+        "model": "not exposed by tool",
+        "transparentBackgroundRequested": true,
+        "prompt": "Use case: stylized-concept\nAsset type: transparent PNG sprite for a Singapore public transport map; isolated single vehicle, recognisable at 40 pixels.\nStyle/medium: precise, polished miniature 3D product render, restrained realistic materials, clean simplified details, crisp silhouette. Orthographic isometric three-quarter view from above. Entire vehicle visible, centred, filling about 82% of a square canvas with safe padding. Every vehicle in this set must point toward the upper-right/northeast: its FRONT at upper-right, rear at lower-left. Show roof, front, and near side. Soft neutral lighting within the object only.\nScene/backdrop: genuinely transparent alpha background, empty cutout. No floor, platform, road, track, water, wake, scenery, people, drop shadow, cast shadow, title, caption, legend, border or watermark. No legible logos, route numbers or signage; retain livery colours and physical proportions. Preserve opaque white paint; only empty space is transparent.\nSubject: one representative Singapore Bukit Panjang LRT Alstom Innovia APM 300R C801B automated people-mover car. Correct observed new-fleet design from Alstom's 2024 launch photo https://www.alstom.com/sites/alstom.com/files/2024/08/01/BPLRT_Singapore_Launch.jpg : a compact SHORT single carriage, square-ended modern white/light-silver body, huge broad black front windshield and black continuous side window band, lower WHITE body with sparse small CYAN BLUE and GREY HEXAGON livery accents along its sides. White front cheeks enclosing the black central glazing; subtle angular triangular low lamp clusters; short grey flat roof, small rubber-tyred undercarriage. This is a compact rubber-tyred automated people mover, not a long MRT heavy-rail carriage, not a tram and no red stripe. Front at UPPER-RIGHT, rear at LOWER-LEFT, long axis ascending left to right, no coupler beyond safe padding. A short car with only two side door pairs."
+      },
+      "format": {
+        "width": 256,
+        "height": 256,
+        "channels": "RGBA",
+        "paddingPx": 16,
+        "maxSourceCanvasPx": 224,
+        "headingNote": "Fixed isometric artwork has no geographic heading. Use the separate travel-direction arrow; do not derive movement direction from the sprite.",
+        "artworkAxis": "lower-left to upper-right in image space",
+        "observedOrientation": "Cab glazing appears at both ends. The clearly visible near cab is at lower-left; these people-mover cars are bidirectional and the image does not imply a travel direction.",
+        "visuallyDistinctFront": "ambiguous: bidirectional cabs at both ends"
+      },
+      "validation": {
+        "transparentPixelFraction": 0.6185,
+        "alphaMin": 0,
+        "alphaMax": 255,
+        "cornerPixelsTransparent": true,
+        "opaqueNearWhitePixels": 25,
+        "visuallyInspectedOn": [
+          "#fffef9",
+          "#203b36"
+        ],
+        "promptEmbedded": true
+      },
+      "bytes": 55279,
+      "sha256": "bd70b62089a3ceba5b77d9836b06fbc816285e1b60202335311247e76c34f1be"
+    },
+    {
+      "id": "train-lrt-sengkang-punggol",
+      "file": "train-lrt-sengkang-punggol.png",
+      "publicPath": "/transit/train-lrt-sengkang-punggol.png",
+      "label": "Sengkang / Punggol LRT",
+      "representative": true,
+      "description": "Representative Mitsubishi Crystal Mover leading car, one-car symbol for the operating train",
+      "observedLivery": "Navy-blue upper body and white/silver lower body, faceted compact nose",
+      "referenceSources": [
+        {
+          "title": "MHI new Sengkang-Punggol trains",
+          "url": "https://www.mhi.com/news/250716.html"
+        },
+        {
+          "title": "MHI operating Crystal Mover photograph and fleet information",
+          "url": "https://www.mhi.com/news/220217.html"
+        }
+      ],
+      "generation": {
+        "tool": "built-in ImageGen",
+        "model": "not exposed by tool",
+        "transparentBackgroundRequested": true,
+        "prompt": "Use case: stylized-concept\nAsset type: transparent PNG sprite for a Singapore public transport map; isolated single vehicle, recognisable at 40 pixels.\nStyle/medium: precise, polished miniature 3D product render, restrained realistic materials, clean simplified details, crisp silhouette. Orthographic isometric three-quarter view from above. Entire vehicle visible, centred, filling about 82% of a square canvas with safe padding. Every vehicle in this set must point toward the upper-right/northeast: its FRONT at upper-right, rear at lower-left. Show roof, front, and near side. Soft neutral lighting within the object only.\nScene/backdrop: genuinely transparent alpha background, empty cutout. No floor, platform, road, track, water, wake, scenery, people, drop shadow, cast shadow, title, caption, legend, border or watermark. No legible logos, route numbers or signage; retain livery colours and physical proportions. Preserve opaque white paint; only empty space is transparent.\nSubject: one representative Singapore Sengkang-Punggol LRT Mitsubishi Crystal Mover leading car, matching actual manufacturer/operator photos at https://www.mhi.com/news/250716.html and https://www.mhi.com/news/220217.html . Compact SHORT automated rubber-tyred people-mover car, with distinctive faceted/angular broad front, slanted black windshield under a dark NAVY BLUE upper nose and upper body, white/silver lower body, large black-blue side windows, white double passenger doors, grey roof, small rubber-tyred concealed running gear. The real navy-blue and white livery must remain visible; not green, not the map line colour. The square Crystal Mover proportions are much shorter and wider than an MRT carriage. Two side door pairs, one car only, small rear connection hint. Front at UPPER-RIGHT, rear at LOWER-LEFT, long axis ascending left to right. No tram pantograph, no rails or platform."
+      },
+      "format": {
+        "width": 256,
+        "height": 256,
+        "channels": "RGBA",
+        "paddingPx": 16,
+        "maxSourceCanvasPx": 224,
+        "headingNote": "Fixed isometric artwork has no geographic heading. Use the separate travel-direction arrow; do not derive movement direction from the sprite.",
+        "artworkAxis": "lower-left to upper-right in image space",
+        "observedOrientation": "Cab glazing appears at both ends. The clearly visible near cab is at lower-left; these people-mover cars are bidirectional and the image does not imply a travel direction.",
+        "visuallyDistinctFront": "ambiguous: bidirectional cabs at both ends"
+      },
+      "validation": {
+        "transparentPixelFraction": 0.6324,
+        "alphaMin": 0,
+        "alphaMax": 255,
+        "cornerPixelsTransparent": true,
+        "opaqueNearWhitePixels": 6,
+        "visuallyInspectedOn": [
+          "#fffef9",
+          "#203b36"
+        ],
+        "promptEmbedded": true
+      },
+      "bytes": 54842,
+      "sha256": "1a2d98e5d959b8190e2538adcba7096b40b99c406dfed6829c98717f52e41258"
+    },
+    {
+      "id": "ferry-island-cruise",
+      "file": "ferry-island-cruise.png",
+      "publicPath": "/transit/ferry-island-cruise.png",
+      "label": "Singapore Island Cruise domestic passenger ferry",
+      "representative": true,
+      "description": "Representative Southern Islands ferry; not an exact named vessel and not a universal domestic operator livery",
+      "observedLivery": "White passenger launch with deep-blue hull, dark glazing and white bow rails",
+      "referenceSources": [
+        {
+          "title": "Singapore Island Cruise operator fleet",
+          "url": "https://islandcruise.com.sg/about-us/"
+        },
+        {
+          "title": "Operator ferry photograph",
+          "url": "https://islandcruise.com.sg/wp-content/uploads/2021/02/sic_aboutus_opt-768x431.jpg"
+        }
+      ],
+      "generation": {
+        "tool": "built-in ImageGen",
+        "model": "not exposed by tool",
+        "transparentBackgroundRequested": true,
+        "prompt": "Use case: stylized-concept\nAsset type: transparent PNG sprite for a Singapore public transport map; isolated single vehicle, recognisable at 40 pixels.\nStyle/medium: precise, polished miniature 3D product render, restrained realistic materials, clean simplified details, crisp silhouette. Orthographic isometric three-quarter view from above. Entire vehicle visible, centred, filling about 82% of a square canvas with safe padding. Every vehicle in this set must point toward the upper-right/northeast: its FRONT at upper-right, rear at lower-left. Show roof, front, and near side. Soft neutral lighting within the object only.\nScene/backdrop: genuinely transparent alpha background, empty cutout. No floor, platform, road, track, water, wake, scenery, people, drop shadow, cast shadow, title, caption, legend, border or watermark. No legible logos, route numbers or signage; retain livery colours and physical proportions. Preserve opaque white paint; only empty space is transparent.\nSubject: one representative Singapore Island Cruise domestic Southern Islands passenger ferry, based on the operator's own about-us photo https://islandcruise.com.sg/wp-content/uploads/2021/02/sic_aboutus_opt-768x431.jpg. Compact broad monohull passenger launch; sharp curved pointed bow with white metal bow railings, deep cobalt-blue lower hull, white superstructure, wraparound dark bridge glazing above the forward cabin, long dark rectangular side passenger windows, small open upper aft deck with white railings, orange lifebuoy and subtle yellow seats. Blue hull around the pointed bow is important. NOT a cruise ship, yacht, sailboat, catamaran or car ferry. The object is a representative miniature, no exact vessel identity."
+      },
+      "format": {
+        "width": 256,
+        "height": 256,
+        "channels": "RGBA",
+        "paddingPx": 16,
+        "maxSourceCanvasPx": 224,
+        "headingNote": "Fixed isometric artwork has no geographic heading. Use the separate travel-direction arrow; do not derive movement direction from the sprite.",
+        "artworkAxis": "lower-left to upper-right in image space",
+        "observedOrientation": "Pointed bow and forward bridge at upper-right; flat stern transom and open aft deck at lower-left.",
+        "visuallyDistinctFront": "upper-right bow"
+      },
+      "validation": {
+        "transparentPixelFraction": 0.6946,
+        "alphaMin": 0,
+        "alphaMax": 255,
+        "cornerPixelsTransparent": true,
+        "opaqueNearWhitePixels": 67,
+        "visuallyInspectedOn": [
+          "#fffef9",
+          "#203b36"
+        ],
+        "promptEmbedded": true
+      },
+      "bytes": 52111,
+      "sha256": "a2a170cd4eaf6d6a5ba90e37d1cb4ca5c6da2c346b28210a91bcc4e5a5bbf83b"
+    },
+    {
+      "id": "ferry-ubin-bumboat",
+      "file": "ferry-ubin-bumboat.png",
+      "publicPath": "/transit/ferry-ubin-bumboat.png",
+      "label": "Pulau Ubin passenger bumboat",
+      "representative": true,
+      "description": "Representative small privately managed Changi Point–Pulau Ubin passenger bumboat. Appearance follows a photographed vessel in July2020; individual boats vary and no fleet-wide livery is implied.",
+      "observedLivery": "Dark charcoal painted wooden hull with red-brown waterline, low white cabin with pale-blue window trim, muted-green canopy roof, black tyre fenders and red-orange lifebuoy.",
+      "referenceSources": [
+        {
+          "title": "Current NParks confirmation of private bumboat service between Changi Point and Pulau Ubin",
+          "url": "https://pulau-ubin.nparks.gov.sg/visitubin/"
+        },
+        {
+          "title": "RailTravel Station original crossing report and photographs,29July2020",
+          "url": "https://railtravelstation.com/pulau-ubin-bumboat-changi-point-ferry-terminal-to-pulau-ubin-main-jetty-by-bumboat/"
+        },
+        {
+          "title": "RailTravel Station original exterior photograph026,July2020",
+          "url": "https://railtravelstation.com/wp-content/uploads/2020/07/Pulau-Ubin-Bumboat-Changi-Point-Pulau-Ubin-026.jpg"
+        },
+        {
+          "title": "RailTravel Station original deck and canopy photograph005,July2020",
+          "url": "https://railtravelstation.com/wp-content/uploads/2020/07/Pulau-Ubin-Bumboat-Changi-Point-Pulau-Ubin-005.jpg"
+        }
+      ],
+      "generation": {
+        "tool": "built-in ImageGen",
+        "model": "not exposed by tool",
+        "transparentBackgroundRequested": true,
+        "prompt": "Use case: stylized-concept\nAsset type: transparent PNG sprite for a Singapore public transport map; one isolated Pulau Ubin passenger bumboat, readable at 40–54 pixels.\nPrimary request: a precise miniature 3D representative of the actual small diesel passenger bumboat photographed by RailTravel Station on the Changi Point–Pulau Ubin crossing in July 2020: https://railtravelstation.com/wp-content/uploads/2020/07/Pulau-Ubin-Bumboat-Changi-Point-Pulau-Ubin-026.jpg . Use the observed shape and paint colours, not a generic white island ferry.\nSubject: one small long narrow traditional wooden Singapore passenger bumboat, about 10m long for roughly12 passengers. Low dark CHARCOAL-GREY painted planked hull with a thin weathered dark red-brown waterline. Distinctive upswept pointed bow at UPPER-RIGHT, flat stern aft deck at LOWER-LEFT. A LOW white-painted rectangular wood cabin sits amidships, with simple square windows outlined in PALE SKY-BLUE trim and a slanted front wheelhouse windshield. Low muted GREEN flat roof extends aft on simple posts as an open-sided canopy over the rear seating area. Open flat dark-brown wooden aft deck. Several clearly visible BLACK TYRE FENDERS hang along the hull and bow. One red-orange lifebuoy on the white cabin side, and small orange rounded safety float on the roof; a modest white mast. No upper deck, no sleek yacht shape, no large island ferry superstructure. No fabricated boat registration, logos or writing.\nStyle/medium: precise polished miniature 3D product render, restrained realistic materials and simple crisp details. Match an isometric transport-marker set: orthographic three-quarter view from above, entire vehicle visible, centred and filling about82% of a square canvas. Long axis lower-left to upper-right; show roof, near side and open aft deck. Soft neutral lighting within object only, no external shadows. Preserve opaque white cabin paint.\nScene/backdrop: genuinely transparent alpha background and empty cutout. No water, wake, seabed, floor, cast shadow, dock, scenery, people, labels, captions, border or watermark. No trace of the photograph's watermark. The generated illustration represents a photographed boat type and livery, not any exact vessel identity or a fleet-wide standard."
+      },
+      "format": {
+        "width": 256,
+        "height": 256,
+        "channels": "RGBA",
+        "paddingPx": 16,
+        "maxSourceCanvasPx": 224,
+        "artworkAxis": "lower-left to upper-right in image space",
+        "headingNote": "Fixed isometric artwork has no geographic heading. Use the separate travel-direction arrow; do not derive movement direction from the sprite.",
+        "observedOrientation": "Upswept pointed bow and forward wheelhouse are at upper-right; flat open aft deck is at lower-left.",
+        "visuallyDistinctFront": "upper-right bow"
+      },
+      "validation": {
+        "transparentPixelFraction": 0.7341,
+        "alphaMin": 0,
+        "alphaMax": 255,
+        "cornerPixelsTransparent": true,
+        "opaqueNearWhitePixels": 7,
+        "visuallyInspectedOn": [
+          "#fffef9",
+          "#203b36"
+        ],
+        "promptEmbedded": true
+      },
+      "bytes": 53058,
+      "sha256": "266ef467a9ac8fff743ee8ad7afbc019b7fb89c36410c46294fee04bc838c190"
+    }
+  ]
+}

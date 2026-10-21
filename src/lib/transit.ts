@@ -1,0 +1,232 @@
+export const TRANSIT_MODES = ["bus", "train", "ferry"] as const;
+export type TransitMode = (typeof TRANSIT_MODES)[number];
+export type Position = [number, number];
+export type TransitActive = Record<TransitMode, boolean>;
+export const TRANSIT_DEFAULTS: TransitActive = { bus: false, train: false, ferry: false };
+export const TRANSIT_ICONS = {
+  bus: "bus-single-deck", train: "train-nsew", ferry: "ferry-island-cruise",
+} satisfies Record<TransitMode, string>;
+
+export interface TransitStop {
+  id: string; name: string; position: Position; mode: TransitMode;
+}
+export interface TransitRoute {
+  id: string; mode: TransitMode; service: string; name: string; destination: string;
+  direction: number; colour: string; colourSource: "official" | "display";
+  paths: Position[][]; stopIds: string[]; sourceUrl: string;
+}
+export interface TransitCatalog {
+  generatedAt: string; sourceUpdatedAt: string; attribution: string;
+  routes: TransitRoute[]; stops: TransitStop[];
+}
+export interface TransitViewport { west: number; south: number; east: number; north: number; zoom: number }
+export interface BusObservation {
+  service: string; stopId: string; origin: string; destination: string;
+  arrivalAt: number; observedAt: number; position: Position | null;
+  monitored: boolean; type: "SD" | "DD" | "BD";
+  visitNumber: number;
+}
+export interface TransitVehicle {
+  id: string; routeId: string; service: string; destination: string;
+  evidence: "eta" | "gps"; icon: string;
+  fromDistance: number; toDistance: number;
+  observedAt: number; arrivalAt: number; staleAt: number; expiresAt: number;
+}
+export interface TransitFeed {
+  status: "ok" | "unconfigured" | "error";
+  generatedAt: number; observations: BusObservation[];
+}
+
+export function isTransitMode(value: unknown): value is TransitMode {
+  return value === "bus" || value === "train" || value === "ferry";
+}
+export function isPosition(value: unknown): value is Position {
+  return Array.isArray(value) && value.length === 2 && value.every(Number.isFinite)
+    && value[0] >= 103.4 && value[0] <= 104.2 && value[1] >= 1.1 && value[1] <= 1.55;
+}
+export function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+export function parseTransitCatalog(value: unknown): TransitCatalog {
+  if (!isRecord(value) || typeof value.generatedAt !== "string" || typeof value.sourceUpdatedAt !== "string"
+    || typeof value.attribution !== "string" || !Array.isArray(value.routes) || !Array.isArray(value.stops)) {
+    throw new Error("Invalid transit catalogue");
+  }
+  const stops: TransitStop[] = value.stops.map((stop: unknown) => {
+    if (!isRecord(stop) || typeof stop.id !== "string" || typeof stop.name !== "string"
+      || !isTransitMode(stop.mode) || !isPosition(stop.position)) throw new Error("Invalid transit stop");
+    return { id: stop.id, name: stop.name, mode: stop.mode, position: stop.position };
+  });
+  const routes: TransitRoute[] = value.routes.map((route: unknown) => {
+    if (!isRecord(route) || typeof route.id !== "string" || !isTransitMode(route.mode)
+      || typeof route.service !== "string" || typeof route.name !== "string"
+      || typeof route.destination !== "string" || typeof route.direction !== "number"
+      || typeof route.colour !== "string" || !/^#[0-9a-f]{6}$/i.test(route.colour)
+      || (route.colourSource !== "official" && route.colourSource !== "display")
+      || typeof route.sourceUrl !== "string" || !route.sourceUrl.startsWith("https://")
+      || !Array.isArray(route.stopIds) || !route.stopIds.every((id: unknown) => typeof id === "string")
+      || !Array.isArray(route.paths)) throw new Error("Invalid transit route");
+    const paths: Position[][] = route.paths.map((path: unknown) => {
+      if (!Array.isArray(path) || path.length < 2 || !path.every(isPosition)) throw new Error("Invalid transit geometry");
+      return path;
+    });
+    return { id: route.id, mode: route.mode, service: route.service, name: route.name,
+      destination: route.destination, direction: route.direction, colour: route.colour,
+      colourSource: route.colourSource, paths, stopIds: route.stopIds, sourceUrl: route.sourceUrl };
+  });
+  return { generatedAt: value.generatedAt, sourceUpdatedAt: value.sourceUpdatedAt,
+    attribution: value.attribution, routes, stops };
+}
+
+export function distance(a: Position, b: Position) {
+  return Math.hypot((a[0] - b[0]) * 111280 * Math.cos(a[1] * Math.PI / 180), (a[1] - b[1]) * 111280);
+}
+export function routeMetrics(path: Position[]) {
+  const distances = [0];
+  for (let i = 1; i < path.length; i++) distances.push(distances[i - 1] + distance(path[i - 1], path[i]));
+  return distances;
+}
+export function projectOnRoute(path: Position[], position: Position, minimum = 0, maximum = Infinity) {
+  let best = { distance: Infinity, along: 0, position, bearing: 0 };
+  let along = 0;
+  for (let i = 1; i < path.length; i++) {
+    const a = path[i - 1], b = path[i];
+    const segment = distance(a, b);
+    const lower = Math.max(0, (minimum - along) / (segment || 1));
+    const upper = Math.min(1, (maximum - along) / (segment || 1));
+    if (lower > upper) { along += segment; continue; }
+    const x = (b[0] - a[0]) * Math.cos(a[1] * Math.PI / 180), y = b[1] - a[1];
+    const px = (position[0] - a[0]) * Math.cos(a[1] * Math.PI / 180), py = position[1] - a[1];
+    const fraction = Math.max(lower, Math.min(upper, (px * x + py * y) / (x * x + y * y || 1)));
+    const point: Position = [a[0] + fraction * (b[0] - a[0]), a[1] + fraction * (b[1] - a[1])];
+    const error = distance(point, position);
+    if (error < best.distance) best = { distance: error, along: along + segment * fraction,
+      position: point, bearing: Math.atan2(x, y) * 180 / Math.PI };
+    along += segment;
+  }
+  return best;
+}
+export function pointAlongRoute(path: Position[], metres: number) {
+  let remaining = Math.max(0, metres);
+  for (let i = 1; i < path.length; i++) {
+    const a = path[i - 1], b = path[i], segment = distance(a, b);
+    if (remaining <= segment || i === path.length - 1) {
+      const fraction = Math.min(1, remaining / (segment || 1));
+      const position: Position = [a[0] + (b[0] - a[0]) * fraction, a[1] + (b[1] - a[1]) * fraction];
+      return { position, bearing: Math.atan2((b[0] - a[0]) * Math.cos(a[1] * Math.PI / 180), b[1] - a[1]) * 180 / Math.PI };
+    }
+    remaining -= segment;
+  }
+  return { position: path[0] ?? [103.8198, 1.3521] satisfies Position, bearing: 0 };
+}
+export function vehicleDistanceAt(vehicle: TransitVehicle, now: number) {
+  const time = Math.min(now, vehicle.staleAt);
+  const fraction = Math.max(0, Math.min(1, (time - vehicle.observedAt) / Math.max(1, vehicle.arrivalAt - vehicle.observedAt)));
+  return vehicle.fromDistance + (vehicle.toDistance - vehicle.fromDistance) * fraction;
+}
+export function routeInView(route: TransitRoute, view: TransitViewport) {
+  // A bounding-box intersection includes a path crossing the viewport even if no vertex lies inside it.
+  return route.paths.some((path) => {
+    let west = Infinity, east = -Infinity, south = Infinity, north = -Infinity;
+    for (const [lng, lat] of path) { west = Math.min(west, lng); east = Math.max(east, lng); south = Math.min(south, lat); north = Math.max(north, lat); }
+    return west <= view.east && east >= view.west && south <= view.north && north >= view.south;
+  });
+}
+
+const stopDistanceCache = new WeakMap<TransitRoute, number[]>();
+function orderedStopDistances(route: TransitRoute, stops: Map<string, TransitStop>) {
+  const cached = stopDistanceCache.get(route);
+  if (cached) return cached;
+  let progress = 0;
+  const distances = route.stopIds.map((id) => {
+    const point = stops.get(id)?.position;
+    if (point && route.paths[0]) progress = projectOnRoute(route.paths[0], point, progress).along;
+    return progress;
+  });
+  stopDistanceCache.set(route, distances);
+  return distances;
+}
+
+export function inferBusVehicles(catalog: TransitCatalog, observations: BusObservation[], previous: TransitVehicle[], now: number): TransitVehicle[] {
+  const stops = new Map(catalog.stops.map((stop) => [stop.id, stop]));
+  const candidates: TransitVehicle[] = [];
+  const usedPrevious = new Set<string>();
+  for (const obs of observations) {
+    if (!obs.monitored || obs.arrivalAt <= now || obs.observedAt > now + 5000 || now - obs.observedAt > 90000) continue;
+    const stop = stops.get(obs.stopId);
+    if (!stop) continue;
+    const matching = catalog.routes.filter((route) => route.mode === "bus" && route.service === obs.service
+      && route.stopIds.includes(obs.stopId) && route.stopIds.at(-1) === obs.destination);
+    let best: { route: TransitRoute; from: number; to: number; error: number } | null = null;
+    for (const route of matching) {
+      const path = route.paths[0];
+      if (!path) continue;
+      const stopDistances = orderedStopDistances(route, stops);
+      const occurrences = route.stopIds.flatMap((id, index) => id === obs.stopId ? [index] : []);
+      const stopIndex = occurrences[Math.max(0, Math.min(occurrences.length - 1, (obs.visitNumber || 1) - 1))];
+      const target = stopDistances[stopIndex];
+      let from: number | null = null, error = 0;
+      if (obs.position) {
+        const projected = projectOnRoute(path, obs.position, 0, target + 70);
+        if (projected.distance > 220 || projected.along > target + 70) continue;
+        from = Math.min(target, projected.along); error = projected.distance;
+      } else {
+        // Infer speed only from two arrival predictions for the same service/destination.
+        const index = stopIndex;
+        const next = observations.filter((other) => other !== obs && other.monitored && other.service === obs.service && other.origin === obs.origin
+          && other.destination === obs.destination && route.stopIds.indexOf(other.stopId) > index
+          && other.arrivalAt - obs.arrivalAt >= 15000 && other.arrivalAt - obs.arrivalAt <= 240000)
+          .sort((a, b) => a.arrivalAt - b.arrivalAt)[0];
+        const nextStop = next && stops.get(next.stopId);
+        if (!next || !nextStop) continue;
+        const nextAlong = stopDistances[route.stopIds.indexOf(next.stopId)];
+        const speed = (nextAlong - target) / ((next.arrivalAt - obs.arrivalAt) / 1000);
+        if (speed < 0.5 || speed > 25) continue;
+        from = Math.max(0, target - speed * ((obs.arrivalAt - now) / 1000));
+        error = 221;
+      }
+      const speed = (target - from) / Math.max(1, (obs.arrivalAt - now) / 1000);
+      if (speed > 30) continue;
+      if (!best || error < best.error) best = { route, from, to: target, error };
+    }
+    if (!best) continue;
+    const { route, from, to } = best;
+    if (candidates.some((vehicle) => vehicle.routeId === route.id && Math.abs(vehicle.fromDistance - from) < 55)) continue;
+    const existing = previous.filter((vehicle) => vehicle.routeId === route.id && !usedPrevious.has(vehicle.id)
+      && vehicle.expiresAt > now && Math.abs(vehicleDistanceAt(vehicle, now) - from) < 350)
+      .sort((a, b) => Math.abs(vehicleDistanceAt(a, now) - from) - Math.abs(vehicleDistanceAt(b, now) - from))[0];
+    if (existing) usedPrevious.add(existing.id);
+    if (existing && obs.observedAt <= existing.observedAt) { candidates.push(existing); continue; }
+    const continuousFrom = existing && Math.abs(vehicleDistanceAt(existing, obs.observedAt) - from) < 80
+      ? Math.min(to, vehicleDistanceAt(existing, obs.observedAt)) : from;
+    candidates.push({ id: existing?.id ?? `${route.id}:${obs.stopId}:${Math.round(obs.arrivalAt / 1000)}`,
+      routeId: route.id, service: obs.service, destination: route.destination, evidence: "eta",
+      icon: obs.type === "DD" ? "bus-double-deck" : obs.type === "BD" ? "bus-articulated" : "bus-single-deck",
+      fromDistance: continuousFrom, toDistance: to, observedAt: obs.observedAt, arrivalAt: obs.arrivalAt,
+      staleAt: obs.observedAt + 45000, expiresAt: obs.observedAt + 90000 });
+  }
+  return candidates;
+}
+
+export function parseBusObservations(value: unknown, stopId: string, observedAt: number): BusObservation[] {
+  if (!isRecord(value) || !Array.isArray(value.Services)) throw new Error("Invalid bus arrivals");
+  const result: BusObservation[] = [];
+  for (const service of value.Services) {
+    if (!isRecord(service) || typeof service.ServiceNo !== "string") continue;
+    for (const key of ["NextBus", "NextBus2", "NextBus3"]) {
+      const bus = service[key];
+      if (!isRecord(bus) || typeof bus.EstimatedArrival !== "string") continue;
+      const arrivalAt = Date.parse(bus.EstimatedArrival);
+      if (!Number.isFinite(arrivalAt)) continue;
+      const coordinate = [Number(bus.Longitude), Number(bus.Latitude)];
+      result.push({ service: service.ServiceNo, stopId,
+        origin: typeof bus.OriginCode === "string" ? bus.OriginCode : "",
+        destination: typeof bus.DestinationCode === "string" ? bus.DestinationCode : "",
+        arrivalAt, observedAt, position: isPosition(coordinate) ? coordinate : null,
+        monitored: bus.Monitored === 1 || bus.Monitored === "1",
+        visitNumber: Number.isInteger(Number(bus.VisitNumber)) && Number(bus.VisitNumber) > 0 ? Number(bus.VisitNumber) : 1,
+        type: bus.Type === "DD" || bus.Type === "BD" ? bus.Type : "SD" });
+    }
+  }
+  return result;
+}

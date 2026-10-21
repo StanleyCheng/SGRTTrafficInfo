@@ -11,6 +11,59 @@ safety zones and expressway advisories.
 - **Live layer feature notes:** [`doc/live-layers.md`](doc/live-layers.md)
 - **UI design system:** [`DESIGN.md`](DESIGN.md)
 
+## 3D map and public transport
+
+The top-menu **3D** button adds free OpenFreeMap building extrusions with tilt and rotation.
+Buildings appear from zoom 14, according to the available OSM height data. It preserves the
+map centre, zoom and active layers; the last 2D/3D choice is remembered locally.
+
+The scrolling layer rail includes **Buses**, **Trains** and **Ferries**, initially off. Options
+opens a route/direction selector and source/coverage information. The shipped geometry contains
+602 bus services / 798 directions, all nine operating MRT/LRT systems across eleven line/loop
+entries, and three mapped domestic ferry connections. Bus and ferry route colours are app
+display colours; rail lines use their line colours. Coverage and geometry dates are disclosed.
+
+The twelve transparent vehicle illustrations in `public/transit/` are researched representative
+fleet/type icons. Their exact generation prompts, primary reference links and alpha checks are
+in `public/transit/assets.json`. They are fixed-view 3D renders rather than rotatable models.
+
+Bus positions use LTA Bus Arrival v3's live ETA and estimated coordinate evidence, snapped to
+the mapped route. They are labelled estimates, never raw GPS. The map queries up to eight stops
+in view / on the selected route and does not claim to show the full fleet. Missing coordinates
+need compatible predictions at two stops to infer progress. Schedule-only arrivals do not animate.
+Positions stop after 45 seconds without fresh evidence and disappear after 90 seconds.
+
+Routine live train positioning and domestic ferry feed coverage remain unverified. Those layers
+show routes and stops without timetable-only moving vehicles. No simulated vehicles ship.
+
+### Run the transit backend
+
+Local development uses `GET /api/transit?stops=01012,01019`. Set `DATAMALL_ACCOUNT_KEY` privately
+in `.env.local`. No usable key was present during implementation, so credentialed upstream checks
+must be completed before describing the bus feed as live-verified.
+
+Vercel hosts the Next.js frontend and API handlers together. Set the private key in the Vercel
+project environment; leave `NEXT_PUBLIC_TRANSIT_API_BASE` unset for same-origin requests.
+
+For an optional GitHub Pages build, run this Next.js app separately as the backend,
+with the private key in that host's environment. Set `NEXT_PUBLIC_TRANSIT_API_BASE` to its HTTPS
+origin in the Pages build environment. The endpoint supports CORS and bounds each call to eight
+known stops, two upstream workers per request, 20-second shared per-stop caches, and a
+120-upstream-request/minute budget per server instance. Free-host account limits must also be
+configured and verified; the in-process budget is not an account-wide billing limit.
+
+The backend needs `public/transit/catalog.json` in its deployment. Error responses contain no
+upstream credential details. When the backend or key is unavailable, route geometry remains
+usable and the transit Options panel explains the missing position feed.
+
+Refresh route geometry with `node scripts/import-transit.mjs`; cached source imports can be
+rebuilt with `--cached`. Geometry attribution and upstream capture dates are retained. The bus
+source is [SG Bus Data](https://github.com/cheeaun/sgbusdata), the rail source is
+[SG Rail Data](https://github.com/cheeaun/sgraildata), and ferry connections are mapped
+[OpenStreetMap](https://www.openstreetmap.org/copyright) ways. Simplified mapped alignments
+are not surveyed tracks or vessel logs. Ferry services absent from the checked geometry are
+not inferred from straight pier-to-pier lines.
+
 ## Two ways to run it
 
 | Mode | Command | Data path |
@@ -18,7 +71,8 @@ safety zones and expressway advisories.
 | Self-hosted (Node server) | `npm run dev` / `npm run build && npm start` | own API routes; live images from LTA **DataMall** with the key held server-side |
 | Static (GitHub Pages) | `npm run build:static` → `out/` | baked enforcement-camera snapshot + keyless **data.gov.sg** live-image feed |
 
-The static export is what CI deploys; it needs no server, no API key and no database.
+The full application deploys to Vercel. The optional static export needs no server, but live
+credentialed feeds require a separately hosted backend.
 
 ## Live driver overlays · 實時路況圖層
 
@@ -81,8 +135,10 @@ Traffic images use the keyless data.gov.sg feed and refresh while that layer is 
 
 ### Phone and desktop controls
 
-- **Both layouts:** a single icon-only row toggles layer visibility. Hover/focus shows a tooltip;
-  tapping briefly shows its name and new state without opening a popup. The pinned Options icon
+- **Both layouts:** a single scrolling row of icons with short labels toggles layer visibility.
+  Labels sit below each layer icon and follow the English/Traditional Chinese language switch.
+  Hover/focus shows the full tooltip. Tapping shows its name and new state without opening a popup;
+  phone tap hints stay open until another interaction dismisses them. The pinned Options icon
   opens the last-tapped layer's details, legends and filters without changing visibility.
   The row scrolls horizontally, with a chevron indicating more controls. Browse, Reset and
   Collapse are icon controls in the same row; Options and data status stay reachable while scrolling.
@@ -98,9 +154,9 @@ Traffic images use the keyless data.gov.sg feed and refresh while that layer is 
 - **Default view:** driver layers 1 (live congestion) and 2 (accidents & breakdowns) are on; layers
   3–9 and all three camera layers are off, in every build.
 - **Top bar:** the app-icon button retracts the header and restores it in the same position. The
-  language, basemap and source buttons remain independent keyboard controls. On phones the header
-  stays on one row: logo, short title, one EN/中 language toggle, and icon-only basemap/Sources buttons.
-  Both languages keep the Chinese title's bar width and the three action buttons aligned to its right.
+  language, 2D/3D, basemap and source buttons remain independent keyboard controls. On phones the header
+  stays on one row: logo, short title, one EN/中 language toggle, a 2D/3D action, and icon-only basemap/Sources buttons.
+  Both languages keep the Chinese title's bar width and the four action buttons aligned to its right.
 
 ## Data sources (all official, no mock data)
 
@@ -143,17 +199,20 @@ in the browser; neither basemap needs configuration or an API key.
 | `npm run build` / `npm start` | production build / serve (server mode) |
 | `npm run build:static` | static export for GitHub Pages → `out/` |
 | `npm run verify` | lint + type check (what CI runs before deploying) |
-| `npm test` | regression tests for capture dates and actionable feed errors |
+| `npm test` | regression tests for capture dates, feed errors and transit position evidence |
 | `npm run lint` / `npm run typecheck` | individually |
 | `node scripts/smoke.mjs [url]` | end-to-end browser checks via Chrome DevTools Protocol (screenshots → `.cache/screens/`) |
 
 ### Deployment
 
-`.github/workflows/deploy.yml` runs `npm ci` → `npm run verify` → `npm test` → `npm run build:static` and
-publishes `out/` to GitHub Pages on every push to `main`. The static build bakes the camera
-datasets into `public/data/cameras.json` from `src/data/cameras-seed.json`, temporarily moves
-`src/app/api` aside (route handlers are incompatible with `output: 'export'`) and sets the
-`/SGRTTrafficInfo` base path — see `scripts/build-static.mjs` and `next.config.ts`.
+Vercel deploys the connected `main` branch as the full Next.js application, including API route
+handlers. `vercel.json` selects the Next.js build and Singapore function region. Configure
+`DATAMALL_ACCOUNT_KEY` privately in the Vercel project environment; no secret belongs in Git.
+
+`.github/workflows/deploy.yml` runs installation, lint/type checks, tests and a production build.
+It no longer publishes GitHub Pages. The optional `npm run build:static` export remains available
+for snapshot-only hosting; it temporarily removes API routes and uses the `/SGRTTrafficInfo`
+base path — see `scripts/build-static.mjs` and `next.config.ts`.
 
 To refresh the deployed camera data, re-run a real fetch and commit the new snapshot:
 

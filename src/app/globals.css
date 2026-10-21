@@ -24,6 +24,10 @@
   --c-speed: #947029;
   --c-snapshot: #3e718b;
   --c-live: #3e718b;
+  --c-bus: #286453;
+  --c-train: #76558d;
+  --c-ferry: #286f92;
+  --building: #b8c9bd;
 
   /* Road-condition signals stay legible above the muted civic basemap. */
   --c-traffic: #35735d;
@@ -54,6 +58,9 @@
   --radius-control: 12px;
   --radius-tile: 16px;
   --text-caption: 12px;
+  --layer-tile-height: 78px;
+  /* Tile + rail padding + panel padding and border. */
+  --layer-dock-height: calc(var(--layer-tile-height) + 24px);
 }
 
 @theme inline {
@@ -269,7 +276,7 @@ body {
   border-color: color-mix(in srgb, var(--c-expressway) 20%, transparent);
 }
 
-/* ---------- layer rail: one coloured icon per layer, docked bottom-centre ---------- */
+/* ---------- layer rail: labelled layer icons, docked bottom-centre ---------- */
 .atlas-layers {
   /* The tooltip and settings panel float above the panel, so nothing is clipped. */
   position: relative;
@@ -332,14 +339,28 @@ body {
 .atlas-rail-icon {
   position: relative;
   display: grid;
-  width: 52px;
-  height: 52px;
+  grid-template-rows: 24px 30px;
+  gap: 4px;
+  width: 88px;
+  height: var(--layer-tile-height);
+  padding: 8px 6px;
+  align-content: center;
   place-items: center;
   border: 1px solid color-mix(in srgb, var(--layer-color) 26%, var(--line));
   border-radius: 16px;
   background: color-mix(in srgb, var(--layer-color) 9%, var(--surface));
   color: var(--layer-color);
   transition: background 160ms, border-color 160ms, transform 120ms;
+}
+
+.atlas-rail-label {
+  width: 100%;
+  font-size: var(--text-caption);
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: center;
+  text-wrap: balance;
+  color: var(--ink);
 }
 
 /*
@@ -393,8 +414,8 @@ body {
 
 .atlas-rail-count {
   position: absolute;
-  right: -3px;
-  bottom: -3px;
+  top: 3px;
+  right: 3px;
   min-width: 20px;
   padding: 1px 4px;
   border-radius: 999px;
@@ -418,7 +439,7 @@ body {
 .atlas-rail-dot {
   position: absolute;
   top: 5px;
-  right: 5px;
+  left: 5px;
   width: 7px;
   height: 7px;
   border-radius: 999px;
@@ -763,14 +784,6 @@ button,
   transform: translateY(0);
 }
 
-@media (max-width: 639px) {
-  .atlas-layers-phone .atlas-rail-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 14px;
-  }
-}
-
 /* Scrollbars */
 .scroll-thin {
   scrollbar-width: thin;
@@ -826,8 +839,8 @@ button,
 
 @media (max-width: 639px) {
   .maplibregl-map .maplibregl-ctrl-bottom-right {
-    /* 72 px dock + 10 px bottom inset + 8 px breathing room. */
-    bottom: 90px;
+    /* Full labelled dock + 10 px bottom inset + 8 px breathing room. */
+    bottom: calc(var(--layer-dock-height) + 18px);
   }
   .maplibregl-ctrl-attrib.maplibregl-compact {
     margin: 0 4px 0 0 !important;
@@ -975,6 +988,40 @@ button,
 .atlas-modal { margin: auto; width: min(94vw, 600px); max-height: 82dvh; overflow-y: auto; color: var(--ink); }
 .atlas-modal::backdrop { background: color-mix(in srgb, var(--ink) 25%, transparent); backdrop-filter: blur(4px); }
 ::selection { color: var(--ink); background: var(--mint); }
+
+.atlas-map-mode { font-weight: 700; font-size: 13px; font-variant-numeric: tabular-nums; }
+.atlas-vehicle-marker { width: 56px; height: 68px; padding: 0; background: transparent; border: 0; cursor: pointer; color: var(--ink); }
+.atlas-vehicle-marker img { width: 56px; height: 56px; object-fit: contain; }
+.atlas-vehicle-marker span { display: block; width: fit-content; margin: -6px auto 0; padding: 2px 5px; background: var(--surface); color: var(--vehicle-route-colour); font: 700 12px var(--font-sans); border-radius: 4px; line-height: 16px; }
+.atlas-vehicle-marker svg { position: absolute; top: -4px; left: 21px; width: 14px; height: 14px; fill: none; stroke: var(--ink); stroke-width: 2px; stroke-linecap: round; stroke-linejoin: round; }
+.atlas-vehicle-marker[data-state="stale"] { opacity: 0.5; }
+.atlas-map-mode[aria-pressed="true"] { color: var(--accent-ink); background: var(--accent); }
+.atlas-transit-glyph { width: 38px; height: 26px; object-fit: contain; }
+.atlas-transit-options { display: grid; gap: 12px; padding: 0 16px 16px; font-size: 13px; }
+.atlas-transit-options label { font-weight: 600; }
+.atlas-transit-options select { width: 100%; min-height: 44px; padding: 8px; background: var(--surface); color: var(--ink); border: 1px solid var(--line-strong); border-radius: var(--radius-control); font: inherit; }
+.atlas-transit-route-summary { display: flex; gap: 16px; align-items: center; }
+.atlas-transit-route-summary p { margin-top: 4px; }
+.atlas-transit-route-code { display: inline-block; color: var(--ink); border-bottom: 3px solid; padding-bottom: 2px; }
+.atlas-transit-vehicle-list { max-height: 180px; overflow-y: auto; }
+.atlas-transit-vehicle-list button { min-height: 44px; width: 100%; text-align: left; padding-block: 8px; color: var(--ink); border-bottom: 1px solid var(--line); }
+.atlas-transit-vehicle-list span { display: block; color: var(--muted); font-size: 12px; margin-top: 3px; }
+.atlas-transit-artwork { width: 110px; height: 76px; object-fit: contain; flex-shrink: 0; }
+.atlas-transit-sources { font-size: 12px; color: var(--muted); }
+.atlas-transit-sources summary { min-height: 44px; cursor: pointer; color: var(--accent); align-content: center; }
+.atlas-transit-sources a { display: block; min-height: 44px; align-content: center; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+.atlas-transit-detail { width: min(380px, calc(100vw - 16px)); padding: 16px; color: var(--ink); overflow-y: auto; max-height: 70dvh; }
+.atlas-transit-detail header { display: flex; justify-content: space-between; gap: 16px; align-items: center; }
+.atlas-transit-detail h2 { font-family: var(--font-display); font-size: 24px; }
+.atlas-transit-detail dl { display: grid; grid-template-columns: auto 1fr; gap: 10px 16px; margin: 16px 0; font-size: 13px; }
+.atlas-transit-detail dt { color: var(--muted); }
+.atlas-transit-detail p { margin-top: 12px; font-size: 13px; color: var(--muted); }
+.atlas-map-hint { position: absolute; top: 96px; left: 16px; max-width: min(300px, calc(100vw - 32px)); padding: 10px 12px; font-size: 12px; color: var(--ink-2); pointer-events: none; }
+
+@media (max-width: 639px) {
+  .atlas-map-hint { top: 88px; left: 8px; }
+  .atlas-header-identity { min-width: 0; }
+}
 
 @media (max-width: 639px) {
   .atlas-app-header { flex-wrap: nowrap; gap: 8px; }

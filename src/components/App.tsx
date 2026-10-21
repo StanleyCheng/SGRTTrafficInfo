@@ -9,6 +9,10 @@ import { RoadConditionDetail } from "@/components/road-condition-detail";
 import { SourcesPanel } from "@/components/sources-panel";
 import { useI18n } from "@/components/i18n-provider";
 import type { BasemapId, MapFocus } from "@/components/MapView";
+import type { MapMode } from "./map-3d";
+import { useTransit } from "@/hooks/use-transit";
+import { TRANSIT_DEFAULTS, type TransitMode, type TransitVehicle, type TransitViewport } from "@/lib/transit";
+import { TransitVehicleDetail } from "./transit-ui";
 import {
   useCameras,
   useRoadConditions,
@@ -47,6 +51,13 @@ const BASEMAP_STORAGE_KEY = "sgdi.basemap";
 export default function App() {
   const { t } = useI18n();
   const [basemap, setBasemap] = useState<BasemapId>("osm");
+  const [mapMode, setMapMode] = useState<MapMode>("2d");
+  const [transitActive, setTransitActive] = useState(TRANSIT_DEFAULTS);
+  const [selectedTransitRoute, setSelectedTransitRoute] = useState<string | null>(null);
+  const [selectedVehicle, setSelectedVehicle] = useState<TransitVehicle | null>(null);
+  const [clock, setClock] = useState(() => Date.now());
+  const [viewport, setViewport] = useState<TransitViewport | null>(null);
+  const transit = useTransit(transitActive, viewport, selectedTransitRoute);
   const { cameras, error: cameraError, retry: retryCameras } = useCameras();
   const [active, setActive] =
     useState<Record<LayerId, boolean>>(CAMERA_DEFAULTS);
@@ -72,13 +83,24 @@ export default function App() {
   useEffect(() => {
     try {
       const stored = window.localStorage.getItem(BASEMAP_STORAGE_KEY);
+      if (window.localStorage.getItem("sgdi.mapMode") === "3d") {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate the persisted preference after the server render
+        setMapMode("3d");
+      }
       if (stored === "positron") {
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time persisted preference after hydration
         setBasemap("positron");
       }
     } catch {
       /* private mode */
     }
+  }, []);
+
+  const toggleMapMode = useCallback(() => {
+    setMapMode((current) => {
+      const next = current === "2d" ? "3d" : "2d";
+      try { window.localStorage.setItem("sgdi.mapMode", next); } catch { /* private mode */ }
+      return next;
+    });
   }, []);
 
   const toggleBasemap = useCallback(() => {
@@ -187,6 +209,7 @@ export default function App() {
 
   const select = useCallback(
     (point: CameraPoint | null) => {
+      setSelectedVehicle(null);
       if (point)
         detailReturnFocus.current = document.activeElement as HTMLElement;
       setSelectedId(point?.id ?? null);
@@ -217,6 +240,7 @@ export default function App() {
 
   const selectRoad = useCallback(
     (feature: RoadConditionFeature | null) => {
+      setSelectedVehicle(null);
       if (feature)
         detailReturnFocus.current = document.activeElement as HTMLElement;
       setSelectedRoadId(feature?.id ?? null);
@@ -227,6 +251,26 @@ export default function App() {
     },
     [focusOnRoad],
   );
+
+  const toggleTransit = useCallback((mode: TransitMode) => {
+    setTransitActive((previous) => ({ ...previous, [mode]: !previous[mode] }));
+    setSelectedVehicle(null);
+  }, []);
+  const selectTransitRoute = useCallback((id: string | null) => {
+    setSelectedTransitRoute(id);
+    const route = transit.catalog?.routes.find((item) => item.id === id);
+    const path = route?.paths[0];
+    const point = path?.[Math.floor(path.length / 2)];
+    if (point) setFocus({ lng: point[0], lat: point[1], zoom: route?.mode === "bus" ? 14 : 12.5, key: `${id}:${Date.now()}` });
+  }, [transit.catalog]);
+  const selectVehicle = useCallback((vehicle: TransitVehicle) => {
+    detailReturnFocus.current = document.activeElement as HTMLElement;
+    setSelectedVehicle(vehicle); setSelectedId(null); setSelectedRoadId(null);
+  }, []);
+  const transitScene = useMemo(() => ({ catalog: transit.catalog, routes: transit.routes,
+    vehicles: transit.vehicles, selectedRouteId: selectedTransitRoute, onVehicle: selectVehicle, onRoute: selectTransitRoute,
+    vehicleLabel: (vehicle: TransitVehicle, stale: boolean) => `${vehicle.service} → ${vehicle.destination} · ${t(stale ? "transit.stale" : "transit.eta")}` }),
+  [transit.catalog, transit.routes, transit.vehicles, selectedTransitRoute, selectVehicle, selectTransitRoute, t]);
 
   const toggleLayer = useCallback(
     (id: LayerId) => {
@@ -250,7 +294,14 @@ export default function App() {
     [roadFeatureMap],
   );
 
-  const showDetail = Boolean(selected || selectedRoad);
+  const currentVehicle = selectedVehicle ? transit.vehicles.find((item) => item.id === selectedVehicle.id) ?? selectedVehicle : null;
+  const visibleVehicle = currentVehicle && clock < currentVehicle.expiresAt ? currentVehicle : null;
+  const showDetail = Boolean(selected || selectedRoad || visibleVehicle);
+  useEffect(() => {
+    if (!selectedVehicle) return;
+    const timer = setInterval(() => setClock(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [selectedVehicle]);
 
   useEffect(() => {
     if (showDetail) detailRef.current?.focus({ preventScroll: true });
@@ -259,11 +310,15 @@ export default function App() {
   const closeDetail = () => {
     setSelectedId(null);
     setSelectedRoadId(null);
+    setSelectedVehicle(null);
     requestAnimationFrame(() =>
       detailReturnFocus.current?.focus({ preventScroll: true }),
     );
   };
   const reset = () => {
+    setTransitActive(TRANSIT_DEFAULTS);
+    setSelectedTransitRoute(null);
+    setSelectedVehicle(null);
     setActive(CAMERA_DEFAULTS);
     setRoadActive(ROAD_LAYER_DEFAULTS);
     setIncidentRoute(null);
@@ -282,6 +337,9 @@ export default function App() {
     <main className="relative h-[100dvh] w-full overflow-hidden bg-paper">
       <MapView
         basemap={basemap}
+        mapMode={mapMode}
+        transit={transitScene}
+        onViewportChange={setViewport}
         points={visibleCameras?.points ?? []}
         active={active}
         selectedId={selectedId}
@@ -302,10 +360,16 @@ export default function App() {
         <AppHeader
           basemap={basemap}
           onToggleBasemap={toggleBasemap}
+          mapMode={mapMode}
+          onToggleMapMode={toggleMapMode}
           onOpenSources={() => setSourcesOpen(true)}
           className="pointer-events-auto"
         />
       </div>
+
+      {mapMode === "3d" && viewport && viewport.zoom < 14 && (
+        <p className="panel atlas-map-hint">{t("transit.mapHint")}</p>
+      )}
 
       {/* layer control — docked bottom-centre on both platforms; it retracts while a
           detail card is open, because the card can grow to the bottom of the window */}
@@ -314,6 +378,12 @@ export default function App() {
         className={`absolute z-30 flex transition-transform duration-300 ease-out ${showDetail ? "translate-y-[110%]" : "translate-y-0"} inset-x-0 bottom-[2px] justify-start p-2 sm:justify-center sm:bottom-4 sm:p-0`}
       >
         <LayerPanel
+          transit={transit}
+          transitActive={transitActive}
+          onTransitToggle={toggleTransit}
+          selectedTransitRoute={selectedTransitRoute}
+          onTransitRoute={selectTransitRoute}
+          onTransitVehicle={selectVehicle}
           layers={visibleCameras?.layers ?? null}
           points={visibleCameras?.points ?? []}
           active={active}
@@ -359,7 +429,10 @@ export default function App() {
           showDetail ? "rise" : "pointer-events-none hidden"
         }`}
       >
-        {selectedRoad ? (
+        {visibleVehicle && transit.catalog ? (
+          <TransitVehicleDetail vehicle={visibleVehicle}
+            catalog={transit.catalog} now={clock} onClose={closeDetail} />
+        ) : selectedRoad ? (
           <RoadConditionDetail
             feature={selectedRoad}
             layer={selectedRoadLayer}
