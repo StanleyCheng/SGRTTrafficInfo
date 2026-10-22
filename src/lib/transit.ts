@@ -57,6 +57,23 @@ export function filteredTransitRoutes(catalog: TransitCatalog, active: TransitAc
   });
 }
 
+/** Overview sampling must never keep polling a route that a filter has hidden. */
+export function sampledBusStops(catalog: TransitCatalog, routes: TransitRoute[],
+  viewport: TransitViewport, selectedRouteId: string | null) {
+  const buses = routes.filter((route) => route.mode === "bus");
+  if (!buses.length) return [];
+  const routeStops = new Set(buses.flatMap((route) => route.stopIds));
+  const selected = buses.find((route) => route.id === selectedRouteId);
+  const centre = [(viewport.west + viewport.east) / 2, (viewport.south + viewport.north) / 2];
+  const nearby = catalog.stops.filter((stop) => stop.mode === "bus" && routeStops.has(stop.id)
+    && stop.position[0] >= viewport.west && stop.position[0] <= viewport.east
+    && stop.position[1] >= viewport.south && stop.position[1] <= viewport.north)
+    .sort((a, b) => Math.hypot(a.position[0] - centre[0], a.position[1] - centre[1])
+      - Math.hypot(b.position[0] - centre[0], b.position[1] - centre[1]));
+  const selectedIds = selected ? [0.15, 0.4, 0.65, 0.85].map((fraction) => selected.stopIds[Math.floor((selected.stopIds.length - 1) * fraction)]) : [];
+  return [...new Set([...selectedIds, ...nearby.map((stop) => stop.id)].filter(Boolean))].slice(0, 8).sort();
+}
+
 export function isTransitMode(value: unknown): value is TransitMode {
   return typeof value === "string" && (TRANSIT_MODES as readonly string[]).includes(value);
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { STATIC_MODE } from "@/lib/client-data";
-import { filteredTransitRoutes, inferBusVehicles, isRecord, parseTransitCatalog,
+import { filteredTransitRoutes, inferBusVehicles, isRecord, parseTransitCatalog, sampledBusStops,
   type BusObservation, type TransitActive, type TransitCatalog, type TransitFeed,
   type TransitFilters, type TransitVehicle, type TransitViewport } from "@/lib/transit";
 
@@ -71,17 +71,7 @@ export function useTransit(active: TransitActive, viewport: TransitViewport | nu
   const service = focusedGroup?.startsWith("bus:") ? focusedGroup.slice(4) : null;
   const stopsKey = useMemo(() => {
     if (!catalog || !viewport || !active.bus || (focusedGroup && !service)) return "";
-    const routeIds = new Set(routes.filter((route) => route.mode === "bus").flatMap((route) => route.stopIds));
-    const selected = catalog.routes.find((route) => route.id === selectedRouteId && route.mode === "bus");
-    const centre = [(viewport.west + viewport.east) / 2, (viewport.south + viewport.north) / 2];
-    const available = catalog.stops.filter((stop) => stop.mode === "bus" && routeIds.has(stop.id)
-      && stop.position[0] >= viewport.west && stop.position[0] <= viewport.east
-      && stop.position[1] >= viewport.south && stop.position[1] <= viewport.north)
-      .sort((a, b) => Math.hypot(a.position[0] - centre[0], a.position[1] - centre[1])
-        - Math.hypot(b.position[0] - centre[0], b.position[1] - centre[1]));
-    // Reserve four samples along the selected route, plus four nearby visible stops.
-    const selectedIds = selected ? [0.15, 0.4, 0.65, 0.85].map((fraction) => selected.stopIds[Math.floor((selected.stopIds.length - 1) * fraction)]) : [];
-    return [...new Set([...selectedIds, ...available.map((stop) => stop.id)].filter(Boolean))].slice(0, 8).sort().join(",");
+    return sampledBusStops(catalog, routes, viewport, selectedRouteId).join(",");
   }, [catalog, viewport, active.bus, routes, selectedRouteId, focusedGroup, service]);
   const query = service ? `service=${encodeURIComponent(service)}` : stopsKey ? `stops=${encodeURIComponent(stopsKey)}` : "";
 

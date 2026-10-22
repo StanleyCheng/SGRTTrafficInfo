@@ -19,11 +19,13 @@ Extra geometry is imported from actual OSM relations/ways, with no invented join
 ## Local verification
 
 - `npm run verify`: lint and TypeScript pass.
-- `npm test`: 22 tests pass, including both-direction grouping, focus outside the viewport, isolation, separate ferry choices, new-mode geometry/stops/access and existing position/staleness inference.
+- `npm test`: 23 tests pass, including both-direction grouping, focus outside the viewport, isolation, separate ferry choices, new-mode geometry/stops/access and existing position/staleness inference.
 - `npm run build`: production build passes with all four API handlers.
 - Focused browser checks on the real MapLibre map: service 2 renders only `bus:2:1` and `bus:2:2`; other road overlays are hidden; stop-name toggle produced 27 rendered stop labels; route tap opens the popup and its action focuses the full route. Selecting Sentosa fits both mapped directions. Cable car exposes both lines; Skytrain exposes six public/transit connection groups.
 - Desktop 1440×900; phones 390×844 in English and Traditional Chinese; short 320×568 phone. Right panel fits and scrolls on the short phone. Dock retains its horizontal layout and map-control clearance, with 12px captions and 44px utility targets.
 - Broader live-data smoke run: 55/59 checks passed. Four live-data assumptions failed during warm-up (initial traffic-camera count, incident filter data, live-camera payload and roadworks mapped-feature availability). Subsequent direct API checks returned eight traffic cameras and six mapped incidents; roadworks reports can lack published geometry. No unrelated feed behavior was changed. All changed route interactions were verified separately as above.
+
+The first production check exposed overview polling of a previously selected bus after filters hid all bus routes. Sampling now uses displayed routes only, stops entirely for an empty bus selection, and has regression coverage. The visual layout is unchanged.
 
 Screenshots and browser command evidence are kept locally under `.cache/routes-qa/`; no credentials are included.
 

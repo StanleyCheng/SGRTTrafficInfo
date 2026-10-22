@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import { inferBusVehicles, parseBusObservations, parseTransitCatalog, pointAlongRoute,
   projectOnRoute, routeInView, vehicleDistanceAt, routeGroupId, filteredTransitRoutes,
-  TRANSIT_DEFAULTS, TRANSIT_FILTER_DEFAULTS } from "../src/lib/transit.ts";
+  TRANSIT_DEFAULTS, TRANSIT_FILTER_DEFAULTS, sampledBusStops } from "../src/lib/transit.ts";
 
 const now = 1000000;
 const path = [[103.8, 1.3], [103.81, 1.3], [103.81, 1.31]];
@@ -86,6 +86,15 @@ test("service focus includes both directions outside the viewport and isolates o
   assert.deepEqual(filteredTransitRoutes(all, active, TRANSIT_FILTER_DEFAULTS, "bus:42", null).map((item) => item.id), [route.id, reverse.id]);
   assert.deepEqual(filteredTransitRoutes(all, active, { ...filters, bus: [] }, null, null), []);
   assert.deepEqual(filteredTransitRoutes(all, TRANSIT_DEFAULTS, filters, null, null), []);
+});
+test("overview sampling stops when filters hide buses and excludes a hidden selected service", () => {
+  const view = { west: 103.7, east: 103.9, south: 1.2, north: 1.4, zoom: 12 };
+  assert.deepEqual(sampledBusStops(catalog, [], view, route.id), []);
+  const other = { ...route, id: "bus:43:1", service: "43", stopIds: ["00004", "00005"] };
+  const all = { ...catalog, routes: [route, other], stops: [...catalog.stops,
+    { id: "00004", name: "D", mode: "bus", position: [103.82, 1.3] },
+    { id: "00005", name: "E", mode: "bus", position: [103.83, 1.3] }] };
+  assert.deepEqual(sampledBusStops(all, [other], view, route.id), ["00004", "00005"]);
 });
 test("ferry connections remain separately selectable and extra modes have mapped stops and access", () => {
   const actual = parseTransitCatalog(JSON.parse(fs.readFileSync(new URL("../public/transit/catalog.json", import.meta.url), "utf8")));
