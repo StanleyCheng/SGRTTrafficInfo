@@ -1,6 +1,6 @@
 # 3D map and transit validation
 
-Local implementation record, 22 October 2026. The ten brief choices in [the approved plan](transit-3d-plan.md) are implemented. **Finish disposition: SHIP at the scored-fix scope.** No deployment or backend provisioning was performed.
+Implementation and release record, 22 October 2026. The ten brief choices in [the approved plan](transit-3d-plan.md) are implemented. **Finish disposition: SHIP at the scored-fix scope.** The initial implementation was local; the subsequent approved release uses Vercel, as recorded below.
 
 ## Result and visual continuity
 
@@ -30,7 +30,7 @@ The fixtures are local test evidence. They are not live feed captures or a shipp
 | Check | Result and scope |
 |---|---|
 | `npm run verify` | Lint and type checks passed |
-| `npm test` | 19/19 passed: 8 existing checks plus 11 transit checks covering geometry, evidence, expiry, direction, input validation and rail coverage |
+| `npm test` | 20/20 passed: 8 existing checks, 11 transit checks and a read-only Vercel cache check covering geometry, evidence, expiry, direction, input validation and rail coverage |
 | Existing browser smoke | 57/57 passed |
 | Focused browser checks | 11 passed, including roughly 700 rendered CBD buildings with rail, centre/zoom/layer retention, remembered mode, 320/390/440 px layouts, bilingual controls, 44 px targets and no page overflow |
 | Synthetic bus interaction | Normalized ETA input moved a double-deck bus on mapped route `bus:2:1`; map tap and accessible Options-list selection opened vehicle evidence/details |
@@ -59,4 +59,16 @@ The illustrations represent researched fleet/type appearance, not the actual uni
 
 No private DataMall key was available, so the credentialed upstream bus feed was not verified. LTA ETA/estimated-coordinate evidence is labelled as a position estimate, not raw GPS. Without compatible evidence, routes and stops remain available and no timetable-only vehicle moves. Routine live train positions and domestic ferry position-feed coverage remain unverified; those layers currently provide routes and stops.
 
-The backend code is prepared but no host was provisioned or deployed. GitHub Pages transit positions require a separately hosted public HTTPS backend, a private `DATAMALL_ACCOUNT_KEY`, and `NEXT_PUBLIC_TRANSIT_API_BASE` in the frontend build. The implementation bounds a request to eight known stops, two upstream workers, 20-second per-stop caches and 120 upstream requests/minute per server instance. That budget is not an account-wide billing cap, and free-host capacity/limits still need verification. The completed work remains local.
+The initial local delivery prepared the backend without provisioning a host. The user then selected Vercel for the full application because GitHub Pages cannot run its private API handlers. GitHub Pages transit positions require a separately hosted public HTTPS backend, a private `DATAMALL_ACCOUNT_KEY`, and `NEXT_PUBLIC_TRANSIT_API_BASE` in the frontend build. The implementation bounds a request to eight known stops, two upstream workers, 20-second per-stop caches and 120 upstream requests/minute per server instance. That budget is not an account-wide billing cap, and free-host capacity/limits still need verification. The full app is now deployed on Vercel; the optional Pages export retains these backend requirements.
+
+## Vercel release
+
+- Public production site: https://sgrttrafficinfo-stanleychengs-projects.vercel.app/
+- GitHub repository homepage and README now point to Vercel. The connected `main` branch deploys automatically; the former Pages workflow now runs checks and a production build.
+- Initial implementation commit `80c519c` deployed successfully with GitHub CI passing. Live desktop/390px browser checks confirmed server mode, persisted 3D selection, all fifteen controls, transit route options, unavailable-position wording, twelve successful sprite requests, no horizontal overflow, no JavaScript exceptions and no failed application requests.
+- The public transit API returned `200` with honest unconfigured status and `400` for malformed input. No production private DataMall key is configured.
+- Live runtime inspection exposed writes to the read-only application directory in the existing shared disk cache. The Vercel path now uses its temporary directory, with a passing test that writes/reads cache data while the application directory is read-only. Local development retains `.cache/`. Per-instance temporary storage is not durable shared storage.
+- The catalogue is explicitly included in the transit function's output file trace. Vercel uses Next.js, Node 22 and the configured Singapore function region. Public access is enabled for this public map.
+- The documenter wrote the evidence files before its handoff hit a usage limit; the primary agent completed the documentation check inline.
+
+The release does not establish live train/ferry position coverage or authenticate an absent bus-feed key. The final deployment and runtime-cache checks are reported with the release result.

@@ -5,7 +5,7 @@ cameras, every camera currently published by LTA's live Traffic Images feed, and
 live driver overlays — congestion, incidents, hazards, roadworks, parking, ERP, EV charging,
 safety zones and expressway advisories.
 
-- **Live site (GitHub Pages):** https://stanleycheng.github.io/SGRTTrafficInfo/
+- **Live site (Vercel):** https://sgrttrafficinfo-stanleychengs-projects.vercel.app/
 - **Repository:** https://github.com/StanleyCheng/SGRTTrafficInfo
 - **Build report & decisions:** [`doc/build-report.md`](doc/build-report.md)
 - **Live layer feature notes:** [`doc/live-layers.md`](doc/live-layers.md)
@@ -51,6 +51,9 @@ origin in the Pages build environment. The endpoint supports CORS and bounds eac
 known stops, two upstream workers per request, 20-second shared per-stop caches, and a
 120-upstream-request/minute budget per server instance. Free-host account limits must also be
 configured and verified; the in-process budget is not an account-wide billing limit.
+
+Vercel uses a temporary disk cache alongside the per-instance memory cache; local development
+keeps the existing `.cache/` directory. Neither is a shared durable database.
 
 The backend needs `public/transit/catalog.json` in its deployment. Error responses contain no
 upstream credential details. When the backend or key is unavailable, route geometry remains

@@ -22,7 +22,7 @@ The reviewer found no regression in the scored scope, left no open material find
 - `expiry-fixture.png` (390 × 844): explicitly labelled synthetic outage over 90 seconds, expired vehicle absent, routes/stops retained.
 - Completed lint/type checks, 19 unit tests, 57 existing smoke checks, 11 focused browser checks, final production build and final static export.
 
-The synthetic fixtures verify local behavior and make no claim about credentialed upstream availability. No simulation mode was added to the application. No private DataMall key was available; live bus integration, routine train positioning, domestic ferry feeds and external backend capacity remain unverified. No deployment occurred.
+The synthetic fixtures verify local behavior and make no claim about credentialed upstream availability. No simulation mode was added to the application. No private DataMall key was available; live bus integration, routine train positioning, domestic ferry feeds and external backend capacity remain unverified. No deployment had occurred at the time of that local review; the later Vercel release is recorded in the validation document.
 
 The detector ran once. Its sole inline-code-underline match was a false positive; the hook check was clean. No second detector ran.
 

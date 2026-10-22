@@ -1,6 +1,6 @@
 # Singapore traffic and transit
 
-Shared language for the traffic map and its planned transit layers.
+Shared language for the traffic map and its transit layers.
 
 ## Language
 

@@ -48,3 +48,6 @@ next-env.d.ts
 # local brief contains credentials
 /prompt.md
 .vercel
+
+# local browser verification output
+/.playwright-cli/

@@ -12,11 +12,11 @@ Visitors consulting a Singapore traffic map in English or Traditional Chinese, o
 
 ## Product Purpose
 
-Present official Singapore traffic information on an interactive map. The planned transit extension adds public buses, all operating MRT/LRT lines and domestic passenger ferries.
+Present official Singapore traffic information on an interactive map. The transit extension adds public buses, all operating MRT/LRT lines and domestic passenger ferries.
 
 ## Operating Context
 
-The public frontend is a static GitHub Pages site. The user has chosen to keep it there and add a separate backend on a free hosting tier for credentialed transit feeds. Provider and verified capacity remain implementation decisions.
+The full Next.js application is hosted on Vercel, including private credentialed API handlers. The user selected Vercel when the complete app could not run entirely on static GitHub Pages. GitHub Pages export remains optional for snapshot-only hosting. API keys stay server-side; live feed access and hosting capacity remain explicit limits.
 
 ## Capabilities and Constraints
 
@@ -36,7 +36,7 @@ Preserve the established bilingual Singapore traffic-map identity and existing c
 
 ## Evidence on Hand
 
-The repository contains the existing traffic UI, official-source registries, feed-status handling, static export and responsive smoke checks. Transit geometry, feeds and vehicle artwork are not implemented yet. Official feed coverage must be verified before describing a vehicle position as available.
+The repository contains the existing traffic UI, official-source registries, feed-status handling, static export and responsive smoke checks. Transit route geometry, researched generated artwork, an ETA bus adapter and evidence-aware motion are implemented. Official feed coverage must be verified before describing a vehicle position as available.
 
 ## Product Principles
 

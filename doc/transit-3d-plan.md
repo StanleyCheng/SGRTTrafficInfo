@@ -1,6 +1,6 @@
 # 3D map and transit extension
 
-Status: implemented locally after brief confirmation; final review and validation recorded in [transit-3d-validation.md](transit-3d-validation.md). No deployment performed.
+Status: implemented locally after brief confirmation; final review and validation recorded in [transit-3d-validation.md](transit-3d-validation.md). The approved Vercel release and live checks are recorded there.
 
 ## Purpose and scope
 
@@ -49,3 +49,7 @@ Implement and validate the feature locally after brief confirmation. Test positi
 - [LTA on-request datasets](https://datamall.lta.gov.sg/content/datamall/en/on-request_datasets.html)
 - [LTA public-bus livery reference](https://www.lta.gov.sg/content/ltagov/en/who_we_are/our_work/public_transport_system/bus/upgrading_bus_fleets.html)
 - [MPA OCEANS-X](https://oceans-x.mpa.gov.sg/), current ferry access and coverage still to be verified.
+
+## Release destination update, 22 October 2026
+
+The user subsequently requested GitHub Pages only if the entire app can run there, otherwise Vercel with the GitHub deployment link replaced. Credentialed API handlers require a server, so the full application now targets Vercel. This supersedes the earlier Pages-plus-backend hosting choice; the position-evidence and visual requirements remain unchanged.

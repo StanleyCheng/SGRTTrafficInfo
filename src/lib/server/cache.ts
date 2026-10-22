@@ -1,5 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { tmpdir } from "node:os";
 
 /**
  * Tiny JSON cache: memory → disk → bundled seed.
@@ -13,7 +14,9 @@ export interface CacheEntry<T> {
 }
 
 const mem = new Map<string, CacheEntry<unknown>>();
-const DIR = path.join(process.cwd(), ".cache");
+const DIR = process.env.VERCEL
+  ? path.join(tmpdir(), "sgrttrafficinfo-cache")
+  : path.join(process.cwd(), ".cache");
 
 export function readMemory<T>(key: string): CacheEntry<T> | undefined {
   return mem.get(key) as CacheEntry<T> | undefined;
