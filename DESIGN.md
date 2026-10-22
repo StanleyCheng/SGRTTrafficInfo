@@ -33,6 +33,7 @@ wrapping metadata instead of a first-language-only layout.
 | `--c-expressway` | `#34497a` | corridor times and EMAS cards |
 | `--ok` / `--warn` / `--err` | `#15803d` / `#a14b09` / `#b42318` | status |
 | `--radius` / `--radius-control` | `20px` / `12px` | floating cards / controls |
+| `--layer-toggle-scale` | `0.7` | layer tiles, glyphs, captions and badges scale from the 88 × 78 px baseline; full-size tooltips and 44 px utility controls remain readable |
 | `--shadow-panel` | soft forest-tinted shadow and inset highlight | floating-card depth |
 
 Layer colours are **double-encoded**: each layer also has its own marker shape

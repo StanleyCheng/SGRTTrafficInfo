@@ -58,7 +58,8 @@
   --radius-control: 12px;
   --radius-tile: 16px;
   --text-caption: 12px;
-  --layer-tile-height: 78px;
+  --layer-toggle-scale: 0.7;
+  --layer-tile-height: calc(78px * var(--layer-toggle-scale));
   /* Tile + rail padding + panel padding and border. */
   --layer-dock-height: calc(var(--layer-tile-height) + 24px);
 }
@@ -339,11 +340,11 @@ body {
 .atlas-rail-icon {
   position: relative;
   display: grid;
-  grid-template-rows: 24px 30px;
-  gap: 4px;
-  width: 88px;
+  grid-template-rows: calc(24px * var(--layer-toggle-scale)) calc(30px * var(--layer-toggle-scale));
+  gap: calc(4px * var(--layer-toggle-scale));
+  width: calc(88px * var(--layer-toggle-scale));
   height: var(--layer-tile-height);
-  padding: 8px 6px;
+  padding: calc(8px * var(--layer-toggle-scale)) calc(6px * var(--layer-toggle-scale));
   align-content: center;
   place-items: center;
   border: 1px solid color-mix(in srgb, var(--layer-color) 26%, var(--line));
@@ -355,7 +356,7 @@ body {
 
 .atlas-rail-label {
   width: 100%;
-  font-size: var(--text-caption);
+  font-size: calc(var(--text-caption) * var(--layer-toggle-scale));
   font-weight: 600;
   line-height: 1.25;
   text-align: center;
@@ -414,10 +415,10 @@ body {
 
 .atlas-rail-count {
   position: absolute;
-  top: 3px;
-  right: 3px;
-  min-width: 20px;
-  padding: 1px 4px;
+  top: calc(3px * var(--layer-toggle-scale));
+  right: calc(3px * var(--layer-toggle-scale));
+  min-width: calc(20px * var(--layer-toggle-scale));
+  padding: calc(1px * var(--layer-toggle-scale)) calc(4px * var(--layer-toggle-scale));
   border-radius: 999px;
   background: var(--surface);
   border: 1px solid var(--line);
@@ -438,10 +439,10 @@ body {
 
 .atlas-rail-dot {
   position: absolute;
-  top: 5px;
-  left: 5px;
-  width: 7px;
-  height: 7px;
+  top: calc(5px * var(--layer-toggle-scale));
+  left: calc(5px * var(--layer-toggle-scale));
+  width: calc(7px * var(--layer-toggle-scale));
+  height: calc(7px * var(--layer-toggle-scale));
   border-radius: 999px;
   background: var(--layer-color);
   box-shadow: 0 0 0 2px var(--surface);
@@ -955,9 +956,11 @@ button,
 .atlas-feed-status[data-state="stale"], .atlas-feed-status[data-state="partial"] { color: var(--warn); }
 .atlas-feed-status[data-state="error"] { color: var(--err); }
 .atlas-status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; align-self: center; }
-.atlas-rail-icon { border-radius: var(--radius-tile); }
+.atlas-rail-icon { border-radius: calc(var(--radius-tile) * var(--layer-toggle-scale)); }
+.atlas-rail-icon > svg { width: calc(22px * var(--layer-toggle-scale)); height: calc(22px * var(--layer-toggle-scale)); }
+.atlas-rail-icon > .atlas-transit-glyph { width: calc(38px * var(--layer-toggle-scale)); height: calc(26px * var(--layer-toggle-scale)); }
 .atlas-rail-icon[data-active="true"] { border-width: 2px; }
-.atlas-rail-count { font-size: 11px; }
+.atlas-rail-count { font-size: calc(11px * var(--layer-toggle-scale)); }
 .atlas-layer-notice { margin: 8px 12px; font-size: var(--text-caption); line-height: 1.5; color: var(--warn); }
 .atlas-rail-popup .atlas-layer-notice { margin-inline: 0; }
 .atlas-source-time { font-size: var(--text-caption); line-height: 1.5; color: var(--muted); margin-top: 6px; }
