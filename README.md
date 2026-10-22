@@ -61,15 +61,16 @@ toggle is off by default and is saved locally.
 The scheduler records a source URL and capture date for every figure in
 `src/lib/transit-schedule.ts`. It uses operator/LTA publications, plus the MHI technical paper
 for the Skytrain's 5-minute interim headway because CAG publishes only "every few minutes". It
-covers the North East and Downtown lines, the four Sengkang–Punggol LRT loops, two Southern
-Islands ferry connections, both Sentosa directions, both cable car lines and the mapped Skytrain
-connections. SMRT's North-South, East-West, Circle, Thomson–East Coast and Bukit Panjang LRT
+covers the North East, Downtown and Circle lines, the four Sengkang–Punggol LRT loops, two
+Southern Islands ferry connections, both Sentosa directions, both cable car lines and the mapped
+Skytrain connections. SMRT's North-South, East-West, Thomson–East Coast and Bukit Panjang LRT
 lines stay static because no operator-published end-to-end run time was found; the Pulau Ubin
 bumboat stays static because NParks describes an on-demand service with no fixed headway. These
 gaps are listed in `SCHEDULE_UNAVAILABLE` and are not filled with guessed figures. The Sentosa
 run time is the published 7-minute upper bound of its 4–7 minute frequency; the cable car uses a
 single-cabin round-trip model based on the operator's 13-minute one-way and 26–30 minute
-round-trip figures.
+round-trip figures. The Circle Line uses SMRT's published full-loop first/last times and an
+82-minute run derived from the last-train sequence over the 39 km loop.
 
 ### Run the transit backend
 

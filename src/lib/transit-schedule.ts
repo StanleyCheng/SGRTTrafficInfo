@@ -75,6 +75,11 @@ const MHI_SKYTRAIN: ScheduleSource = {
   capturedAt: SCHEDULE_CAPTURED_AT,
   note: "Manufacturer paper: interim Changi operation ran at intervals of about 5 minutes. Current CAG pages describe only 'every few minutes'.",
 };
+const SMRT_CCL: ScheduleSource = {
+  url: "https://journey.smrt.com.sg/journey/station_info/dhoby-ghaut/first-and-last-train/",
+  capturedAt: SCHEDULE_CAPTURED_AT,
+  note: "SMRT publishes the full-loop first (05:37) and last (23:56) train at Dhoby Ghaut. The 82-minute run time is derived from the published last-train sequence Bartley 23:10 to Telok Blangah 23:46, scaled over the 39 km loop.",
+};
 const FERRY_SCHEDULE: ScheduleSource = {
   url: "https://islandcruise.com.sg/wp-content/uploads/2025/04/SJI-Jetty-Closure-Ferry-Schedule.jpg",
   capturedAt: SCHEDULE_CAPTURED_AT,
@@ -90,6 +95,13 @@ const rail = (routeId: string, label: string, serviceStart: string, serviceEnd: 
 export const SCHEDULE_LINES: ScheduledLine[] = [
   rail("train:NE", "North East Line", "05:47", "23:55", 37, 6),
   rail("train:DT", "Downtown Line", "05:30", "23:40", 64, 6),
+  {
+    routeId: "train:CC", label: "Circle Line", mode: "train",
+    serviceStart: "05:37", serviceEnd: "23:56", headwayMinutes: 5, runTimeMinutes: 82,
+    direction: 1, maxVehicles: 6,
+    basis: "SMRT full-loop first/last at Dhoby Ghaut; 82-min run derived from the published last-train sequence over the 39 km loop",
+    sources: { service: SMRT_CCL, headway: LTA_RAIL, runTime: SMRT_CCL },
+  },
   rail("train:SE", "Sengkang LRT East Loop", "05:25", "00:35", 10, 2),
   rail("train:SW", "Sengkang LRT West Loop", "05:18", "00:37", 12, 2),
   rail("train:PE", "Punggol LRT East Loop", "05:20", "00:38", 11, 2),
@@ -143,7 +155,6 @@ export const SCHEDULE_LINES: ScheduledLine[] = [
 export const SCHEDULE_UNAVAILABLE = [
   { lineKey: "train:NS", reason: "No operator-published end-to-end run time; SMRT's journey planner requires an authenticated client." },
   { lineKey: "train:EW", reason: "No operator-published end-to-end run time; SMRT's journey planner requires an authenticated client." },
-  { lineKey: "train:CC", reason: "No operator-published end-to-end run time; SMRT's journey planner requires an authenticated client." },
   { lineKey: "train:TE", reason: "No operator-published end-to-end run time; SMRT's journey planner requires an authenticated client." },
   { lineKey: "train:BP", reason: "No operator-published end-to-end run time for the Bukit Panjang LRT." },
   { lineKey: "ferry:117595324", reason: "NParks describes an on-demand 12-passenger bumboat with no fixed headway." },

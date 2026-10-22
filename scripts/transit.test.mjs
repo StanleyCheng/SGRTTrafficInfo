@@ -274,6 +274,14 @@ test("reverse motion follows the same path backwards without leaving it", () => 
     previous = current;
   }
 });
+test("Circle Line produces labelled estimates inside its service window", () => {
+  const actual = parseTransitCatalog(JSON.parse(fs.readFileSync(new URL("../public/transit/catalog.json", import.meta.url), "utf8")));
+  const at = (hours, minutes = 0) => Date.UTC(2026, 9, 22, hours - 8, minutes);
+  const cc = inferScheduledVehicles(actual, at(12), new Set(["train:CC"]), true);
+  assert.ok(cc.length > 0, "Circle Line needs a visible estimate at midday");
+  assert.ok(cc.every((vehicle) => vehicle.routeId === "train:CC" && vehicle.evidence === "schedule"));
+  assert.equal(inferScheduledVehicles(actual, at(5), new Set(["train:CC"]), true).length, 0);
+});
 test("scheduled estimates are opt-in, deterministic and never labelled live", () => {
   const actual = parseTransitCatalog(JSON.parse(fs.readFileSync(new URL("../public/transit/catalog.json", import.meta.url), "utf8")));
   const at = (hours, minutes = 0) => Date.UTC(2026, 9, 22, hours - 8, minutes);
@@ -308,9 +316,10 @@ test("scheduled estimates are opt-in, deterministic and never labelled live", ()
     new Set(["train:NE", "train:DT", "ferry:558921059", "sentosa:2353581", "cablecar:28755868", "skytrain:9664403"]), true);
   assert.ok(active.length > 0);
   assert.ok(active.every((vehicle) => vehicle.evidence === "schedule"));
-  for (const key of ["train:NS", "train:EW", "train:CC", "train:TE", "train:BP", "ferry:117595324"]) {
+  for (const key of ["train:NS", "train:EW", "train:TE", "train:BP", "ferry:117595324"]) {
     assert.ok(SCHEDULE_UNAVAILABLE.some((item) => item.lineKey === key), `missing unavailable record for ${key}`);
   }
+  assert.ok(SCHEDULE_LINES.some((line) => line.routeId === "train:CC"), "Circle Line must have a scheduled estimate");
   for (const scheduled of SCHEDULE_LINES) {
     const found = actual.routes.find((item) => item.id === scheduled.routeId);
     assert.ok(found, `missing route ${scheduled.routeId}`);
