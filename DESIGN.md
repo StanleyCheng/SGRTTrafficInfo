@@ -1,7 +1,28 @@
+---
+name: Pastel Civic Atlas
+description: Mint and ivory controls for Singapore's bilingual traffic map.
+typography:
+  layer-caption:
+    fontSize: "12px"
+    fontWeight: 600
+    lineHeight: 1.25
+  layer-count:
+    fontSize: "10px"
+    fontWeight: 600
+components:
+  layer-tile:
+    typography: "{typography.layer-caption}"
+    width: "79.2px"
+    height: "70.2px"
+    rounded: "14.4px"
+---
+
 # Design system — “Pastel Civic Atlas”
 
 Reference for every UI change in this repo. Tokens live in `src/app/globals.css`
 (Tailwind v4 `@theme inline`); never hardcode a colour, radius or font in a component.
+The frontmatter and `.impeccable/design.json` capture the approved layer-picker resize.
+The incumbent token table and guidance below remain the reference for the broader atlas.
 
 ## Direction
 
@@ -31,9 +52,13 @@ wrapping metadata instead of a first-language-only layout.
 | `--c-ev` | `#4a7c1e` | EV charging signal |
 | `--c-zones` | `#a63f7a` | school / silver zone overlay |
 | `--c-expressway` | `#34497a` | corridor times and EMAS cards |
+| `--c-sentosa` | `#9a3974` | Sentosa Express control signal |
+| `--c-cablecar` | `#387145` | Singapore Cable Car control signal |
+| `--c-skytrain` | `#546e7a` | Changi Skytrain control signal |
 | `--ok` / `--warn` / `--err` | `#15803d` / `#a14b09` / `#b42318` | status |
 | `--radius` / `--radius-control` | `20px` / `12px` | floating cards / controls |
-| `--layer-toggle-scale` | `0.7` | layer tiles, glyphs, captions and badges scale from the 88 × 78 px baseline; full-size tooltips and 44 px utility controls remain readable |
+| `--text-caption` | `12px` | fixed layer captions and supporting metadata; captions do not scale with tiles |
+| `--layer-toggle-scale` | `0.9` | layer tiles and glyphs scale from the 88 × 78 px baseline to 79.2 × 70.2 px; captions stay 12 px, count badges stay 10 px, and utility controls stay 44 px |
 | `--shadow-panel` | soft forest-tinted shadow and inset highlight | floating-card depth |
 
 Layer colours are **double-encoded**: each layer also has its own marker shape
@@ -48,6 +73,8 @@ signal.
   is tracked slightly tighter where it sits next to Latin.
 - Micro-labels: `.label` = 11 px / uppercase / `0.1em` tracking / 600. Never shout in
   sentence case where a label is required.
+- Layer captions use the fixed caption token at weight 600 and line-height 1.25. Count
+  badges use 10 px text. Increasing tile density must not shrink either text size.
 
 ## Motion
 
@@ -62,8 +89,8 @@ shimmer for loading, 200 ms colour/transform transitions on controls. Everything
   right-hand gutter (`calc(100vw - 150px)` at its widest) so the single-row labelled dock scrolls instead of
   painting over the zoom/geolocate controls, and it retracts while a detail card is open.
 - Phone: header pinned to the top, the layer control is a **rail of coloured icons docked at the
-  bottom of the window**, spanning the available width with 8 px side insets and listing all twelve
-  layers in every build. Map controls and attribution sit above the full-width dock, not beside it.
+  bottom of the window**, spanning the available width with 8 px side insets and listing every
+  camera, road and supported transit layer in every build. Map controls and attribution sit above the full-width dock, not beside it.
   Both platforms use one horizontally scrolling row of icons with short, persistent captions below
   them. Captions follow the EN/中 language switch, use at most two lines, and stay inside the same
   visibility-toggle button as the icon. Full names remain in tooltips and details. Utility buttons
@@ -80,6 +107,23 @@ shimmer for loading, 200 ms colour/transform transitions on controls. Everything
   of text. Its one shared tooltip floats above the panel, points at the hovered tile with a caret,
   and is exposed to assistive tech through `aria-describedby`; the settings panel is not open at the
   same time, so the two never overlap.
+- Transit has six captioned controls: Buses, Trains, Ferries, Sentosa Express, Cable Car and
+  Skytrain. Their researched representative artwork preserves vehicle livery; route colours
+  remain separate from the artwork and are repeated in service-code underlines.
+- The collapsible Transit routes control sits at the upper right, below the header and above
+  the map tools. Its ivory panel is 312 px wide on desktop and at most 332 px on phones,
+  with 12 px padding, 8 px gaps and a height bounded by the viewport and shared dock-height
+  token. It scrolls on short phones so the mode, search, selection and return controls remain
+  reachable. Phone search and select fields use 16 px text; row metadata and notes use 12 px.
+- Transit service rows combine an 18 px checkbox within a large label target, a route-colour
+  underline and a separate 44 px fit action. All on / All off actions use secondary-surface fills;
+  the pressed action uses forest green with white text. Search reveals services in batches
+  of 60. Selected rows use the secondary surface; whole-service focus uses a mint inset and
+  an explicit return action. Focus fits every mapped direction and temporarily isolates the
+  service from other overlays. Leaving focus restores the user's other layer settings.
+- The stop-name toggle applies to displayed transit routes. Labels use forest ink with an
+  ivory halo and normal map collision placement. Skytrain service rows distinguish Public
+  area and Transit area, and the panel explains the airside access requirement.
 - The top bar is retractable: its dedicated app-icon button collapses the header; the icon
   keeps **exactly** its expanded position (same left inset and glyph), and clicking it again restores
   it. The basemap toggle sits between the language and source-information controls; its label names

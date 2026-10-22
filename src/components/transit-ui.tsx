@@ -18,15 +18,16 @@ export function VehicleArtwork({ name, className = "" }: { name: string; classNa
   return <img src={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/transit/${name}.png`} alt="" className={className} draggable={false} />;
 }
 
-export function TransitOptions({ mode, state, selectedRouteId, onRoute, onVehicle }: {
+export function TransitOptions({ mode, state, selectedRouteId, onRoute, onFocus, onVehicle }: {
   mode: TransitMode; state: TransitState; selectedRouteId: string | null; onRoute: (id: string | null) => void;
+  onFocus: (route: TransitRoute) => void;
   onVehicle: (vehicle: TransitVehicle) => void;
 }) {
   const { t } = useI18n();
   const routes = state.catalog?.routes.filter((route) => route.mode === mode) ?? [];
   const selected = routes.find((route) => route.id === selectedRouteId);
   const message = state.catalogError ? "transit.catalogError" : !state.catalog ? "status.loading"
-    : mode === "train" ? "transit.noTrainPosition" : mode === "ferry" ? "transit.noFerryPosition"
+    : mode !== "bus" ? mode === "ferry" ? "transit.noFerryPosition" : mode === "train" ? "transit.noTrainPosition" : "transit.noPosition"
       : state.feedStatus === "unconfigured" ? "transit.unconfigured" : state.feedStatus === "error" ? "transit.feedError"
         : state.feedStatus === "loading" ? "status.loading" : "transit.sample";
   return <div className="atlas-transit-options">
@@ -41,6 +42,7 @@ export function TransitOptions({ mode, state, selectedRouteId, onRoute, onVehicl
       <div><strong className="atlas-transit-route-code" style={{ borderColor: selected.colour }}>{selected.service}</strong><p>{selected.destination}</p>
         <p className="text-muted">{t(selected.colourSource === "official" ? "transit.officialColour" : "transit.displayColour")}</p></div>
     </div>}
+    {selected && <button type="button" className="atlas-route-primary" onClick={() => onFocus(selected)}>{t("routes.showWhole")}</button>}
     <p>{t("transit.routesCount", { count: routes.length })}</p>
     {mode === "bus" && state.vehicles.length > 0 && <ul className="atlas-transit-vehicle-list" aria-label={t("transit.estimates")}>
       {state.vehicles.filter((vehicle) => !selected || vehicle.routeId === selected.id).slice(0, 12).map((vehicle) => <li key={vehicle.id}>

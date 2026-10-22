@@ -17,38 +17,62 @@ The top-menu **3D** button adds free OpenFreeMap building extrusions with tilt a
 Buildings appear from zoom 14, according to the available OSM height data. It preserves the
 map centre, zoom and active layers; the last 2D/3D choice is remembered locally.
 
-The scrolling layer rail includes **Buses**, **Trains** and **Ferries**, initially off. Options
-opens a route/direction selector and source/coverage information. The shipped geometry contains
+The scrolling layer rail includes **Buses**, **Trains**, **Ferries**, **Sentosa Express**,
+**Cable Car** and **Skytrain**, initially off. Tiles use 0.9 of the 88 × 78 px baseline,
+with fixed 12 px captions and 10 px count badges; utility controls retain 44 px touch targets.
+Options opens route/direction details and source/coverage information. The shipped geometry contains
 602 bus services / 798 directions, all nine operating MRT/LRT systems across eleven line/loop
 entries, and three mapped domestic ferry connections. Bus and ferry route colours are app
-display colours; rail lines use their line colours. Coverage and geometry dates are disclosed.
+display colours; rail lines use their line colours. The added mapped modes contain both Sentosa
+Express directions, the Mount Faber and Sentosa cable car lines, and six Changi Skytrain
+connection groups across ten relation/direction records. Skytrain public and transit areas are
+listed separately, with airside access required for transit-area connections. The A/A-South
+shuttle is omitted because its mapped access tags conflict. Coverage and geometry dates are disclosed.
 
-The twelve transparent vehicle illustrations in `public/transit/` are researched representative
+Open **Transit routes** at the upper right to choose a mode and turn all services on, all off,
+or choose individual services with checkboxes. Search matches service names and destinations;
+the list starts with 60 results and loads 60 more at a time. Each row has a separate fit action.
+Clicking a mapped route opens a popup with the same whole-service action. It fits all mapped
+directions, including both bus directions and both Sentosa directions, and shows the available
+bus estimates. Focus temporarily hides other transit, camera and road overlays; **Return to route
+selection** restores their chosen settings. The selector's stop-name toggle applies to displayed
+routes, with normal map collision placement. The bounded panel scrolls on short phones.
+
+The transparent vehicle illustrations in `public/transit/` are researched representative
 fleet/type icons. Their exact generation prompts, primary reference links and alpha checks are
-in `public/transit/assets.json`. They are fixed-view 3D renders rather than rotatable models.
+in `public/transit/assets.json` and `public/transit/extra-assets.json`. The extra assets cover
+Sentosa Express, a conventional Singapore Cable Car cabin and Changi Skytrain. They are fixed-view
+3D renders rather than rotatable models.
 
 Bus positions use LTA Bus Arrival v3's live ETA and estimated coordinate evidence, snapped to
-the mapped route. They are labelled estimates, never raw GPS. The map queries up to eight stops
-in view / on the selected route and does not claim to show the full fleet. Missing coordinates
+the mapped route. They are labelled estimates, never raw GPS. The overview queries up to eight
+sampled stops in view / on the selected route every 20 seconds. Whole-service focus instead scans
+the unique stops across both bus directions, with a 45-second polling interval and per-stop cache.
+The panel reports checked/total stops when coverage is partial; deferred stops take priority on
+the next scan. Neither path claims to show the full fleet. Missing coordinates
 need compatible predictions at two stops to infer progress. Schedule-only arrivals do not animate.
 Positions stop after 45 seconds without fresh evidence and disappear after 90 seconds.
 
-Routine live train positioning and domestic ferry feed coverage remain unverified. Those layers
-show routes and stops without timetable-only moving vehicles. No simulated vehicles ship.
+Routine live train positioning and domestic ferry feed coverage remain unverified. Sentosa
+Express, Cable Car and Skytrain also have no verified live positions. These layers show mapped
+routes and stops without timetable-only moving vehicles. No simulated vehicles ship.
 
 ### Run the transit backend
 
-Local development uses `GET /api/transit?stops=01012,01019`. Set `DATAMALL_ACCOUNT_KEY` privately
-in `.env.local`. No usable key was present during implementation, so credentialed upstream checks
-must be completed before describing the bus feed as live-verified.
+Local development uses `GET /api/transit?stops=01012,01019` for sampled stops and
+`GET /api/transit?service=2` for a whole service. Set `DATAMALL_ACCOUNT_KEY` privately in
+`.env.local`; the same server-side credential supports the existing DataMall feeds. A response
+reports feed status and checked/total stop coverage without exposing upstream credentials.
 
 Vercel hosts the Next.js frontend and API handlers together. Set the private key in the Vercel
 project environment; leave `NEXT_PUBLIC_TRANSIT_API_BASE` unset for same-origin requests.
 
 For an optional GitHub Pages build, run this Next.js app separately as the backend,
 with the private key in that host's environment. Set `NEXT_PUBLIC_TRANSIT_API_BASE` to its HTTPS
-origin in the Pages build environment. The endpoint supports CORS and bounds each call to eight
-known stops, two upstream workers per request, 20-second shared per-stop caches, and a
+origin in the Pages build environment. The endpoint supports CORS. The sampled-stop path accepts
+at most eight known stops, uses two upstream workers and shares a 20-second per-stop cache.
+The service path derives the unique stops across all mapped directions, uses four workers and
+a 45-second per-stop cache, and bounds a scan to 22 seconds. Both paths share a
 120-upstream-request/minute budget per server instance. Free-host account limits must also be
 configured and verified; the in-process budget is not an account-wide billing limit.
 
@@ -65,7 +89,8 @@ source is [SG Bus Data](https://github.com/cheeaun/sgbusdata), the rail source i
 [SG Rail Data](https://github.com/cheeaun/sgraildata), and ferry connections are mapped
 [OpenStreetMap](https://www.openstreetmap.org/copyright) ways. Simplified mapped alignments
 are not surveyed tracks or vessel logs. Ferry services absent from the checked geometry are
-not inferred from straight pier-to-pier lines.
+not inferred from straight pier-to-pier lines. Sentosa Express, Cable Car and Skytrain geometry
+comes from OpenStreetMap, with cable car station names checked against Mount Faber Leisure.
 
 ## Two ways to run it
 

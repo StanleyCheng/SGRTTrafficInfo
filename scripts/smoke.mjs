@@ -279,7 +279,7 @@ async function main() {
       fillsRow: Math.abs(box.left - left) <= 1 && Math.abs(box.right - right) <= 1,
       rowSpread: Math.max(...centres) - Math.min(...centres),
       targets: boxes.every(r => r.width >= 44 && r.height >= 44),
-      labelsFit: labels.length === 15 && labels.every(label => {
+      labelsFit: labels.length === 18 && labels.every(label => {
         const labelBox = label.getBoundingClientRect();
         const button = label.closest('button');
         const buttonBox = button.getBoundingClientRect();
@@ -440,7 +440,7 @@ async function main() {
     //     layers 1 and 2 are on.
     const staticMode = mode === "static";
     await waitFor(
-      `document.querySelectorAll('.atlas-rail-icon').length === 15`,
+      `document.querySelectorAll('.atlas-rail-icon').length === 18`,
       90000,
     );
     const railCount = await evaluate(
@@ -448,7 +448,7 @@ async function main() {
     );
     check(
       "road, transit and camera layers are listed",
-      railCount === 15,
+      railCount === 18,
       `icons=${railCount}${staticMode ? " (static build)" : ""}`,
     );
     const readLayerState = () =>
@@ -1374,7 +1374,7 @@ async function main() {
       mobileText.slice(0, 60).replace(/\n/g, " / "),
     );
 
-    // The phone control is a coloured icon rail docked at the bottom. All fifteen
+    // The phone control is a coloured icon rail docked at the bottom. All eighteen
     // layers are listed in every build, each with a hover/focus/tap tooltip. Layer
     // taps only toggle visibility; the independent Options icon exposes settings.
     const railIcons = await evaluate(
@@ -1385,7 +1385,7 @@ async function main() {
     );
     check(
       "phone rail lists road, transit and camera layers",
-      railIcons === 15 &&
+      railIcons === 18 &&
         ["traffic-speed", "incidents", "zones", "expressway", "bus", "train", "ferry", "snapshot"].every(
           (id) => railLayers.includes(id),
         ),
@@ -1557,7 +1557,7 @@ async function main() {
       retracted.icons === 0 &&
         retracted.chip &&
         retracted.status &&
-        restoredIcons === 15,
+        restoredIcons === 18,
       `${JSON.stringify(retracted)} -> ${restoredIcons} icons`,
     );
 

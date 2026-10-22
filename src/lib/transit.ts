@@ -1,10 +1,11 @@
-export const TRANSIT_MODES = ["bus", "train", "ferry"] as const;
+export const TRANSIT_MODES = ["bus", "train", "ferry", "sentosa", "cablecar", "skytrain"] as const;
 export type TransitMode = (typeof TRANSIT_MODES)[number];
 export type Position = [number, number];
 export type TransitActive = Record<TransitMode, boolean>;
-export const TRANSIT_DEFAULTS: TransitActive = { bus: false, train: false, ferry: false };
+export const TRANSIT_DEFAULTS: TransitActive = { bus: false, train: false, ferry: false, sentosa: false, cablecar: false, skytrain: false };
 export const TRANSIT_ICONS = {
   bus: "bus-single-deck", train: "train-nsew", ferry: "ferry-island-cruise",
+  sentosa: "train-sentosa", cablecar: "cable-car", skytrain: "train-skytrain",
 } satisfies Record<TransitMode, string>;
 
 export interface TransitStop {
@@ -14,6 +15,7 @@ export interface TransitRoute {
   id: string; mode: TransitMode; service: string; name: string; destination: string;
   direction: number; colour: string; colourSource: "official" | "display";
   paths: Position[][]; stopIds: string[]; sourceUrl: string;
+  access?: "public" | "transit";
 }
 export interface TransitCatalog {
   generatedAt: string; sourceUpdatedAt: string; attribution: string;
@@ -35,10 +37,28 @@ export interface TransitVehicle {
 export interface TransitFeed {
   status: "ok" | "unconfigured" | "error";
   generatedAt: number; observations: BusObservation[];
+  coverage?: { checked: number; total: number };
+}
+
+/** A service includes both directions. Ferry connections have no shared service code. */
+export function routeGroupId(route: TransitRoute) {
+  return route.mode === "ferry" ? route.id : `${route.mode}:${route.service}`;
+}
+export type TransitFilters = Record<TransitMode, string[] | null>;
+export const TRANSIT_FILTER_DEFAULTS: TransitFilters = { bus: null, train: null, ferry: null, sentosa: null, cablecar: null, skytrain: null };
+export function filteredTransitRoutes(catalog: TransitCatalog, active: TransitActive,
+  filters: TransitFilters, focusedGroup: string | null, viewport: TransitViewport | null) {
+  return catalog.routes.filter((route) => {
+    if (!active[route.mode]) return false;
+    const group = routeGroupId(route);
+    if (focusedGroup) return group === focusedGroup;
+    const selected = filters[route.mode];
+    return selected === null ? Boolean(viewport && routeInView(route, viewport)) : selected.includes(group);
+  });
 }
 
 export function isTransitMode(value: unknown): value is TransitMode {
-  return value === "bus" || value === "train" || value === "ferry";
+  return typeof value === "string" && (TRANSIT_MODES as readonly string[]).includes(value);
 }
 export function isPosition(value: unknown): value is Position {
   return Array.isArray(value) && value.length === 2 && value.every(Number.isFinite)
@@ -72,7 +92,8 @@ export function parseTransitCatalog(value: unknown): TransitCatalog {
     });
     return { id: route.id, mode: route.mode, service: route.service, name: route.name,
       destination: route.destination, direction: route.direction, colour: route.colour,
-      colourSource: route.colourSource, paths, stopIds: route.stopIds, sourceUrl: route.sourceUrl };
+      colourSource: route.colourSource, paths, stopIds: route.stopIds, sourceUrl: route.sourceUrl,
+      ...(route.access === "public" || route.access === "transit" ? { access: route.access } : {}) };
   });
   return { generatedAt: value.generatedAt, sourceUpdatedAt: value.sourceUpdatedAt,
     attribution: value.attribution, routes, stops };

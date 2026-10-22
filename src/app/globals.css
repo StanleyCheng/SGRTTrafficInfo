@@ -27,6 +27,9 @@
   --c-bus: #286453;
   --c-train: #76558d;
   --c-ferry: #286f92;
+  --c-sentosa: #9a3974;
+  --c-cablecar: #387145;
+  --c-skytrain: #546e7a;
   --building: #b8c9bd;
 
   /* Road-condition signals stay legible above the muted civic basemap. */
@@ -58,7 +61,7 @@
   --radius-control: 12px;
   --radius-tile: 16px;
   --text-caption: 12px;
-  --layer-toggle-scale: 0.7;
+  --layer-toggle-scale: 0.9;
   --layer-tile-height: calc(78px * var(--layer-toggle-scale));
   /* Tile + rail padding + panel padding and border. */
   --layer-dock-height: calc(var(--layer-tile-height) + 24px);
@@ -356,7 +359,7 @@ body {
 
 .atlas-rail-label {
   width: 100%;
-  font-size: calc(var(--text-caption) * var(--layer-toggle-scale));
+  font-size: var(--text-caption);
   font-weight: 600;
   line-height: 1.25;
   text-align: center;
@@ -960,7 +963,7 @@ button,
 .atlas-rail-icon > svg { width: calc(22px * var(--layer-toggle-scale)); height: calc(22px * var(--layer-toggle-scale)); }
 .atlas-rail-icon > .atlas-transit-glyph { width: calc(38px * var(--layer-toggle-scale)); height: calc(26px * var(--layer-toggle-scale)); }
 .atlas-rail-icon[data-active="true"] { border-width: 2px; }
-.atlas-rail-count { font-size: calc(11px * var(--layer-toggle-scale)); }
+.atlas-rail-count { font-size: 10px; }
 .atlas-layer-notice { margin: 8px 12px; font-size: var(--text-caption); line-height: 1.5; color: var(--warn); }
 .atlas-rail-popup .atlas-layer-notice { margin-inline: 0; }
 .atlas-source-time { font-size: var(--text-caption); line-height: 1.5; color: var(--muted); margin-top: 6px; }
@@ -1000,6 +1003,51 @@ button,
 .atlas-vehicle-marker[data-state="stale"] { opacity: 0.5; }
 .atlas-map-mode[aria-pressed="true"] { color: var(--accent-ink); background: var(--accent); }
 .atlas-transit-glyph { width: 38px; height: 26px; object-fit: contain; }
+
+/* Route selection stays on the right, clear of the header and bottom map tools. */
+.atlas-route-controls { position: absolute; z-index: 25; top: 88px; right: 16px; display: grid; justify-items: end; gap: 8px; max-width: calc(100vw - 32px); }
+.atlas-route-trigger, .atlas-route-exit { min-height: 44px; padding: 10px 14px; color: var(--ink); font-size: 13px; font-weight: 600; }
+.atlas-route-trigger { display: flex; align-items: center; gap: 8px; max-width: 300px; text-align: start; }
+.atlas-route-trigger > svg, .atlas-route-fit > svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; flex-shrink: 0; }
+.atlas-route-trigger > svg circle { fill: var(--surface); }
+.atlas-route-panel { width: 312px; max-width: 100%; max-height: calc(100dvh - var(--layer-dock-height) - 174px); display: flex; flex-direction: column; padding: 12px; gap: 8px; font-size: 13px; overflow-y: auto; overscroll-behavior: contain; }
+.atlas-route-panel > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-shrink: 0; }
+.atlas-route-panel h2 { font-size: 16px; font-weight: 700; }
+.atlas-route-panel select, #route-search { width: 100%; min-height: 44px; padding: 8px 10px; background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--radius-control); color: var(--ink); }
+.atlas-route-mode { font-weight: 600; }
+.atlas-stop-names { display: flex; gap: 10px; align-items: center; min-height: 44px; cursor: pointer; }
+.atlas-route-panel input[type="checkbox"] { width: 18px; height: 18px; flex-shrink: 0; accent-color: var(--accent); }
+.atlas-route-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+.atlas-route-actions > button { min-height: 44px; padding: 8px 12px; border-radius: var(--radius-control); background: var(--surface-2); color: var(--ink); font-weight: 600; }
+.atlas-route-actions > button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.atlas-route-actions > span { margin-left: auto; color: var(--muted); font-size: 12px; }
+.atlas-route-results { overflow-y: auto; overscroll-behavior: contain; min-height: 80px; flex: 1 1 280px; scrollbar-color: var(--line-strong) transparent; }
+.atlas-route-row { display: flex; gap: 4px; align-items: center; border-bottom: 1px solid var(--line); }
+.atlas-route-row[data-selected="true"] { background: var(--surface-2); }
+.atlas-route-row > label { display: flex; gap: 10px; align-items: center; padding: 10px 6px; min-height: 60px; cursor: pointer; flex: 1; min-width: 0; }
+.atlas-route-row > label > span { min-width: 0; display: grid; gap: 4px; }
+.atlas-route-row strong { font-weight: 700; text-decoration-line: underline; text-decoration-thickness: 3px; text-underline-offset: 4px; }
+.atlas-route-row small { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; line-height: 1.4; }
+.atlas-route-fit { min-width: 44px; height: 44px; display: grid; place-items: center; color: var(--accent); border-radius: var(--radius-control); }
+.atlas-route-fit:hover, .atlas-route-exit:hover { background: var(--mint); }
+.atlas-route-note { color: var(--muted); font-size: 12px; line-height: 1.45; flex-shrink: 0; }
+.atlas-route-focus { display: grid; gap: 4px; padding: 10px; background: var(--mint); border-radius: var(--radius-control); }
+.atlas-route-focus > span { font-size: 12px; color: var(--ink-2); }
+.atlas-route-focus > button { min-height: 44px; text-align: start; text-decoration: underline; text-underline-offset: 3px; font-weight: 600; }
+.atlas-route-primary { display: block; min-height: 44px; padding: 10px 12px; border-radius: var(--radius-control); background: var(--accent); color: var(--accent-ink); font-size: 13px; font-weight: 600; }
+.atlas-transit-popup { padding: 8px; display: grid; gap: 8px; font: 13px/1.45 var(--font-sans), sans-serif; color: var(--ink); }
+.atlas-transit-popup > strong { font-size: 18px; padding-right: 20px; }
+.atlas-transit-popup .text-muted { font-size: 12px; }
+.atlas-route-panel :focus-visible, .atlas-transit-popup :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (max-width: 639px) {
+  .atlas-route-controls { top: 78px; right: 8px; max-width: calc(100vw - 16px); }
+  .atlas-route-panel { width: min(332px, calc(100vw - 16px)); max-height: calc(100dvh - var(--layer-dock-height) - 168px); }
+  .atlas-route-panel select, #route-search { font-size: 16px; }
+}
+@media (max-height: 700px) {
+  .atlas-route-results { flex: 0 0 auto; max-height: none; overflow: visible; }
+  .atlas-route-panel > * { flex-shrink: 0; }
+}
 .atlas-transit-options { display: grid; gap: 12px; padding: 0 16px 16px; font-size: 13px; }
 .atlas-transit-options label { font-weight: 600; }
 .atlas-transit-options select { width: 100%; min-height: 44px; padding: 8px; background: var(--surface); color: var(--ink); border: 1px solid var(--line-strong); border-radius: var(--radius-control); font: inherit; }

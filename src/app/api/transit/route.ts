@@ -11,17 +11,18 @@ const headers = {
 };
 const cache = new Map<string, { time: number; observations: BusObservation[] }>();
 const pending = new Map<string, Promise<BusObservation[]>>();
+const serviceCursor = new Map<string, number>();
 let budget = { minute: 0, requests: 0 };
-let validStops: Promise<Set<string>> | null = null;
+let catalog: Promise<ReturnType<typeof parseTransitCatalog>> | null = null;
 
-function allowedStops() {
-  validStops ??= readFile(path.join(process.cwd(), "public/transit/catalog.json"), "utf8")
-    .then((text) => new Set(parseTransitCatalog(JSON.parse(text)).stops.filter((stop) => stop.mode === "bus").map((stop) => stop.id)));
-  return validStops;
+function routeCatalog() {
+  catalog ??= readFile(path.join(process.cwd(), "public/transit/catalog.json"), "utf8")
+    .then((text) => parseTransitCatalog(JSON.parse(text)));
+  return catalog;
 }
-async function arrivals(stop: string): Promise<BusObservation[]> {
+async function arrivals(stop: string, maxAge = 20000): Promise<BusObservation[]> {
   const previous = cache.get(stop);
-  if (previous && Date.now() - previous.time < 20000) return previous.observations;
+  if (previous && Date.now() - previous.time < maxAge) return previous.observations;
   const running = pending.get(stop);
   if (running) return running;
   const minute = Math.floor(Date.now() / 60000);
@@ -42,29 +43,46 @@ async function arrivals(stop: string): Promise<BusObservation[]> {
 
 export async function GET(request: Request) {
   const generatedAt = Date.now();
-  const query = new URL(request.url).searchParams.get("stops") ?? "";
-  const stops = [...new Set(query.split(",").filter(Boolean))].sort();
-  if (stops.length > 8 || stops.some((stop) => !/^\d{5}$/.test(stop))) {
+  const params = new URL(request.url).searchParams;
+  const service = params.get("service");
+  let stops = [...new Set((params.get("stops") ?? "").split(",").filter(Boolean))].sort();
+  if ((service !== null && (!/^[a-z0-9]+$/i.test(service) || stops.length > 0))
+    || stops.length > 8 || stops.some((stop) => !/^\d{5}$/.test(stop))) {
     return Response.json({ status: "error", generatedAt, observations: [] }, { status: 400, headers });
   }
-  if (!process.env.DATAMALL_ACCOUNT_KEY?.trim()) {
-    return Response.json({ status: "unconfigured", generatedAt, observations: [] }, { headers });
-  }
   try {
-    const allowed = await allowedStops();
-    if (stops.some((stop) => !allowed.has(stop))) {
+    const data = await routeCatalog();
+    const allowed = new Set(data.stops.filter((stop) => stop.mode === "bus").map((stop) => stop.id));
+    if (service) {
+      stops = [...new Set(data.routes.filter((route) => route.mode === "bus" && route.service === service).flatMap((route) => route.stopIds))];
+      const cursor = (serviceCursor.get(service) ?? 0) % (stops.length || 1);
+      stops = [...stops.slice(cursor), ...stops.slice(0, cursor)];
+    }
+    if ((service && !stops.length) || stops.some((stop) => !allowed.has(stop))) {
       return Response.json({ status: "error", generatedAt, observations: [] }, { status: 400, headers });
     }
-    // Two workers bound upstream concurrency independently of the number of stops.
+    if (!process.env.DATAMALL_ACCOUNT_KEY?.trim()) {
+      return Response.json({ status: "unconfigured", generatedAt, observations: [], coverage: { checked: 0, total: stops.length } }, { headers });
+    }
+    // Focused services scan the union of both directions. Bounded workers,
+    // shared stop caching and the same request budget also apply to this path.
     const results: BusObservation[][] = [];
     let index = 0;
-    await Promise.all(Array.from({ length: Math.min(2, stops.length) }, async () => {
-      while (index < stops.length) {
-        const stop = stops[index++];
-        results.push(await arrivals(stop));
+    let checked = 0;
+    let firstMissed = -1;
+    const deadline = Date.now() + 22000;
+    await Promise.all(Array.from({ length: Math.min(service ? 4 : 2, stops.length) }, async () => {
+      while (index < stops.length && Date.now() < deadline) {
+        const position = index++;
+        const stop = stops[position];
+        try { results.push(await arrivals(stop, service ? 45000 : 20000)); checked++; }
+        catch { firstMissed = firstMissed < 0 ? position : Math.min(firstMissed, position); }
       }
     }));
-    return Response.json({ status: "ok", generatedAt, observations: results.flat() }, { headers });
+    if (service && stops.length) serviceCursor.set(service, ((serviceCursor.get(service) ?? 0) + (firstMissed < 0 ? index : firstMissed)) % stops.length);
+    if (stops.length && !checked) throw new Error("No stops available");
+    return Response.json({ status: "ok", generatedAt, observations: results.flat().filter((item) => !service || item.service === service),
+      coverage: { checked, total: stops.length } }, { headers });
   } catch {
     // Never reflect upstream diagnostics or credential-bearing request details to the browser.
     return Response.json({ status: "error", generatedAt, observations: [] }, {

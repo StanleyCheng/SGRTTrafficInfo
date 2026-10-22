@@ -2,7 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { inferBusVehicles, parseBusObservations, parseTransitCatalog, pointAlongRoute,
-  projectOnRoute, routeInView, vehicleDistanceAt } from "../src/lib/transit.ts";
+  projectOnRoute, routeInView, vehicleDistanceAt, routeGroupId, filteredTransitRoutes,
+  TRANSIT_DEFAULTS, TRANSIT_FILTER_DEFAULTS } from "../src/lib/transit.ts";
 
 const now = 1000000;
 const path = [[103.8, 1.3], [103.81, 1.3], [103.81, 1.31]];
@@ -74,6 +75,33 @@ test("feed parsing validates arrivals and preserves the official monitored flag"
 });
 test("viewport filtering retains paths crossing the map without a vertex inside it", () => {
   assert.equal(routeInView(route, { west: 103.802, east: 103.804, south: 1.299, north: 1.301, zoom: 15 }), true);
+});
+test("service focus includes both directions outside the viewport and isolates other services", () => {
+  const reverse = { ...route, id: "bus:42:2", direction: 2 };
+  const other = { ...route, id: "bus:43:1", service: "43" };
+  const all = { ...catalog, routes: [route, reverse, other] };
+  const active = { ...TRANSIT_DEFAULTS, bus: true };
+  const filters = { ...TRANSIT_FILTER_DEFAULTS, bus: [routeGroupId(route)] };
+  assert.deepEqual(filteredTransitRoutes(all, active, filters, null, null).map((item) => item.id), [route.id, reverse.id]);
+  assert.deepEqual(filteredTransitRoutes(all, active, TRANSIT_FILTER_DEFAULTS, "bus:42", null).map((item) => item.id), [route.id, reverse.id]);
+  assert.deepEqual(filteredTransitRoutes(all, active, { ...filters, bus: [] }, null, null), []);
+  assert.deepEqual(filteredTransitRoutes(all, TRANSIT_DEFAULTS, filters, null, null), []);
+});
+test("ferry connections remain separately selectable and extra modes have mapped stops and access", () => {
+  const actual = parseTransitCatalog(JSON.parse(fs.readFileSync(new URL("../public/transit/catalog.json", import.meta.url), "utf8")));
+  const ferries = actual.routes.filter((item) => item.mode === "ferry");
+  assert.equal(new Set(ferries.map(routeGroupId)).size, ferries.length);
+  for (const mode of ["sentosa", "cablecar", "skytrain"]) {
+    const routes = actual.routes.filter((item) => item.mode === mode);
+    assert.ok(routes.length > 0);
+    for (const item of routes) {
+      assert.ok(item.stopIds.length >= 2);
+      assert.ok(item.paths.every((line) => line.length >= 2));
+      assert.ok(item.stopIds.every((id) => actual.stops.some((stop) => stop.id === id && stop.mode === mode)));
+      if (mode === "skytrain") assert.ok(["public", "transit"].includes(item.access));
+    }
+  }
+  assert.equal(actual.routes.filter((item) => item.mode === "cablecar").flatMap((item) => item.stopIds).length, 6);
 });
 test("shipped catalogue includes the current Circle extension and all nine rail systems", () => {
   const actual = parseTransitCatalog(JSON.parse(fs.readFileSync(new URL("../public/transit/catalog.json", import.meta.url), "utf8")));

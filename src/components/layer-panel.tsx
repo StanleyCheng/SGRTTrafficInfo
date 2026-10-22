@@ -36,7 +36,7 @@ import {
 } from "./layer-ui";
 import { FeedIssue, FeedStatus } from "./feed-status";
 import { FeatureList } from "./feature-list";
-import { isTransitMode, TRANSIT_ICONS, TRANSIT_MODES, type TransitActive, type TransitMode, type TransitVehicle } from "@/lib/transit";
+import { isTransitMode, TRANSIT_ICONS, TRANSIT_MODES, type TransitActive, type TransitMode, type TransitRoute, type TransitVehicle } from "@/lib/transit";
 import type { TransitState } from "@/hooks/use-transit";
 import { TransitOptions, VehicleArtwork } from "./transit-ui";
 
@@ -46,6 +46,7 @@ export interface LayerPanelProps {
   onTransitToggle: (mode: TransitMode) => void;
   selectedTransitRoute: string | null;
   onTransitRoute: (id: string | null) => void;
+  onTransitFocus: (route: TransitRoute) => void;
   onTransitVehicle: (vehicle: TransitVehicle) => void;
   layers: LayerInfo[] | null;
   points: CameraPoint[];
@@ -99,6 +100,7 @@ export function LayerPanel({
   onTransitToggle,
   selectedTransitRoute,
   onTransitRoute,
+  onTransitFocus,
   onTransitVehicle,
   layers,
   points,
@@ -660,7 +662,7 @@ export function LayerPanel({
               </p>
             </>
           ) : isTransitMode(open) ? (
-            <TransitOptions mode={open} state={transit} selectedRouteId={selectedTransitRoute} onRoute={onTransitRoute} onVehicle={onTransitVehicle} />
+            <TransitOptions mode={open} state={transit} selectedRouteId={selectedTransitRoute} onRoute={onTransitRoute} onFocus={onTransitFocus} onVehicle={onTransitVehicle} />
           ) : (
             current && (
               <>

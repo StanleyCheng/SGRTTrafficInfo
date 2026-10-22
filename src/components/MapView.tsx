@@ -26,7 +26,7 @@ import type {
 } from "@/lib/types";
 import { useI18n } from "./i18n-provider";
 import { applyMapMode, type MapMode } from "./map-3d";
-import { renderTransit } from "./transit-map";
+import { renderTransit, renderTransitPopup } from "./transit-map";
 import type { TransitViewport } from "@/lib/transit";
 
 const TILES = ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"];
@@ -91,6 +91,7 @@ export interface MapFocus {
   lng: number;
   key: string;
   zoom?: number;
+  bounds?: [[number, number], [number, number]];
   /** Right/bottom insets (px) so the target clears the floating panels. */
   padding?: { right?: number; bottom?: number };
 }
@@ -99,6 +100,7 @@ export interface MapViewProps {
   basemap?: BasemapId;
   mapMode?: MapMode;
   transit: Parameters<typeof renderTransit>[1];
+  routePopup: Parameters<typeof renderTransitPopup>[1] | null;
   onViewportChange: (viewport: TransitViewport) => void;
   points: CameraPoint[];
   active: Record<LayerId, boolean>;
@@ -120,6 +122,7 @@ export default function MapView({
   basemap = "osm",
   mapMode = "2d",
   transit,
+  routePopup,
   onViewportChange,
   points,
   active,
@@ -693,6 +696,9 @@ export default function MapView({
     ]);
 
     const showRoadPopup = (event: maplibregl.MapLayerMouseEvent) => {
+      if (mapInstance.getLayer("transit-route-hit") && mapInstance.queryRenderedFeatures(event.point, { layers: ["transit-route-hit"] }).length) {
+        popup.current?.remove(); return;
+      }
       const rendered = event.features?.[0];
       const feature = rendered && roadFeaturesById.current.get(String(rendered.properties?.id));
       if (!feature || feature.id === iso.current.selectedRoadId) return;
@@ -726,6 +732,7 @@ export default function MapView({
     });
     mapInstance.on("mousemove", roadInteractive, showRoadPopup);
     mapInstance.on("click", roadInteractive, (event) => {
+      if (mapInstance.getLayer("transit-route-hit") && mapInstance.queryRenderedFeatures(event.point, { layers: ["transit-route-hit"] }).length) return;
       // Camera points are more precise than the wide schematic speed hit area.
       if (mapInstance.queryRenderedFeatures(event.point, { layers: cameraInteractive }).length > 0) return;
       const rendered = event.features?.[0];
@@ -738,7 +745,7 @@ export default function MapView({
     });
 
     mapInstance.on("click", (event) => {
-      const transitInteractive = ["transit-route-lines"].filter((id) => Boolean(mapInstance.getLayer(id)));
+      const transitInteractive = ["transit-route-hit"].filter((id) => Boolean(mapInstance.getLayer(id)));
       const hits = mapInstance.queryRenderedFeatures(event.point, {
         layers: [...cameraInteractive, ...roadInteractive, ...transitInteractive],
       });
@@ -972,11 +979,23 @@ export default function MapView({
     return renderTransit(map.current, transit);
   }, [transit, ready]);
 
+  useEffect(() => {
+    if (!map.current || !ready || !routePopup) return;
+    return renderTransitPopup(map.current, routePopup);
+  }, [routePopup, ready]);
+
   /* ---------------- fly to ---------------- */
   useEffect(() => {
     const mapInstance = map.current;
     if (!mapInstance || !ready || !focus || appliedFocusKey.current === focus.key) return;
     appliedFocusKey.current = focus.key;
+    if (focus.bounds) {
+      const dock = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--layer-tile-height")) || 72;
+      mapInstance.fitBounds(focus.bounds, { padding: { top: 96, right: focus.padding?.right ?? 24,
+        bottom: dock + 70, left: 24 }, maxZoom: 16,
+        duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 700 });
+      return;
+    }
     mapInstance.flyTo({
       center: [focus.lng, focus.lat],
       zoom: focus.zoom ?? 16.5,

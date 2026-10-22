@@ -2,9 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { STATIC_MODE } from "@/lib/client-data";
-import { inferBusVehicles, isRecord, parseTransitCatalog, routeInView,
+import { filteredTransitRoutes, inferBusVehicles, isRecord, parseTransitCatalog,
   type BusObservation, type TransitActive, type TransitCatalog, type TransitFeed,
-  type TransitVehicle, type TransitViewport } from "@/lib/transit";
+  type TransitFilters, type TransitVehicle, type TransitViewport } from "@/lib/transit";
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 const BACKEND = process.env.NEXT_PUBLIC_TRANSIT_API_BASE?.replace(/\/$/, "");
@@ -28,16 +28,20 @@ function parseFeed(value: unknown): TransitFeed {
       position: position === null ? null : [Number(position[0]), Number(position[1])] });
   }
   return { status: value.status === "ok" ? "ok" : value.status === "unconfigured" ? "unconfigured" : "error",
-    generatedAt: value.generatedAt, observations };
+    generatedAt: value.generatedAt, observations,
+    coverage: isRecord(value.coverage) && typeof value.coverage.checked === "number" && typeof value.coverage.total === "number"
+      ? { checked: value.coverage.checked, total: value.coverage.total } : undefined };
 }
 
-export function useTransit(active: TransitActive, viewport: TransitViewport | null, selectedRouteId: string | null) {
+export function useTransit(active: TransitActive, viewport: TransitViewport | null, selectedRouteId: string | null,
+  filters: TransitFilters, focusedGroup: string | null, requested: boolean) {
   const [catalog, setCatalog] = useState<TransitCatalog | null>(null);
   const [catalogError, setCatalogError] = useState(false);
   const [feedStatus, setFeedStatus] = useState<TransitFeed["status"] | "loading">("unconfigured");
   const [vehicles, setVehicles] = useState<TransitVehicle[]>([]);
+  const [coverage, setCoverage] = useState<TransitFeed["coverage"]>();
   const previous = useRef<TransitVehicle[]>([]);
-  const enabled = Object.values(active).some(Boolean);
+  const enabled = requested || Object.values(active).some(Boolean);
 
   // Expiry also removes estimates from the accessible Options list when a
   // sustained feed failure leaves no successful poll to replace the records.
@@ -62,11 +66,11 @@ export function useTransit(active: TransitActive, viewport: TransitViewport | nu
     return () => abort.abort();
   }, [enabled, catalog]);
 
-  const routes = useMemo(() => catalog?.routes.filter((route) => active[route.mode]
-    && (route.id === selectedRouteId || (viewport && routeInView(route, viewport)))) ?? [],
-  [catalog, active, viewport, selectedRouteId]);
+  const routes = useMemo(() => catalog ? filteredTransitRoutes(catalog, active, filters, focusedGroup, viewport) : [],
+  [catalog, active, viewport, filters, focusedGroup]);
+  const service = focusedGroup?.startsWith("bus:") ? focusedGroup.slice(4) : null;
   const stopsKey = useMemo(() => {
-    if (!catalog || !viewport || !active.bus) return "";
+    if (!catalog || !viewport || !active.bus || (focusedGroup && !service)) return "";
     const routeIds = new Set(routes.filter((route) => route.mode === "bus").flatMap((route) => route.stopIds));
     const selected = catalog.routes.find((route) => route.id === selectedRouteId && route.mode === "bus");
     const centre = [(viewport.west + viewport.east) / 2, (viewport.south + viewport.north) / 2];
@@ -78,10 +82,11 @@ export function useTransit(active: TransitActive, viewport: TransitViewport | nu
     // Reserve four samples along the selected route, plus four nearby visible stops.
     const selectedIds = selected ? [0.15, 0.4, 0.65, 0.85].map((fraction) => selected.stopIds[Math.floor((selected.stopIds.length - 1) * fraction)]) : [];
     return [...new Set([...selectedIds, ...available.map((stop) => stop.id)].filter(Boolean))].slice(0, 8).sort().join(",");
-  }, [catalog, viewport, active.bus, routes, selectedRouteId]);
+  }, [catalog, viewport, active.bus, routes, selectedRouteId, focusedGroup, service]);
+  const query = service ? `service=${encodeURIComponent(service)}` : stopsKey ? `stops=${encodeURIComponent(stopsKey)}` : "";
 
   useEffect(() => {
-    if (!active.bus || !catalog || !stopsKey || (STATIC_MODE && !BACKEND)) return;
+    if (!active.bus || !catalog || !query || (STATIC_MODE && !BACKEND)) return;
     let disposed = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let abort: AbortController | null = null;
@@ -91,13 +96,14 @@ export function useTransit(active: TransitActive, viewport: TransitViewport | nu
       const requestSequence = ++sequence;
       const controller = new AbortController();
       abort = controller;
-      const timeout = setTimeout(() => controller.abort(), 12000);
+      const timeout = setTimeout(() => controller.abort(), service ? 35000 : 12000);
       try {
-        const response = await fetch(`${BACKEND ?? ""}/api/transit?stops=${encodeURIComponent(stopsKey)}`, { signal: controller.signal });
+        const response = await fetch(`${BACKEND ?? ""}/api/transit?${query}`, { signal: controller.signal });
         if (!response.ok) throw new Error("Transit feed unavailable");
         const feed = parseFeed(await response.json());
         if (disposed || requestSequence !== sequence) return;
         setFeedStatus(feed.status);
+        setCoverage(feed.coverage);
         if (feed.status === "ok") {
           previous.current = inferBusVehicles(catalog, feed.observations, previous.current, Date.now());
           setVehicles(previous.current);
@@ -106,7 +112,7 @@ export function useTransit(active: TransitActive, viewport: TransitViewport | nu
         if (!disposed && !document.hidden && requestSequence === sequence) setFeedStatus("error");
       } finally {
         clearTimeout(timeout);
-        if (!disposed && !document.hidden && requestSequence === sequence) timer = setTimeout(poll, 20000);
+        if (!disposed && !document.hidden && requestSequence === sequence) timer = setTimeout(poll, service ? 45000 : 20000);
       }
     };
     const visibility = () => {
@@ -114,12 +120,13 @@ export function useTransit(active: TransitActive, viewport: TransitViewport | nu
       sequence++; abort?.abort();
       if (!document.hidden) void poll();
     };
-    const kickoff = setTimeout(() => { setFeedStatus("loading"); void poll(); }, 0);
+    const kickoff = setTimeout(() => { setFeedStatus("loading"); setCoverage(undefined); void poll(); }, 0);
     document.addEventListener("visibilitychange", visibility);
     return () => { disposed = true; clearTimeout(kickoff); clearTimeout(timer); abort?.abort(); document.removeEventListener("visibilitychange", visibility); };
-  }, [active.bus, catalog, stopsKey]);
+  }, [active.bus, catalog, query, service]);
 
-  return { catalog, catalogError, routes, vehicles: active.bus ? vehicles : [],
+  const routeIds = new Set(routes.map((route) => route.id));
+  return { catalog, catalogError, routes, vehicles: active.bus ? vehicles.filter((vehicle) => routeIds.has(vehicle.routeId)) : [], coverage,
     feedStatus: STATIC_MODE && !BACKEND ? "unconfigured" as const : feedStatus, stopsKey };
 }
 export type TransitState = ReturnType<typeof useTransit>;
