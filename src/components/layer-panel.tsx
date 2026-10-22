@@ -36,8 +36,10 @@ import {
 } from "./layer-ui";
 import { FeedIssue, FeedStatus } from "./feed-status";
 import { FeatureList } from "./feature-list";
-import { isTransitMode, TRANSIT_ICONS, TRANSIT_MODES, type TransitActive, type TransitMode, type TransitRoute, type TransitVehicle } from "@/lib/transit";
+import { isTransitMode, TRANSIT_ICONS, TRANSIT_MODES, type TransitActive, type TransitMode, type TransitRoute, type TransitStop, type TransitVehicle } from "@/lib/transit";
 import type { TransitState } from "@/hooks/use-transit";
+import { useSavedScroll, useSavedState } from "@/hooks/use-saved-state";
+import { isChoice } from "@/lib/preferences";
 import { TransitOptions, VehicleArtwork } from "./transit-ui";
 
 export interface LayerPanelProps {
@@ -48,6 +50,7 @@ export interface LayerPanelProps {
   onTransitRoute: (id: string | null) => void;
   onTransitFocus: (route: TransitRoute) => void;
   onTransitVehicle: (vehicle: TransitVehicle) => void;
+  onTransitStop: (stop: TransitStop) => void;
   layers: LayerInfo[] | null;
   points: CameraPoint[];
   active: Record<LayerId, boolean>;
@@ -102,6 +105,7 @@ export function LayerPanel({
   onTransitRoute,
   onTransitFocus,
   onTransitVehicle,
+  onTransitStop,
   layers,
   points,
   active,
@@ -130,16 +134,22 @@ export function LayerPanel({
   className = "",
 }: LayerPanelProps) {
   const { t, lang } = useI18n();
-  const [open, setOpen] = useState<EntryId | "browse" | "status" | null>(null);
-  const [selectedEntry, setSelectedEntry] = useState<EntryId>("incidents");
+  const savedEntry = isChoice<EntryId>(...ROAD_LAYER_ORDER, ...LAYERS.map((layer) => layer.id), ...TRANSIT_MODES);
+  const [open, setOpen] = useSavedState<EntryId | "browse" | "status" | null>("dock.open", null,
+    (value): value is EntryId | "browse" | "status" | null => value === null || value === "browse" || value === "status" || savedEntry(value));
+  const [selectedEntry, setSelectedEntry] = useSavedState<EntryId>("dock.selected", "incidents", savedEntry);
   const [hint, setHint] = useState<{
     text: string;
     owner: string;
     x: number;
   } | null>(null);
   const [more, setMore] = useState(false);
+  const [back, setBack] = useState(false);
+  const drag = useRef<{ pointer: number; x: number; scroll: number; moved: boolean } | null>(null);
+  const suppressDragClick = useRef(false);
   const panelRef = useRef<HTMLElement>(null);
   const railRef = useRef<HTMLDivElement>(null);
+  useSavedScroll(railRef, "dock.scroll", !collapsed);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const returnFocus = useRef<HTMLElement | null>(null);
   const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -246,13 +256,32 @@ export function LayerPanel({
   useEffect(() => {
     const rail = railRef.current;
     if (!rail) return;
-    const observer = new ResizeObserver(() =>
-      setMore(rail.scrollLeft + rail.clientWidth < rail.scrollWidth - 4),
-    );
+    const updateEdges = () => {
+      setBack(rail.scrollLeft > 4);
+      setMore(rail.scrollLeft + rail.clientWidth < rail.scrollWidth - 4);
+    };
+    const wheel = (event: WheelEvent) => {
+      if (mobile || event.ctrlKey || event.metaKey) return;
+      const delta = (Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY)
+        * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? rail.clientWidth : 1);
+      const next = Math.max(0, Math.min(rail.scrollWidth - rail.clientWidth, rail.scrollLeft + delta));
+      if (next === rail.scrollLeft) return;
+      event.preventDefault();
+      rail.scrollLeft = next;
+    };
+    const observer = new ResizeObserver(updateEdges);
     observer.observe(rail);
     if (rail.firstElementChild) observer.observe(rail.firstElementChild);
-    return () => observer.disconnect();
-  }, [collapsed]);
+    rail.addEventListener("wheel", wheel, { passive: false });
+    return () => { observer.disconnect(); rail.removeEventListener("wheel", wheel); };
+  }, [collapsed, mobile]);
+  const scrollRail = (direction: 1 | -1) => {
+    const rail = railRef.current;
+    if (!rail) return;
+    clearHint();
+    rail.scrollBy({ left: direction * Math.max(100, rail.clientWidth * 0.75),
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
+  };
   const clearHint = () => {
     if (hintTimer.current) clearTimeout(hintTimer.current);
     hintTimer.current = null;
@@ -396,12 +425,46 @@ export function LayerPanel({
         </button>
       ) : (
         <>
+          {!mobile && <button type="button" className="atlas-icon-button atlas-rail-nav" disabled={!back}
+            aria-label={t("panel.scrollLeft")} title={t("panel.scrollLeft")} aria-controls="atlas-layer-scroll"
+            onClick={() => scrollRail(-1)}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m12 4-6 6 6 6" /></svg></button>}
           <div className="atlas-rail-window" data-more={more}>
             <div
               ref={railRef}
+              id="atlas-layer-scroll"
               className="atlas-rail-scroll"
+              onPointerDown={(event) => {
+                if (mobile || event.pointerType !== "mouse" || event.button !== 0) return;
+                suppressDragClick.current = false;
+                drag.current = { pointer: event.pointerId, x: event.clientX, scroll: event.currentTarget.scrollLeft, moved: false };
+              }}
+              onPointerMove={(event) => {
+                const current = drag.current;
+                if (!current || current.pointer !== event.pointerId) return;
+                const delta = event.clientX - current.x;
+                if (!current.moved && Math.abs(delta) < 6) return;
+                current.moved = true;
+                event.currentTarget.setPointerCapture(event.pointerId);
+                event.currentTarget.dataset.dragging = "true";
+                event.preventDefault();
+                event.currentTarget.scrollLeft = current.scroll - delta;
+              }}
+              onPointerUp={(event) => {
+                if (drag.current?.pointer !== event.pointerId) return;
+                suppressDragClick.current = drag.current.moved;
+                drag.current = null;
+                delete event.currentTarget.dataset.dragging;
+                if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+              }}
+              onPointerCancel={(event) => { drag.current = null; delete event.currentTarget.dataset.dragging; }}
+              onClickCapture={(event) => {
+                if (suppressDragClick.current && event.detail > 0) {
+                  event.preventDefault(); event.stopPropagation(); suppressDragClick.current = false;
+                }
+              }}
               onScroll={(event) => {
                 const rail = event.currentTarget;
+                setBack(rail.scrollLeft > 4);
                 setMore(
                   rail.scrollLeft + rail.clientWidth < rail.scrollWidth - 4,
                 );
@@ -542,7 +605,7 @@ export function LayerPanel({
                 </li>
               </ul>
             </div>
-            {more && (
+            {mobile && more && (
               <span className="atlas-rail-overflow" aria-hidden="true">
                 <svg
                   width="12"
@@ -557,6 +620,9 @@ export function LayerPanel({
               </span>
             )}
           </div>
+          {!mobile && <button type="button" className="atlas-icon-button atlas-rail-nav" disabled={!more}
+            aria-label={t("panel.scrollRight")} title={t("panel.scrollRight")} aria-controls="atlas-layer-scroll"
+            onClick={() => scrollRail(1)}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m8 4 6 6-6 6" /></svg></button>}
           <button
             type="button"
             className="atlas-icon-button atlas-options-button"
@@ -662,7 +728,7 @@ export function LayerPanel({
               </p>
             </>
           ) : isTransitMode(open) ? (
-            <TransitOptions mode={open} state={transit} selectedRouteId={selectedTransitRoute} onRoute={onTransitRoute} onFocus={onTransitFocus} onVehicle={onTransitVehicle} />
+            <TransitOptions mode={open} state={transit} selectedRouteId={selectedTransitRoute} onRoute={onTransitRoute} onFocus={onTransitFocus} onVehicle={onTransitVehicle} onStop={onTransitStop} />
           ) : (
             current && (
               <>

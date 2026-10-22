@@ -40,6 +40,26 @@ routes, with normal map collision placement. Compact settings and focus controls
 space for the route list. Mobile Transport values wrap above the native select so each complete
 mode name remains readable. The bounded panel scrolls on short phones.
 
+Click a displayed station name or dot to open its arrivals, direction, source and update details.
+Route Options also lists station buttons for keyboard access. Desktop uses a nonmodal card;
+phones use a bounded bottom sheet. Clock times use Singapore time, with countdowns rounded
+down to whole minutes. Vehicle details show direction, a linked next stop and the final station
+or named loop return. A prediction for a later sampled stop names that stop separately.
+
+The opened bus stop refreshes every 20 seconds while the tab is visible. Changing or closing
+the stop cancels its request. Source update and last-check times are separate. Retained provider
+rows show an update delay after 45 seconds and expire at 90 seconds. LTA `Monitored=1` rows are
+labelled live predictions; `Monitored=0` rows are labelled operator schedules. Provider schedules
+remain available with the local timetable opt-in off and never create moving bus positions.
+This follows the [LTA DataMall API guide](https://datamall.lta.gov.sg/content/dam/datamall/datasets/LTA_DataMall_API_User_Guide.pdf),
+version 6.10, Bus Arrival definitions on page 14 and countdown guidance on page 19.
+
+For other modes, supported station arrivals use the saved timetable opt-in described below.
+The card shows up to three future times per direction, the timetable capture date and source.
+These use uniform headway and route-distance assumptions inside published service windows.
+Unsupported stations and branches outside the primary model keep their serving-route list
+without fabricated arrival times.
+
 The fifteen transparent vehicle illustrations in `public/transit/` are researched representative
 fleet/type icons. Their exact prompts or vector briefs, primary reference links, SHA-256 and alpha
 checks are in `public/transit/assets.json`, including Sentosa Express, a conventional Singapore
@@ -184,8 +204,8 @@ particular street), with the limitation stated in the panel.
 Static hosting has no server-side credential proxy and never ships the private DataMall key.
 It loads a saved official road-condition snapshot, split into one file per layer. A persistent
 data-status icon opens a **Cached copy** label and the original snapshot date on desktop and phone;
-these road conditions must not be interpreted as current traffic. Layers 1–2 still start on and the
-camera layers start off.
+these road conditions must not be interpreted as current traffic. On a first visit, layers 1–2
+start on and camera layers start off. Returning visits restore the browser's saved layer choices.
 Traffic images use the keyless data.gov.sg feed and refresh while that layer is visible.
 
 ### Phone and desktop controls
@@ -195,8 +215,11 @@ Traffic images use the keyless data.gov.sg feed and refresh while that layer is 
   Hover/focus shows the full tooltip. Tapping shows its name and new state without opening a popup;
   phone tap hints stay open until another interaction dismisses them. The pinned Options icon
   opens the last-tapped layer's details, legends and filters without changing visibility.
-  The row scrolls horizontally, with a chevron indicating more controls. Browse, Reset and
-  Collapse are icon controls in the same row; Options and data status stay reachable while scrolling.
+  The row scrolls horizontally. Desktop supports wheel/trackpad gestures, mouse dragging without
+  toggling a layer, and 44 px left/right arrow buttons that disable at their respective edges.
+  Reduced motion makes arrow scrolling immediate. Phones retain native touch scrolling and
+  the overflow chevron. Browse, Reset and Collapse are icon controls in the same row;
+  Options and data status stay reachable while scrolling.
   The collapsed dock retains the data-status icon, which explains feed health and capture dates.
   On phones the expanded dock spans the available width, with map controls and attribution above it.
 - **Browse visible layers:** a searchable, paginated text list provides a keyboard-accessible way to
@@ -206,12 +229,35 @@ Traffic images use the keyless data.gov.sg feed and refresh while that layer is 
   disclosure; missing deployment credentials offer available cameras instead of an ineffective Retry.
 - **Sources:** a native modal contains the nine road-layer sources and three camera-layer sources,
   with keyboard focus containment, Escape dismissal and focus return.
-- **Default view:** driver layers 1 (live congestion) and 2 (accidents & breakdowns) are on; layers
-  3–9 and all three camera layers are off, in every build.
+- **First-visit defaults:** driver layers 1 (live congestion) and 2 (accidents & breakdowns) are on;
+  layers 3–9 and all three camera layers are off, in every build. Returning visits restore saved choices.
 - **Top bar:** the app-icon button retracts the header and restores it in the same position. The
   language, 2D/3D, basemap and source buttons remain independent keyboard controls. On phones the header
   stays on one row: logo, short title, one EN/中 language toggle, a 2D/3D action, and icon-only basemap/Sources buttons.
   Both languages keep the Chinese title's bar width and the four action buttons aligned to its right.
+
+### Reopen saved settings
+
+The app saves settings in the current browser on the current device. Reopening on desktop or
+phone restores the same choices, with panels adapting to the current screen width:
+
+- Map centre, zoom, bearing, pitch, basemap and 2D/3D mode; camera, road and transit layer switches;
+  road filters and the selected incident route.
+- All-on, all-off or selected-only service filters, selected/focused routes and route popups;
+  route panel mode, search, result limit and scroll; stop names and timetable estimates.
+- Selected camera, road, station or unexpired vehicle details; dock selection, open panel, scroll
+  and collapse; header collapse; browse search/page, transit source/station disclosures and the
+  Sources panel. Language retains its existing saved preference.
+
+Selections resolve against current data when it loads. Removed routes/stations and removed or
+duplicate service-filter IDs are discarded; all-on and all-off remain distinct choices. A reopened
+station requests current arrivals. Vehicle detail snapshots keep their original source timestamps
+and freshness limits, refresh when newer matching evidence arrives, and are discarded after expiry.
+They never restart as fresh live positions. Preferences contain no credentials or raw feed responses.
+
+Settings do not sync between browsers or devices. Clearing browser storage removes them. If storage
+is denied, full or corrupt, the app continues with valid defaults. Reset layers and filters saves
+the resulting reset choices.
 
 ## Data sources (all official, no mock data)
 

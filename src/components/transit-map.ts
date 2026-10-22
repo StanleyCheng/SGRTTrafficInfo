@@ -1,6 +1,6 @@
 import maplibregl, { type GeoJSONSource, type Map as LibreMap, type MapLayerMouseEvent } from "maplibre-gl";
 import { pointAlongRoute, reconcileVehicleMotion, routeGroupId, screenRouteHeading, smoothHeading,
-  vehicleMotionAt, vehicleMotionIsAnimating, vehicleHeadingPoints, reducedVehicleDistanceAt, type Position, type TransitCatalog, type TransitRoute, type TransitVehicle, type VehicleMotion } from "@/lib/transit";
+  vehicleMotionAt, vehicleMotionIsAnimating, vehicleHeadingPoints, reducedVehicleDistanceAt, type Position, type TransitCatalog, type TransitRoute, type TransitStop, type TransitVehicle, type VehicleMotion } from "@/lib/transit";
 import { movingSprite } from "@/lib/transit-sprites";
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
@@ -10,6 +10,7 @@ export interface TransitRenderOptions {
   selectedRouteId: string | null;
   focusedGroup: string | null; stopNames: boolean;
   onVehicle: (vehicle: TransitVehicle) => void; onRoute: (id: string | null, position?: Position) => void;
+  onStop: (stop: TransitStop) => void;
   vehicleLabel: (vehicle: TransitVehicle, stale: boolean) => string;
 }
 interface VehicleMarker {
@@ -43,6 +44,8 @@ export function createTransitRenderer(map: LibreMap) {
     map.addLayer({ id: "transit-station-dots", type: "circle", source: "transit-stops", minzoom: 12,
       paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 12, 2, 16, 4], "circle-color": surface,
         "circle-stroke-width": 1.5, "circle-stroke-color": ["get", "colour"] } });
+    map.addLayer({ id: "transit-station-hit", type: "circle", source: "transit-stops", minzoom: 12,
+      paint: { "circle-radius": 12, "circle-opacity": 0 } });
     map.addLayer({ id: "transit-station-labels", type: "symbol", source: "transit-stops",
       layout: { "text-field": ["get", "name"], "text-font": ["Noto Sans Regular"], "text-size": 11,
         "text-anchor": "top", "text-offset": [0, 0.7] },
@@ -50,7 +53,7 @@ export function createTransitRenderer(map: LibreMap) {
   }
   function updateSources(next: TransitRenderOptions) {
     if (sourceState?.stopNames !== next.stopNames) map.setLayoutProperty("transit-station-labels", "visibility", next.stopNames ? "visible" : "none");
-    if (sourceState?.focusedGroup !== next.focusedGroup) map.setLayerZoomRange("transit-station-dots", next.focusedGroup ? 0 : 12, 24);
+    if (sourceState?.focusedGroup !== next.focusedGroup) for (const id of ["transit-station-dots", "transit-station-hit"]) map.setLayerZoomRange(id, next.focusedGroup ? 0 : 12, 24);
     if (sourceState?.routes !== next.routes || sourceState?.selectedRouteId !== next.selectedRouteId || sourceState?.focusedGroup !== next.focusedGroup) {
       map.getSource<GeoJSONSource>("transit-routes")?.setData({ type: "FeatureCollection", features: next.routes.flatMap((route) => route.paths.map((coordinates) => ({
         type: "Feature", geometry: { type: "LineString", coordinates },
@@ -61,7 +64,7 @@ export function createTransitRenderer(map: LibreMap) {
       const colours = new Map(next.routes.flatMap((route) => route.stopIds.map((id) => [id, route.colour] satisfies [string, string])));
       map.getSource<GeoJSONSource>("transit-stops")?.setData({ type: "FeatureCollection", features: (next.catalog?.stops ?? [])
         .filter((stop) => colours.has(stop.id)).map((stop) => ({ type: "Feature", geometry: { type: "Point", coordinates: stop.position },
-          properties: { name: stop.name, colour: colours.get(stop.id) } })) });
+          properties: { stopId: stop.id, name: stop.name, colour: colours.get(stop.id) } })) });
     }
     sourceState = next;
   }
@@ -162,9 +165,16 @@ export function createTransitRenderer(map: LibreMap) {
   }
   function wake() { lastFrame = 0; draw(performance.now()); schedule(); }
   const selectRoute = (event: MapLayerMouseEvent) => {
+    if (map.queryRenderedFeatures(event.point, { layers: ["transit-station-hit", "transit-station-labels"] }).length) return;
     const id: unknown = event.features?.[0]?.properties?.routeId;
     if (typeof id === "string") options?.onRoute(id, [event.lngLat.lng, event.lngLat.lat]);
   };
+  const selectStop = (event: MapLayerMouseEvent) => {
+    const id: unknown = event.features?.[0]?.properties?.stopId;
+    const stop = options?.catalog?.stops.find((stop) => stop.id === id);
+    if (stop) options?.onStop(stop);
+  };
+  const stationLayers = ["transit-station-hit", "transit-station-labels"];
   const pointer = () => { map.getCanvas().style.cursor = "pointer"; };
   const clearPointer = () => { map.getCanvas().style.cursor = ""; };
   function destroy() {
@@ -174,11 +184,15 @@ export function createTransitRenderer(map: LibreMap) {
     map.off("move", wake); map.off("remove", destroy);
     map.off("click", "transit-route-hit", selectRoute);
     map.off("mouseenter", "transit-route-hit", pointer); map.off("mouseleave", "transit-route-hit", clearPointer);
+    map.off("click", stationLayers, selectStop);
+    map.off("mouseenter", stationLayers, pointer); map.off("mouseleave", stationLayers, clearPointer);
   }
   document.addEventListener("visibilitychange", wake); reduced.addEventListener("change", wake);
   map.on("move", wake); map.on("remove", destroy);
   map.on("click", "transit-route-hit", selectRoute);
   map.on("mouseenter", "transit-route-hit", pointer); map.on("mouseleave", "transit-route-hit", clearPointer);
+  map.on("click", stationLayers, selectStop);
+  map.on("mouseenter", stationLayers, pointer); map.on("mouseleave", stationLayers, clearPointer);
   return { update, destroy };
 }
 

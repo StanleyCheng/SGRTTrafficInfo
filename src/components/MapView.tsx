@@ -28,6 +28,7 @@ import { useI18n } from "./i18n-provider";
 import { applyMapMode, type MapMode } from "./map-3d";
 import { createTransitRenderer, renderTransitPopup, type TransitRenderOptions } from "./transit-map";
 import type { TransitViewport } from "@/lib/transit";
+import { isMapView, readPreference, writePreference } from "@/lib/preferences";
 
 const TILES = ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"];
 const POSITRON_STYLE_URL = "https://tiles.openfreemap.org/styles/positron";
@@ -147,6 +148,7 @@ export default function MapView({
     pitch: 0,
   });
   const appliedFocusKey = useRef<string | null>(null);
+  const restoredView = useRef(false);
   const popup = useRef<maplibregl.Popup | null>(null);
   const transitRenderer = useRef<ReturnType<typeof createTransitRenderer> | null>(null);
   const pointsById = useRef(new Map<string, CameraPoint>());
@@ -399,6 +401,8 @@ export default function MapView({
             .addTo(mapInstance);
         });
         mapInstance.on("click", pointLayers, (e) => {
+          const stationLayers = ["transit-station-hit", "transit-station-labels"].filter((id) => Boolean(mapInstance.getLayer(id)));
+          if (stationLayers.length && mapInstance.queryRenderedFeatures(e.point, { layers: stationLayers }).length) return;
           const f = e.features?.[0];
           const p = f && pointsById.current.get(String(f.properties?.id));
           if (p) {
@@ -733,7 +737,8 @@ export default function MapView({
     });
     mapInstance.on("mousemove", roadInteractive, showRoadPopup);
     mapInstance.on("click", roadInteractive, (event) => {
-      if (mapInstance.getLayer("transit-route-hit") && mapInstance.queryRenderedFeatures(event.point, { layers: ["transit-route-hit"] }).length) return;
+      const transitLayers = ["transit-route-hit", "transit-station-hit", "transit-station-labels"].filter((id) => Boolean(mapInstance.getLayer(id)));
+      if (transitLayers.length && mapInstance.queryRenderedFeatures(event.point, { layers: transitLayers }).length) return;
       // Camera points are more precise than the wide schematic speed hit area.
       if (mapInstance.queryRenderedFeatures(event.point, { layers: cameraInteractive }).length > 0) return;
       const rendered = event.features?.[0];
@@ -746,7 +751,7 @@ export default function MapView({
     });
 
     mapInstance.on("click", (event) => {
-      const transitInteractive = ["transit-route-hit"].filter((id) => Boolean(mapInstance.getLayer(id)));
+      const transitInteractive = ["transit-route-hit", "transit-station-hit", "transit-station-labels"].filter((id) => Boolean(mapInstance.getLayer(id)));
       const hits = mapInstance.queryRenderedFeatures(event.point, {
         layers: [...cameraInteractive, ...roadInteractive, ...transitInteractive],
       });
@@ -774,10 +779,22 @@ export default function MapView({
     let cancelled = false;
     const resizeObserver = new ResizeObserver(() => map.current?.resize());
     resizeObserver.observe(container);
+    const saveView = () => {
+      const current = map.current;
+      if (!current) return;
+      const center = current.getCenter();
+      view.current = { center: [center.lng, center.lat], zoom: current.getZoom(), bearing: current.getBearing(), pitch: current.getPitch() };
+      try { writePreference(localStorage, "mapView", view.current); } catch { /* private mode */ }
+    };
+    window.addEventListener("pagehide", saveView);
 
     void (async () => {
       const style = await resolveStyle(basemap);
       if (cancelled || map.current) return;
+      if (!restoredView.current) {
+        try { view.current = readPreference(localStorage, "mapView", view.current, isMapView); } catch { /* private mode */ }
+        restoredView.current = true;
+      }
       const mapInstance = new maplibregl.Map({
         container,
         center: view.current.center,
@@ -811,6 +828,7 @@ export default function MapView({
         viewportCallback.current({ west: bounds.getWest(), south: bounds.getSouth(), east: bounds.getEast(), north: bounds.getNorth(), zoom: mapInstance.getZoom() });
       });
       mapInstance.on("moveend", () => {
+        saveView();
         const bounds = mapInstance.getBounds();
         viewportCallback.current({ west: bounds.getWest(), south: bounds.getSouth(), east: bounds.getEast(), north: bounds.getNorth(), zoom: mapInstance.getZoom() });
       });
@@ -818,6 +836,8 @@ export default function MapView({
 
     return () => {
       cancelled = true;
+      saveView();
+      window.removeEventListener("pagehide", saveView);
       resizeObserver.disconnect();
       popup.current?.remove();
       const mapInstance = map.current;

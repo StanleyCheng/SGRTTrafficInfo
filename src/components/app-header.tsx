@@ -7,6 +7,8 @@ import type { BasemapId } from "@/components/MapView";
 import { LANGS, translate } from "@/lib/i18n";
 import { MapIcon } from "./icons";
 import type { MapMode } from "./map-3d";
+import { useSavedState } from "@/hooks/use-saved-state";
+import { isBoolean } from "@/lib/preferences";
 
 export interface AppHeaderProps {
   basemap?: BasemapId;
@@ -68,7 +70,7 @@ export function AppHeader({
 }: AppHeaderProps) {
   const { lang, setLang, t } = useI18n();
   const [clock, setClock] = useState("");
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useSavedState("header.collapsed", false, isBoolean);
 
   useEffect(() => {
     const fmt = new Intl.DateTimeFormat("en-GB", {

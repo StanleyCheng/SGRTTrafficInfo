@@ -2,37 +2,15 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { STATIC_MODE } from "@/lib/client-data";
-import { filteredTransitRoutes, inferBusVehicles, isRecord, parseTransitCatalog, sampledBusStops,
-  type BusObservation, type TransitActive, type TransitCatalog, type TransitFeed,
+import { filteredTransitRoutes, inferBusVehicles, parseTransitCatalog, sampledBusStops,
+  type TransitActive, type TransitCatalog, type TransitFeed,
   type TransitFilters, type TransitVehicle, type TransitViewport } from "@/lib/transit";
+import { parseTransitFeed } from "@/lib/transit-arrivals";
 import { inferScheduledVehicles } from "@/lib/transit-schedule";
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 const BACKEND = process.env.NEXT_PUBLIC_TRANSIT_API_BASE?.replace(/\/$/, "");
 
-function parseFeed(value: unknown): TransitFeed {
-  if (!isRecord(value) || !["ok", "unconfigured", "error"].includes(String(value.status))
-    || typeof value.generatedAt !== "number" || !Array.isArray(value.observations)) throw new Error("Invalid transit feed");
-  const observations: BusObservation[] = [];
-  for (const item of value.observations) {
-    if (!isRecord(item) || typeof item.service !== "string" || typeof item.stopId !== "string"
-      || typeof item.origin !== "string" || typeof item.destination !== "string"
-      || !Number.isFinite(item.arrivalAt) || typeof item.arrivalAt !== "number"
-      || !Number.isFinite(item.observedAt) || typeof item.observedAt !== "number"
-      || typeof item.monitored !== "boolean" || (item.type !== "SD" && item.type !== "DD" && item.type !== "BD")) continue;
-    const position = item.position;
-    if (position !== null && (!Array.isArray(position) || position.length !== 2 || !position.every(Number.isFinite))) continue;
-    observations.push({ service: item.service, stopId: item.stopId, origin: item.origin,
-      destination: item.destination, arrivalAt: item.arrivalAt, observedAt: item.observedAt,
-      monitored: item.monitored, type: item.type,
-      visitNumber: typeof item.visitNumber === "number" && Number.isInteger(item.visitNumber) && item.visitNumber > 0 ? item.visitNumber : 1,
-      position: position === null ? null : [Number(position[0]), Number(position[1])] });
-  }
-  return { status: value.status === "ok" ? "ok" : value.status === "unconfigured" ? "unconfigured" : "error",
-    generatedAt: value.generatedAt, observations,
-    coverage: isRecord(value.coverage) && typeof value.coverage.checked === "number" && typeof value.coverage.total === "number"
-      ? { checked: value.coverage.checked, total: value.coverage.total } : undefined };
-}
 
 export function useTransit(active: TransitActive, viewport: TransitViewport | null, selectedRouteId: string | null,
   filters: TransitFilters, focusedGroup: string | null, requested: boolean, estimated: boolean) {
@@ -104,7 +82,7 @@ export function useTransit(active: TransitActive, viewport: TransitViewport | nu
       try {
         const response = await fetch(`${BACKEND ?? ""}/api/transit?${query}`, { signal: controller.signal });
         if (!response.ok) throw new Error("Transit feed unavailable");
-        const feed = parseFeed(await response.json());
+        const feed = parseTransitFeed(await response.json());
         if (disposed || requestSequence !== sequence) return;
         setFeedStatus(feed.status);
         setCoverage(feed.coverage);

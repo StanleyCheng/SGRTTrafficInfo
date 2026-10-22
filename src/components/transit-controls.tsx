@@ -1,6 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef } from "react";
+import { useSavedScroll, useSavedState } from "@/hooks/use-saved-state";
+import { isCount, isText } from "@/lib/preferences";
 import { TRANSIT_MODES, routeGroupId, type TransitActive, type TransitCatalog,
   type TransitFilters, type TransitMode, type TransitRoute } from "@/lib/transit";
 import type { TransitState } from "@/hooks/use-transit";
@@ -17,9 +19,11 @@ export function TransitControls({ open, onOpen, catalog, error, active, filters,
   onFocus: (route: TransitRoute) => void; onExitFocus: () => void; state: TransitState;
 }) {
   const { t } = useI18n();
-  const [mode, setMode] = useState<TransitMode>("bus");
-  const [search, setSearch] = useState("");
-  const [limit, setLimit] = useState(60);
+  const [mode, setMode] = useSavedState<TransitMode>("routes.mode", "bus", (value): value is TransitMode => TRANSIT_MODES.includes(value as TransitMode));
+  const [search, setSearch] = useSavedState("routes.search", "", isText);
+  const [limit, setLimit] = useSavedState("routes.limit", 60, (value): value is number => isCount(value) && value >= 60);
+  const resultsRef = useRef<HTMLDivElement>(null);
+  useSavedScroll(resultsRef, `routes.scroll.${mode}`, open && Boolean(catalog));
   const groups = useMemo(() => {
     const result = new Map<string, TransitRoute[]>();
     for (const route of catalog?.routes ?? []) {
@@ -67,7 +71,7 @@ export function TransitControls({ open, onOpen, catalog, error, active, filters,
         <span role="status">{t("routes.selected", { count })}</span></div>
       <label className="sr-only" htmlFor="route-search">{t("routes.search")}</label>
       <input id="route-search" type="search" placeholder={t("routes.search")} value={search} onChange={(event) => { setSearch(event.target.value); setLimit(60); }} />
-      <div className="atlas-route-results" role="region" aria-label={t("routes.results")} tabIndex={0}>
+      <div ref={resultsRef} className="atlas-route-results" role="region" aria-label={t("routes.results")} tabIndex={0}>
         {error ? <p role="alert">{t("transit.catalogError")}</p> : !catalog ? <p role="status">{t("status.loading")}</p> : !matches.length ? <p>{t("routes.noMatches")}</p> : matches.slice(0, limit).map(([id, routes]) => {
           const route = routes[0];
           const checked = active[mode] && (selected === null || selected.includes(id));

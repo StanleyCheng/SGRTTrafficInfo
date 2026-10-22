@@ -1,4 +1,4 @@
-import { assertVehicleEvidence, routeGroupId, routeMetrics, type TransitCatalog, type TransitMode, type TransitRoute, type TransitVehicle } from "./transit.ts";
+import { assertVehicleEvidence, projectOnRoute, routeGroupId, routeMetrics, type TransitCatalog, type TransitMode, type TransitRoute, type TransitStop, type TransitVehicle } from "./transit.ts";
 import { routeIcon } from "./transit-sprites.ts";
 
 /**
@@ -229,6 +229,32 @@ export function scheduledVehiclesForLine(line: ScheduledLine, route: TransitRout
       serviceStartedAt: fromSingaporeMinutes(departure), serviceEndsAt: fromSingaporeMinutes(arrival),
     }, { coordinates: false, arrivals: false, timetable: true });
   }));
+}
+
+/** Three future model arrivals per direction, including departures not yet underway.
+ * Travel between stations is uniform along route distance, not an operator prediction.
+ * Off-primary-path stations (such as branches) receive no fabricated arrival.
+ */
+export function scheduledStopArrivals(line: ScheduledLine, route: TransitRoute, stop: TransitStop, now: number) {
+  const path = route.paths[0], length = path && routeMetrics(path).at(-1);
+  if (!path || !length || line.headwayMinutes <= 0 || line.runTimeMinutes <= 0) return [];
+  const projected = projectOnRoute(path, stop.position);
+  if (projected.distance > 220) return [];
+  const { day, minute } = singaporeMinuteOfDay(now), current = day * 1440 + minute;
+  const startClock = parseClock(line.serviceStart), span = windowLength(startClock, parseClock(line.serviceEnd));
+  return (line.directions ?? [line.direction]).flatMap((direction) => {
+    const travel = line.runTimeMinutes * (direction === 1 ? projected.along / length : 1 - projected.along / length);
+    const result: { direction: 1 | -1; arrivalAt: number }[] = [];
+    for (const offset of [-1, 0, 1]) {
+      const start = (day + offset) * 1440 + startClock;
+      const first = Math.max(0, Math.ceil((current - start - travel) / line.headwayMinutes));
+      const last = Math.floor(span / line.headwayMinutes);
+      for (let index = first; index <= Math.min(last, first + 2); index++) {
+        result.push({ direction, arrivalAt: fromSingaporeMinutes(start + index * line.headwayMinutes + travel) });
+      }
+    }
+    return result.sort((a, b) => a.arrivalAt - b.arrivalAt).slice(0, 3);
+  });
 }
 
 /**

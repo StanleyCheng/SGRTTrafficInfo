@@ -11,8 +11,10 @@ import { useI18n } from "@/components/i18n-provider";
 import type { BasemapId, MapFocus } from "@/components/MapView";
 import type { MapMode } from "./map-3d";
 import { useTransit } from "@/hooks/use-transit";
-import { TRANSIT_DEFAULTS, TRANSIT_FILTER_DEFAULTS, routeGroupId, type Position, type TransitFilters, type TransitMode, type TransitRoute, type TransitVehicle, type TransitViewport } from "@/lib/transit";
-import { TransitVehicleDetail } from "./transit-ui";
+import { useSavedState } from "@/hooks/use-saved-state";
+import { isBoolean, isBooleanRecord, isChoice, isLayerFilters, isOptionalPosition, isOptionalText, isSavedStop, isSavedVehicle, isTransitFilters, pruneTransitFilters } from "@/lib/preferences";
+import { TRANSIT_DEFAULTS, TRANSIT_FILTER_DEFAULTS, routeGroupId, type Position, type TransitFilters, type TransitMode, type TransitRoute, type TransitStop, type TransitVehicle, type TransitViewport } from "@/lib/transit";
+import { TransitVehicleDetail, TransitStopDetail } from "./transit-ui";
 import { TransitControls } from "./transit-controls";
 import {
   useCameras,
@@ -52,37 +54,49 @@ const ESTIMATE_STORAGE_KEY = "sgdi.transitEstimates";
 
 export default function App() {
   const { t } = useI18n();
-  const [basemap, setBasemap] = useState<BasemapId>("osm");
-  const [mapMode, setMapMode] = useState<MapMode>("2d");
-  const [estimatedTransit, setEstimatedTransit] = useState(false);
-  const [transitActive, setTransitActive] = useState(TRANSIT_DEFAULTS);
-  const [selectedTransitRoute, setSelectedTransitRoute] = useState<string | null>(null);
-  const [routeControlsOpen, setRouteControlsOpen] = useState(false);
-  const [transitFilters, setTransitFilters] = useState<TransitFilters>(TRANSIT_FILTER_DEFAULTS);
-  const [focusedTransitGroup, setFocusedTransitGroup] = useState<string | null>(null);
-  const [routePopupPosition, setRoutePopupPosition] = useState<Position | null>(null);
-  const [stopNames, setStopNames] = useState(false);
-  const [selectedVehicle, setSelectedVehicle] = useState<TransitVehicle | null>(null);
+  const [basemap, setBasemap] = useSavedState<BasemapId>("basemap", "osm", isChoice("osm", "positron"));
+  const [mapMode, setMapMode] = useSavedState<MapMode>("mapMode", "2d", isChoice("2d", "3d"));
+  const [estimatedTransit, setEstimatedTransit] = useSavedState("estimates", false, isBoolean);
+  const [transitActive, setTransitActive] = useSavedState("transitLayers", TRANSIT_DEFAULTS, isBooleanRecord(["bus", "train", "ferry", "sentosa", "cablecar", "skytrain"]));
+  const [selectedTransitRoute, setSelectedTransitRoute] = useSavedState<string | null>("transitRoute", null, isOptionalText);
+  const [routeControlsOpen, setRouteControlsOpen] = useSavedState("routesOpen", false, isBoolean);
+  const [transitFilters, setTransitFilters] = useSavedState<TransitFilters>("routeFilters", TRANSIT_FILTER_DEFAULTS, isTransitFilters);
+  const [focusedTransitGroup, setFocusedTransitGroup] = useSavedState<string | null>("focusedRoute", null, isOptionalText);
+  const [routePopupPosition, setRoutePopupPosition] = useSavedState<Position | null>("routePopup", null, isOptionalPosition);
+  const [stopNames, setStopNames] = useSavedState("stopNames", false, isBoolean);
+  const [selectedVehicle, setSelectedVehicle] = useSavedState<TransitVehicle | null>("vehicle", null, isSavedVehicle);
+  const [selectedStop, setSelectedStop] = useSavedState<TransitStop | null>("station", null, isSavedStop);
   const [clock, setClock] = useState(() => Date.now());
   const [viewport, setViewport] = useState<TransitViewport | null>(null);
-  const transit = useTransit(transitActive, viewport, selectedTransitRoute, transitFilters, focusedTransitGroup, routeControlsOpen, estimatedTransit);
+  const transit = useTransit(transitActive, viewport, selectedTransitRoute, transitFilters, focusedTransitGroup, routeControlsOpen || Boolean(selectedStop) || Boolean(selectedVehicle), estimatedTransit);
+  useEffect(() => {
+    if (!transit.catalog) return;
+    const catalog = transit.catalog;
+
+    if (selectedTransitRoute && !catalog.routes.some((route) => route.id === selectedTransitRoute)) { setSelectedTransitRoute(null); setRoutePopupPosition(null); }
+    if (focusedTransitGroup && !catalog.routes.some((route) => routeGroupId(route) === focusedTransitGroup)) setFocusedTransitGroup(null);
+    if (selectedStop && !catalog.stops.some((stop) => stop.id === selectedStop.id)) setSelectedStop(null);
+    if (selectedVehicle && !catalog.routes.some((route) => route.id === selectedVehicle.routeId)) setSelectedVehicle(null);
+    const currentFilters = pruneTransitFilters(catalog, transitFilters);
+    if (currentFilters !== transitFilters) setTransitFilters(currentFilters);
+  }, [transit.catalog, selectedTransitRoute, focusedTransitGroup, selectedStop, selectedVehicle, transitFilters, setTransitFilters, setSelectedTransitRoute, setRoutePopupPosition, setFocusedTransitGroup, setSelectedStop, setSelectedVehicle]);
   const { cameras, error: cameraError, retry: retryCameras } = useCameras();
   const [active, setActive] =
-    useState<Record<LayerId, boolean>>(CAMERA_DEFAULTS);
+    useSavedState<Record<LayerId, boolean>>("cameraLayers", CAMERA_DEFAULTS, isBooleanRecord(["redlight", "speed", "snapshot"]));
   const {
     traffic,
     loading: trafficLoading,
     reload: reloadTraffic,
   } = useTrafficImages(active.snapshot);
   const [roadActive, setRoadActive] =
-    useState<Record<RoadLayerId, boolean>>(ROAD_LAYER_DEFAULTS);
-  const [incidentRoute, setIncidentRoute] = useState<string | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [selectedRoadId, setSelectedRoadId] = useState<string | null>(null);
+    useSavedState<Record<RoadLayerId, boolean>>("roadLayers", ROAD_LAYER_DEFAULTS, isBooleanRecord(ROAD_LAYER_ORDER));
+  const [incidentRoute, setIncidentRoute] = useSavedState<string | null>("incidentRoute", null, isOptionalText);
+  const [selectedId, setSelectedId] = useSavedState<string | null>("cameraSelection", null, isOptionalText);
+  const [selectedRoadId, setSelectedRoadId] = useSavedState<string | null>("roadSelection", null, isOptionalText);
   const [focus, setFocus] = useState<MapFocus | null>(null);
-  const [collapsed, setCollapsed] = useState(false);
-  const [filters, setFilters] = useState<LayerFilters>(DEFAULT_LAYER_FILTERS);
-  const [sourcesOpen, setSourcesOpen] = useState(false);
+  const [collapsed, setCollapsed] = useSavedState("dockCollapsed", false, isBoolean);
+  const [filters, setFilters] = useSavedState<LayerFilters>("roadFilters", DEFAULT_LAYER_FILTERS, isLayerFilters);
+  const [sourcesOpen, setSourcesOpen] = useSavedState("sourcesOpen", false, isBoolean);
   const [mobile, setMobile] = useState(false);
   const detailRef = useRef<HTMLDivElement>(null);
   const detailReturnFocus = useRef<HTMLElement | null>(null);
@@ -91,18 +105,18 @@ export default function App() {
   useEffect(() => {
     try {
       const stored = window.localStorage.getItem(BASEMAP_STORAGE_KEY);
-      if (window.localStorage.getItem("sgdi.mapMode") === "3d") {
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate the persisted preference after the server render
+      if (!window.localStorage.getItem("sgdi.state.v1.mapMode") && window.localStorage.getItem("sgdi.mapMode") === "3d") {
+
         setMapMode("3d");
       }
-      if (window.localStorage.getItem(ESTIMATE_STORAGE_KEY) === "1") setEstimatedTransit(true);
-      if (stored === "positron") {
+      if (!window.localStorage.getItem("sgdi.state.v1.estimates") && window.localStorage.getItem(ESTIMATE_STORAGE_KEY) === "1") setEstimatedTransit(true);
+      if (!window.localStorage.getItem("sgdi.state.v1.basemap") && stored === "positron") {
         setBasemap("positron");
       }
     } catch {
       /* private mode */
     }
-  }, []);
+  }, [setBasemap, setEstimatedTransit, setMapMode]);
 
   const toggleMapMode = useCallback(() => {
     setMapMode((current) => {
@@ -110,13 +124,14 @@ export default function App() {
       try { window.localStorage.setItem("sgdi.mapMode", next); } catch { /* private mode */ }
       return next;
     });
-  }, []);
+  }, [setMapMode]);
 
   const toggleEstimatedTransit = useCallback((next: boolean) => {
     setEstimatedTransit(next);
     setSelectedVehicle(null);
+    setSelectedStop(null);
     try { window.localStorage.setItem(ESTIMATE_STORAGE_KEY, next ? "1" : "0"); } catch { /* private mode */ }
-  }, []);
+  }, [setEstimatedTransit, setSelectedStop, setSelectedVehicle]);
 
   const toggleBasemap = useCallback(() => {
     setBasemap((current) => {
@@ -128,7 +143,7 @@ export default function App() {
       }
       return next;
     });
-  }, []);
+  }, [setBasemap]);
 
   /* ---------------- live road conditions ---------------- */
   // Only the layers that are switched on are fetched, so the default view stays
@@ -225,13 +240,14 @@ export default function App() {
   const select = useCallback(
     (point: CameraPoint | null) => {
       setSelectedVehicle(null);
+      setSelectedStop(null);
       if (point)
         detailReturnFocus.current = document.activeElement as HTMLElement;
       setSelectedId(point?.id ?? null);
       if (point) setSelectedRoadId(null);
       if (point) focusOn(point, mobile ? 16 : undefined);
     },
-    [focusOn, mobile],
+    [focusOn, mobile, setSelectedId, setSelectedRoadId, setSelectedStop, setSelectedVehicle],
   );
 
   const focusOnRoad = useCallback(
@@ -251,11 +267,12 @@ export default function App() {
 
   const updateFilters = useCallback((patch: Partial<LayerFilters>) => {
     setFilters((previous) => ({ ...previous, ...patch }));
-  }, []);
+  }, [setFilters]);
 
   const selectRoad = useCallback(
     (feature: RoadConditionFeature | null) => {
       setSelectedVehicle(null);
+      setSelectedStop(null);
       if (feature)
         detailReturnFocus.current = document.activeElement as HTMLElement;
       setSelectedRoadId(feature?.id ?? null);
@@ -264,7 +281,7 @@ export default function App() {
         focusOnRoad(feature);
       }
     },
-    [focusOnRoad],
+    [focusOnRoad, setSelectedId, setSelectedRoadId, setSelectedStop, setSelectedVehicle],
   );
 
   const toggleTransit = useCallback((mode: TransitMode) => {
@@ -272,11 +289,12 @@ export default function App() {
     setFocusedTransitGroup(null); setRoutePopupPosition(null);
     setTransitFilters((previous) => previous[mode]?.length === 0 ? { ...previous, [mode]: null } : previous);
     setSelectedVehicle(null);
-  }, [focusedTransitGroup]);
+    setSelectedStop(null);
+  }, [focusedTransitGroup, setFocusedTransitGroup, setRoutePopupPosition, setSelectedStop, setSelectedVehicle, setTransitActive, setTransitFilters]);
   const selectTransitRoute = useCallback((id: string | null, position?: Position) => {
     setSelectedTransitRoute(id);
     setRoutePopupPosition(position ?? null);
-  }, []);
+  }, [setRoutePopupPosition, setSelectedTransitRoute]);
   const focusTransitRoute = useCallback((route: TransitRoute) => {
     const group = routeGroupId(route);
     const points = transit.catalog?.routes.filter((item) => routeGroupId(item) === group).flatMap((item) => item.paths.flat()) ?? [];
@@ -285,16 +303,16 @@ export default function App() {
     const south = Math.min(...points.map((point) => point[1])), north = Math.max(...points.map((point) => point[1]));
     setTransitActive((previous) => ({ ...previous, [route.mode]: true }));
     setFocusedTransitGroup(group); setSelectedTransitRoute(route.id); setRoutePopupPosition(null);
-    setSelectedVehicle(null); setSelectedId(null); setSelectedRoadId(null); setRouteControlsOpen(false);
+    setSelectedVehicle(null); setSelectedStop(null); setSelectedId(null); setSelectedRoadId(null); setRouteControlsOpen(false);
     setFocus({ lng: (west + east) / 2, lat: (south + north) / 2,
       bounds: [[west, south], [east, north]], key: `transit:${group}:${Date.now()}` });
-  }, [transit.catalog]);
+  }, [setFocusedTransitGroup, setRouteControlsOpen, setRoutePopupPosition, setSelectedId, setSelectedRoadId, setSelectedStop, setSelectedTransitRoute, setSelectedVehicle, setTransitActive, transit.catalog?.routes]);
   const filterTransitRoutes = useCallback((mode: TransitMode, value: string[] | null) => {
     setTransitFilters((previous) => ({ ...previous, [mode]: value }));
     setTransitActive((previous) => ({ ...previous, [mode]: value === null || value.length > 0 }));
-    setFocusedTransitGroup(null); setRoutePopupPosition(null); setSelectedVehicle(null);
-  }, []);
-  const closeRoutePopup = useCallback(() => setRoutePopupPosition(null), []);
+    setFocusedTransitGroup(null); setRoutePopupPosition(null); setSelectedVehicle(null); setSelectedStop(null);
+  }, [setFocusedTransitGroup, setRoutePopupPosition, setSelectedStop, setSelectedVehicle, setTransitActive, setTransitFilters]);
+  const closeRoutePopup = useCallback(() => setRoutePopupPosition(null), [setRoutePopupPosition]);
   const routePopup = useMemo(() => {
     const route = transit.catalog?.routes.find((item) => item.id === selectedTransitRoute);
     if (!route || !routePopupPosition) return null;
@@ -306,14 +324,19 @@ export default function App() {
   }, [transit.catalog, selectedTransitRoute, routePopupPosition, t, focusTransitRoute, closeRoutePopup]);
   const selectVehicle = useCallback((vehicle: TransitVehicle) => {
     detailReturnFocus.current = document.activeElement as HTMLElement;
-    setSelectedVehicle(vehicle); setSelectedId(null); setSelectedRoadId(null); setRoutePopupPosition(null);
-  }, []);
+    setClock(Date.now()); setSelectedVehicle(vehicle); setSelectedStop(null); setSelectedId(null); setSelectedRoadId(null); setRoutePopupPosition(null);
+  }, [setRoutePopupPosition, setSelectedId, setSelectedRoadId, setSelectedStop, setSelectedVehicle]);
+  const selectStop = useCallback((stop: TransitStop) => {
+    if (!detailRef.current?.contains(document.activeElement)) detailReturnFocus.current = document.activeElement as HTMLElement;
+    setClock(Date.now()); setSelectedStop(stop); setSelectedVehicle(null); setSelectedId(null); setSelectedRoadId(null);
+    setRoutePopupPosition(null); setRouteControlsOpen(false);
+  }, [setRouteControlsOpen, setRoutePopupPosition, setSelectedId, setSelectedRoadId, setSelectedStop, setSelectedVehicle]);
   const transitScene = useMemo(() => ({ catalog: transit.catalog, routes: transit.routes,
     vehicles: transit.vehicles, selectedRouteId: selectedTransitRoute, focusedGroup: focusedTransitGroup,
-    stopNames, onVehicle: selectVehicle, onRoute: selectTransitRoute,
+    stopNames, onVehicle: selectVehicle, onStop: selectStop, onRoute: selectTransitRoute,
     vehicleLabel: (vehicle: TransitVehicle, stale: boolean) => `${vehicle.service} → ${vehicle.destination} · ${t(stale ? "transit.stale"
       : vehicle.evidence === "schedule" ? "transit.evidenceSchedule" : vehicle.evidence === "gps" ? "transit.evidenceGps" : "transit.evidenceEta")}` }),
-  [transit.catalog, transit.routes, transit.vehicles, selectedTransitRoute, focusedTransitGroup, stopNames, selectVehicle, selectTransitRoute, t]);
+  [transit.catalog, transit.routes, transit.vehicles, selectedTransitRoute, focusedTransitGroup, stopNames, selectVehicle, selectStop, selectTransitRoute, t]);
 
   const toggleLayer = useCallback(
     (id: LayerId) => {
@@ -324,7 +347,7 @@ export default function App() {
         return selectedPoint?.layer === id ? null : current;
       });
     },
-    [pointMap, focusedTransitGroup],
+    [setActive, setFocusedTransitGroup, setRoutePopupPosition, setSelectedId, focusedTransitGroup, pointMap],
   );
 
   const toggleRoadLayer = useCallback(
@@ -336,29 +359,34 @@ export default function App() {
         return selectedFeature?.properties.layer === id ? null : current;
       });
     },
-    [roadFeatureMap, focusedTransitGroup],
+    [setRoadActive, setFocusedTransitGroup, setRoutePopupPosition, setSelectedRoadId, focusedTransitGroup, roadFeatureMap],
   );
 
   const currentVehicle = selectedVehicle ? transit.vehicles.find((item) => item.id === selectedVehicle.id) ?? selectedVehicle : null;
-  const visibleVehicle = currentVehicle && clock < currentVehicle.expiresAt ? currentVehicle : null;
-  const showDetail = Boolean(selected || selectedRoad || visibleVehicle);
+  useEffect(() => {
+    if (currentVehicle && currentVehicle !== selectedVehicle && currentVehicle.observedAt > (selectedVehicle?.observedAt ?? 0)) setSelectedVehicle(currentVehicle);
+  }, [currentVehicle, selectedVehicle, setSelectedVehicle]);
+  const currentStop = selectedStop ? transit.catalog?.stops.find((stop) => stop.id === selectedStop.id) : null;
+  const visibleVehicle = transit.catalog && currentVehicle && clock < currentVehicle.expiresAt ? currentVehicle : null;
+  const showDetail = Boolean(selected || selectedRoad || visibleVehicle || currentStop);
   const displayedCameras = focusedTransitGroup ? CAMERA_DEFAULTS : active;
   const displayedRoads = useMemo(() => focusedTransitGroup ? Object.fromEntries(ROAD_LAYER_ORDER.map((id) => [id, false])) as Record<RoadLayerId, boolean> : roadActive, [focusedTransitGroup, roadActive]);
   const displayedTransit = useMemo(() => focusedTransitGroup ? Object.fromEntries(Object.keys(transitActive).map((id) => [id, focusedTransitGroup.startsWith(`${id}:`)])) as typeof transitActive : transitActive, [focusedTransitGroup, transitActive]);
   useEffect(() => {
-    if (!selectedVehicle) return;
+    if (!selectedVehicle && !selectedStop) return;
     const timer = setInterval(() => setClock(Date.now()), 1000);
     return () => clearInterval(timer);
-  }, [selectedVehicle]);
+  }, [selectedVehicle, selectedStop]);
 
   useEffect(() => {
     if (showDetail) detailRef.current?.focus({ preventScroll: true });
-  }, [showDetail, selectedId, selectedRoadId]);
+  }, [showDetail, selectedId, selectedRoadId, selectedVehicle?.id, selectedStop?.id]);
 
   const closeDetail = () => {
     setSelectedId(null);
     setSelectedRoadId(null);
     setSelectedVehicle(null);
+    setSelectedStop(null);
     requestAnimationFrame(() =>
       detailReturnFocus.current?.focus({ preventScroll: true }),
     );
@@ -443,6 +471,7 @@ export default function App() {
           onTransitRoute={selectTransitRoute}
           onTransitFocus={focusTransitRoute}
           onTransitVehicle={selectVehicle}
+          onTransitStop={selectStop}
           layers={visibleCameras?.layers ?? null}
           points={visibleCameras?.points ?? []}
           active={displayedCameras}
@@ -488,9 +517,12 @@ export default function App() {
           showDetail ? "rise" : "pointer-events-none hidden"
         }`}
       >
-        {visibleVehicle && transit.catalog ? (
+        {currentStop && transit.catalog ? (
+          <TransitStopDetail stop={currentStop} catalog={transit.catalog} now={clock} estimated={estimatedTransit}
+            onClose={closeDetail} onFocus={focusTransitRoute} />
+        ) : visibleVehicle && transit.catalog ? (
           <TransitVehicleDetail vehicle={visibleVehicle}
-            catalog={transit.catalog} now={clock} onClose={closeDetail} />
+            catalog={transit.catalog} now={clock} onClose={closeDetail} onStop={selectStop} />
         ) : selectedRoad ? (
           <RoadConditionDetail
             feature={selectedRoad}

@@ -37,6 +37,8 @@ export interface TransitVehicle {
   fromDistance: number; toDistance: number;
   observedAt: number; arrivalAt: number; staleAt: number; expiresAt: number;
   serviceStartedAt: number; serviceEndsAt: number;
+  /** The stop for which the provider supplied arrivalAt (not necessarily the next stop). */
+  arrivalStopId?: string;
 }
 
 /** The evidence actually read from a provider or timetable, not the label we want to show. */
@@ -283,7 +285,7 @@ export function routeInView(route: TransitRoute, view: TransitViewport) {
 }
 
 const stopDistanceCache = new WeakMap<TransitRoute, number[]>();
-function orderedStopDistances(route: TransitRoute, stops: Map<string, TransitStop>) {
+export function orderedStopDistances(route: TransitRoute, stops: Map<string, TransitStop>) {
   const cached = stopDistanceCache.get(route);
   if (cached) return cached;
   let progress = 0;
@@ -351,6 +353,7 @@ export function inferBusVehicles(catalog: TransitCatalog, observations: BusObser
       mode: "bus", lineKey: routeGroupId(route),
       icon: obs.type === "DD" ? "bus-double-deck" : obs.type === "BD" ? "bus-articulated" : "bus-single-deck",
       direction: 1, fromDistance: from, toDistance: to, observedAt: obs.observedAt, arrivalAt: obs.arrivalAt,
+      arrivalStopId: obs.stopId,
       staleAt: obs.observedAt + 45000, expiresAt: obs.observedAt + 90000,
       serviceStartedAt: obs.observedAt, serviceEndsAt: obs.observedAt + 90000 },
       // Even when LTA supplies its estimated coordinate, the position is

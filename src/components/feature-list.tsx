@@ -1,6 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import { useSavedState } from "@/hooks/use-saved-state";
+import { isCount, isText } from "@/lib/preferences";
 import { matchesRoadFilters } from "./map-art";
 import type {
   CameraPoint,
@@ -33,8 +35,8 @@ export function FeatureList({
   onRoadSelect: (feature: RoadConditionFeature) => void;
 }) {
   const { t } = useI18n();
-  const [query, setQuery] = useState("");
-  const [page, setPage] = useState(0);
+  const [query, setQuery] = useSavedState("browse.search", "", isText);
+  const [page, setPage] = useSavedState("browse.page", 0, isCount);
   const rows = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase();
     return [
