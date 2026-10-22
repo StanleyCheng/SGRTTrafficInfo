@@ -1,3 +1,18 @@
 {
-  "buildPath": "code"
+  "buildPath": "code",
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "border-accent-on-rounded",
+        "value": "*",
+        "files": [
+          "src/app/globals.css"
+        ],
+        "createdAt": "2026-10-22T00:06:12.219Z",
+        "reason": "Impeccable finish reviewer cleared this finding: .atlas-transit-route-code at line 1005 is a non-rounded inline strong label with a 3px route-colour underline, not a rounded card. Source and rendered screenshots confirm the intentional route identity treatment."
+      }
+    ]
+  }
 }
