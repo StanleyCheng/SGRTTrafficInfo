@@ -46,15 +46,22 @@ export function TransitControls({ open, onOpen, catalog, error, active, filters,
       if (event.key === "Escape") { event.stopPropagation(); onOpen(false); }
     }}>
       <header><h2>{t("routes.title")}</h2><button type="button" className="atlas-icon-button" aria-label={t("common.close")} onClick={() => onOpen(false)}><CloseIcon /></button></header>
-      {focused && <div className="atlas-route-focus"><strong>{focused.mode === "bus" ? `${t("transit.bus.label")} ${focused.service}` : focused.name}</strong>
-        <span>{t("routes.focused")}</span><button type="button" onClick={onExitFocus}>{t("routes.exitFocus")}</button></div>}
-      <label className="atlas-stop-names"><input type="checkbox" checked={stopNames} onChange={(event) => onStopNames(event.target.checked)} />{t("routes.stopNames")}</label>
-      <label className="atlas-stop-names"><input type="checkbox" checked={estimated} onChange={(event) => onEstimated(event.target.checked)} />{t("transit.estimatedPositions")}</label>
-      <p className="atlas-route-note">{t("transit.estimatedDescription")}</p>
-      <label className="atlas-route-mode" htmlFor="route-mode">{t("routes.transport")}</label>
-      <select id="route-mode" value={mode} onChange={(event) => { setMode(event.target.value as TransitMode); setSearch(""); setLimit(60); }}>
-        {TRANSIT_MODES.map((item) => <option key={item} value={item}>{t(`transit.${item}.name`)}</option>)}
-      </select>
+      {focused && <div className="atlas-route-focus"><div><strong>{focused.mode === "bus" ? `${t("transit.bus.label")} ${focused.service}` : focused.name}</strong>
+        <span>{t("routes.focused")}</span></div><button type="button" onClick={onExitFocus} aria-label={t("routes.exitFocus")} title={t("routes.exitFocus")}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 6-6 6 6 6M4 12h16" /></svg>
+        </button></div>}
+      <div className="atlas-route-settings">
+        <label className="atlas-stop-names"><input type="checkbox" checked={stopNames} onChange={(event) => onStopNames(event.target.checked)} />{t("routes.stopNames")}</label>
+        <label className="atlas-stop-names"><input type="checkbox" checked={estimated} aria-describedby="transit-estimate-description" onChange={(event) => onEstimated(event.target.checked)} />{t("transit.estimatedPositions")}</label>
+      </div>
+      <p id="transit-estimate-description" className="sr-only">{t("transit.estimatedDescription")}</p>
+      <label className="atlas-route-mode" htmlFor="route-mode"><span>{t("routes.transport")}</span>
+        <span className="atlas-route-select-value" aria-hidden="true">{t(`transit.${mode}.name`)}</span>
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4" /></svg>
+        <select id="route-mode" aria-label={t("routes.transport")} value={mode} onChange={(event) => { setMode(event.target.value as TransitMode); setSearch(""); setLimit(60); }}>
+          {TRANSIT_MODES.map((item) => <option key={item} value={item}>{t(`transit.${item}.name`)}</option>)}
+        </select>
+      </label>
       <div className="atlas-route-actions"><button type="button" aria-pressed={active[mode] && selected === null} onClick={() => onFilter(mode, null)}>{t("routes.allOn")}</button>
         <button type="button" aria-pressed={!active[mode] || selected?.length === 0} onClick={() => onFilter(mode, [])}>{t("routes.allOff")}</button>
         <span role="status">{t("routes.selected", { count })}</span></div>

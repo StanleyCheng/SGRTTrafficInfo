@@ -61,10 +61,10 @@
   --radius-control: 12px;
   --radius-tile: 16px;
   --text-caption: 12px;
-  --layer-toggle-scale: 0.9;
+  --layer-toggle-scale: 0.63;
   --layer-tile-height: calc(78px * var(--layer-toggle-scale));
   /* Tile + rail padding + panel padding and border. */
-  --layer-dock-height: calc(var(--layer-tile-height) + 24px);
+  --layer-dock-height: calc(var(--layer-tile-height) + 16.8px);
 }
 
 @theme inline {
@@ -211,8 +211,8 @@ body {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 6px;
-  padding: 6px 8px;
+  gap: 4.2px;
+  padding: 4.2px 5.6px;
   align-self: flex-start;
 }
 
@@ -294,7 +294,7 @@ body {
 .atlas-layers-bar {
   width: max-content;
   /* Keep all controls on one line and reserve the map-control gutter. */
-  max-width: min(1060px, calc(100vw - 150px));
+  max-width: min(742px, calc(100vw - 150px));
 }
 
 .atlas-layers-collapsed {
@@ -306,12 +306,12 @@ body {
   width: max-content;
   flex-wrap: nowrap;
   align-items: center;
-  gap: 6px;
-  padding: 4px 2px 6px;
+  gap: 4.2px;
+  padding: 2.8px 1.4px 4.2px;
 }
 
 .atlas-rail > li { flex: 0 0 auto; }
-.atlas-rail-group-start { margin-left: 8px; }
+.atlas-rail-group-start { margin-left: 5.6px; }
 .atlas-rail-window { position: relative; flex: 1; min-width: 0; }
 .atlas-rail-scroll {
   overflow-x: auto;
@@ -343,11 +343,11 @@ body {
 .atlas-rail-icon {
   position: relative;
   display: grid;
-  grid-template-rows: calc(24px * var(--layer-toggle-scale)) calc(30px * var(--layer-toggle-scale));
-  gap: calc(4px * var(--layer-toggle-scale));
+  grid-template-rows: calc(20px * var(--layer-toggle-scale)) 28px;
+  gap: 1px;
   width: calc(88px * var(--layer-toggle-scale));
   height: var(--layer-tile-height);
-  padding: calc(8px * var(--layer-toggle-scale)) calc(6px * var(--layer-toggle-scale));
+  padding: 3px calc(4px * var(--layer-toggle-scale));
   align-content: center;
   place-items: center;
   border: 1px solid color-mix(in srgb, var(--layer-color) 26%, var(--line));
@@ -358,12 +358,13 @@ body {
 }
 
 .atlas-rail-label {
-  width: 100%;
+  width: calc(100% + 5px);
   font-size: var(--text-caption);
   font-weight: 600;
-  line-height: 1.25;
+  line-height: 1.15;
   text-align: center;
   text-wrap: balance;
+  overflow-wrap: anywhere;
   color: var(--ink);
 }
 
@@ -998,10 +999,10 @@ button,
 .atlas-map-mode { font-weight: 700; font-size: 13px; font-variant-numeric: tabular-nums; }
 .atlas-vehicle-marker { width: 56px; height: 72px; padding: 0; background: transparent; border: 0; cursor: pointer; color: var(--ink); }
 .atlas-vehicle-marker > * { opacity: var(--vehicle-opacity, 1); }
-.atlas-vehicle-art { position: absolute; width: 48px; height: 48px; left: 4px; top: 6px; transform-origin: center; }
-.atlas-vehicle-art img { display: block; width: 48px; height: 48px; object-fit: contain; }
-.atlas-vehicle-marker span { position: absolute; top: 52px; left: 50%; transform: translateX(-50%); display: block; width: max-content; padding: 2px 5px; background: var(--surface); color: var(--vehicle-route-colour); font: 700 12px var(--font-sans); border-radius: 4px; line-height: 16px; }
-.atlas-vehicle-art svg { position: absolute; top: -6px; left: 18px; width: 12px; height: 12px; fill: none; stroke: var(--ink); stroke-width: 2px; stroke-linecap: round; stroke-linejoin: round; transform-origin: center; }
+.atlas-vehicle-art { position: absolute; width: 33.6px; height: 33.6px; left: 11.2px; top: 19.2px; transform-origin: center; }
+.atlas-vehicle-art img { display: block; width: 33.6px; height: 33.6px; object-fit: contain; }
+.atlas-vehicle-marker span { position: absolute; top: 54px; left: 50%; transform: translateX(-50%); display: block; width: max-content; padding: 2px 5px; background: var(--surface); color: var(--vehicle-route-colour); font: 700 12px var(--font-sans); border-radius: 4px; line-height: 16px; }
+.atlas-vehicle-heading { position: absolute; top: 31.8px; left: 23.8px; width: 8.4px; height: 8.4px; fill: none; stroke: var(--ink); stroke-width: 2px; stroke-linecap: round; stroke-linejoin: round; transform-origin: center; }
 .atlas-vehicle-marker[data-state="stale"] > * { opacity: calc(var(--vehicle-opacity, 1) * 0.5); }
 /* Timetable estimates are intentionally quieter and ringed, so they never read as live GPS. */
 .atlas-vehicle-marker[data-state="scheduled"] img { opacity: 0.72; filter: saturate(0.55); }
@@ -1016,30 +1017,39 @@ button,
 .atlas-route-trigger { display: flex; align-items: center; gap: 8px; max-width: 300px; text-align: start; }
 .atlas-route-trigger > svg, .atlas-route-fit > svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; flex-shrink: 0; }
 .atlas-route-trigger > svg circle { fill: var(--surface); }
-.atlas-route-panel { width: 312px; max-width: 100%; max-height: calc(100dvh - var(--layer-dock-height) - 174px); display: flex; flex-direction: column; padding: 12px; gap: 8px; font-size: 13px; overflow-y: auto; overscroll-behavior: contain; }
+.atlas-route-panel { width: 312px; max-width: 100%; max-height: min(700px, calc(100dvh - var(--layer-dock-height) - 116px)); display: flex; flex-direction: column; padding: 10px; gap: 4px; font-size: 13px; overflow-y: auto; overscroll-behavior: contain; }
 .atlas-route-panel > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-shrink: 0; }
 .atlas-route-panel h2 { font-size: 16px; font-weight: 700; }
 .atlas-route-panel select, #route-search { width: 100%; min-height: 44px; padding: 8px 10px; background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--radius-control); color: var(--ink); }
-.atlas-route-mode { font-weight: 600; }
+.atlas-route-mode { position: relative; display: grid; gap: 2px; padding: 6px 32px 6px 10px; min-height: 56px; flex-shrink: 0; border: 1px solid var(--line-strong); border-radius: var(--radius-control); background: var(--surface); }
+.atlas-route-mode > span:first-child { font-size: 12px; font-weight: 600; color: var(--muted); }
+.atlas-route-select-value { font-size: 16px; font-weight: 400; line-height: 1.3; white-space: normal; overflow-wrap: anywhere; }
+.atlas-route-mode > svg { position: absolute; right: 10px; top: 50%; width: 16px; height: 16px; fill: none; stroke: var(--ink); stroke-width: 1.5; pointer-events: none; }
+.atlas-route-mode select { position: absolute; inset: 0; height: 100%; width: 100%; opacity: 0; cursor: pointer; font-size: 16px; }
+.atlas-route-mode:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+.atlas-route-settings { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; flex-shrink: 0; }
+.atlas-route-settings .atlas-stop-names { gap: 6px; font-size: 12px; line-height: 1.3; }
 .atlas-stop-names { display: flex; gap: 10px; align-items: center; min-height: 44px; cursor: pointer; }
 .atlas-route-panel input[type="checkbox"] { width: 18px; height: 18px; flex-shrink: 0; accent-color: var(--accent); }
 .atlas-route-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
 .atlas-route-actions > button { min-height: 44px; padding: 8px 12px; border-radius: var(--radius-control); background: var(--surface-2); color: var(--ink); font-weight: 600; }
 .atlas-route-actions > button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
 .atlas-route-actions > span { margin-left: auto; color: var(--muted); font-size: 12px; }
-.atlas-route-results { overflow-y: auto; overscroll-behavior: contain; min-height: 80px; flex: 1 1 280px; scrollbar-color: var(--line-strong) transparent; }
+.atlas-route-results { overflow-y: auto; overscroll-behavior: contain; min-height: 140px; flex: 1 1 320px; scrollbar-color: var(--line-strong) transparent; }
 .atlas-route-row { display: flex; gap: 4px; align-items: center; border-bottom: 1px solid var(--line); }
 .atlas-route-row[data-selected="true"] { background: var(--surface-2); }
-.atlas-route-row > label { display: flex; gap: 10px; align-items: center; padding: 10px 6px; min-height: 60px; cursor: pointer; flex: 1; min-width: 0; }
+.atlas-route-row > label { display: flex; gap: 10px; align-items: center; padding: 6px; min-height: 48px; cursor: pointer; flex: 1; min-width: 0; }
 .atlas-route-row > label > span { min-width: 0; display: grid; gap: 4px; }
 .atlas-route-row strong { font-weight: 700; text-decoration-line: underline; text-decoration-thickness: 3px; text-underline-offset: 4px; }
 .atlas-route-row small { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; line-height: 1.4; }
 .atlas-route-fit { min-width: 44px; height: 44px; display: grid; place-items: center; color: var(--accent); border-radius: var(--radius-control); }
 .atlas-route-fit:hover, .atlas-route-exit:hover { background: var(--mint); }
 .atlas-route-note { color: var(--muted); font-size: 12px; line-height: 1.45; flex-shrink: 0; }
-.atlas-route-focus { display: grid; gap: 4px; padding: 10px; background: var(--mint); border-radius: var(--radius-control); }
-.atlas-route-focus > span { font-size: 12px; color: var(--ink-2); }
-.atlas-route-focus > button { min-height: 44px; text-align: start; text-decoration: underline; text-underline-offset: 3px; font-weight: 600; }
+.atlas-route-focus { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 6px 8px; flex-shrink: 0; background: var(--mint); border-radius: var(--radius-control); }
+.atlas-route-focus > div { min-width: 0; display: grid; gap: 2px; }
+.atlas-route-focus span { font-size: 12px; color: var(--ink-2); }
+.atlas-route-focus > button { width: 44px; height: 44px; flex-shrink: 0; display: grid; place-items: center; border-radius: var(--radius-control); color: var(--accent); }
+.atlas-route-focus > button svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .atlas-route-primary { display: block; min-height: 44px; padding: 10px 12px; border-radius: var(--radius-control); background: var(--accent); color: var(--accent-ink); font-size: 13px; font-weight: 600; }
 .atlas-transit-popup { padding: 8px; display: grid; gap: 8px; font: 13px/1.45 var(--font-sans), sans-serif; color: var(--ink); }
 .atlas-transit-popup > strong { font-size: 18px; padding-right: 20px; }
@@ -1047,7 +1057,7 @@ button,
 .atlas-route-panel :focus-visible, .atlas-transit-popup :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (max-width: 639px) {
   .atlas-route-controls { top: 78px; right: 8px; max-width: calc(100vw - 16px); }
-  .atlas-route-panel { width: min(332px, calc(100vw - 16px)); max-height: calc(100dvh - var(--layer-dock-height) - 168px); }
+  .atlas-route-panel { width: min(332px, calc(100vw - 16px)); max-height: calc(100dvh - var(--layer-dock-height) - 96px); }
   .atlas-route-panel select, #route-search { font-size: 16px; }
 }
 @media (max-height: 700px) {
@@ -1086,7 +1096,7 @@ button,
   .atlas-header-actions { justify-content: flex-end; gap: 4px; }
   .atlas-language-toggle { display: grid; font-size: 12px; font-weight: 700; }
   .atlas-basemap-button { min-width: 44px; width: 44px; padding: 0; }
-  .atlas-layers-phone .atlas-rail { gap: 8px; }
+  .atlas-layers-phone .atlas-rail { gap: 5.6px; }
   .atlas-rail-popup { max-height: min(60dvh, calc(100dvh - 170px)); }
   .atlas-layers-collapsed .atlas-rail-popup,
   .atlas-layers-collapsed .atlas-rail-hint {
@@ -1095,3 +1105,9 @@ button,
     transform: none;
   }
 }
+
+.atlas-layers .atlas-icon-button > svg { width: 16.8px; height: 16.8px; }
+.atlas-layers .atlas-status-dot { width: 4.9px; height: 4.9px; }
+.atlas-layers { border-radius: 14px; }
+
+.atlas-rail-icon > svg, .atlas-rail-icon > .atlas-transit-glyph { justify-self: start; margin-left: 2px; }

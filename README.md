@@ -18,7 +18,7 @@ Buildings appear from zoom 14, according to the available OSM height data. It pr
 map centre, zoom and active layers; the last 2D/3D choice is remembered locally.
 
 The scrolling layer rail includes **Buses**, **Trains**, **Ferries**, **Sentosa Express**,
-**Cable Car** and **Skytrain**, initially off. Tiles use 0.9 of the 88 × 78 px baseline,
+**Cable Car** and **Skytrain**, initially off. Tiles use 0.63 of the 88 × 78 px baseline,
 with fixed 12 px captions and 10 px count badges; utility controls retain 44 px touch targets.
 Options opens route/direction details and source/coverage information. The shipped geometry contains
 602 bus services / 798 directions, all nine operating MRT/LRT systems across eleven line/loop
@@ -36,12 +36,19 @@ Clicking a mapped route opens a popup with the same whole-service action. It fit
 directions, including both bus directions and both Sentosa directions, and shows the available
 bus estimates. Focus temporarily hides other transit, camera and road overlays; **Return to route
 selection** restores their chosen settings. The selector's stop-name toggle applies to displayed
-routes, with normal map collision placement. The bounded panel scrolls on short phones.
+routes, with normal map collision placement. Compact settings and focus controls reserve more
+space for the route list. Mobile Transport values wrap above the native select so each complete
+mode name remains readable. The bounded panel scrolls on short phones.
 
 The fifteen transparent vehicle illustrations in `public/transit/` are researched representative
 fleet/type icons. Their exact prompts or vector briefs, primary reference links, SHA-256 and alpha
 checks are in `public/transit/assets.json`, including Sentosa Express, a conventional Singapore
 Cable Car cabin and Changi Skytrain. They are fixed-view artwork rather than rotatable models.
+Moving artwork is 33.6 × 33.6 px inside 56 × 72 px marker targets. Per-image front calibration
+turns each body to its directed screen-projected travel, including reverse travel and pitched
+maps; 12 px service badges remain upright. Circle Line has one additional map-only ImageGen
+sprite with its exact prompt, sources, native alpha, calibration and hash recorded in
+`public/transit/moving/circle-assets.json`. Original menu/detail illustrations remain unchanged.
 
 Bus positions use LTA Bus Arrival v3's live ETA and estimated coordinate evidence, snapped to
 the mapped route. They are labelled estimates, never raw GPS. The overview queries up to eight
@@ -70,7 +77,12 @@ gaps are listed in `SCHEDULE_UNAVAILABLE` and are not filled with guessed figure
 run time is the published 7-minute upper bound of its 4–7 minute frequency; the cable car uses a
 single-cabin round-trip model based on the operator's 13-minute one-way and 26–30 minute
 round-trip figures. The Circle Line uses SMRT's published full-loop first/last times and an
-82-minute run derived from the last-train sequence over the 39 km loop.
+82-minute run derived from the last-train sequence over the 39 km loop. The uniform-headway
+model uses the existing 5-minute headway in both directions on the primary mapped loop.
+Every active configured departure is represented, replacing the previous newest-six cap;
+there is no branch schedule. During steady service this produces 32 or 34 active Circle
+estimates depending on phase, not a count of physical trains. Reduced motion uses distributed
+15-second timetable snapshots; ETA/GPS positions retain the latest source-observed position.
 
 ### Run the transit backend
 

@@ -1,11 +1,13 @@
 # Vehicle motion
 
-Operate-mode refinement; preserve the mint/ivory/forest atlas, route selector, route focus, bilingual captions and mobile clearance. Code-first is confirmed. No approved visual comp or replacement visual world.
+Operate-mode refinement of Pastel Civic Atlas. Preserve the mint/ivory/forest palette, route selector, route focus, bilingual captions and mobile map clearance. Code-first; no replacement visual world or approved comp.
 
-First viewport: existing full map and chrome. Only moving artwork becomes 28×28px, centered on its supported route position inside the unchanged 56×68px button. Route badges stay upright at 12px; menu/detail artwork stays unchanged.
+First viewport: moving 3D fleet artwork is 33.6×33.6px, or 0.7 of the previous 48px size, inside the retained 56×72px marker button. Service badges stay upright at 12px. Menu/detail artwork stays unchanged; Circle Line alone uses the additional map-only raster in `public/transit/moving/`.
 
-Signature interaction: follow a route with fixed-view 3D fleet illustrations whose direction arrow turns to the directed screen-projected tangent, including pitched/rotated views. Continuous ETA progress preserves marker identity and uses subpixel placement. Small corrections blend along geometry in 1500ms. Large or reversing revisions dissolve/reacquire in 320ms. A source change never implies implausible travel.
+Signature interaction: calibrated rear/front pixels define each raster's native nose. The body and separate arrow follow the directed screen-projected route tangent, including reverse travel, bends and pitched/rotated views. The symmetric cable car uses a travel axis. Continuous supported progress preserves marker identity and uses subpixel placement. Small fresh corrections blend along route geometry in 1500ms; large or reversing revisions fade/reacquire in 320ms.
 
-Evidence and access: no timetable simulation. Without verified real ETA/GPS, MRT/LRT and other modes retain routes/stops only. Artwork is representative of researched fleet/type, not an exact physical-unit identification. Bus estimates freeze stale at 45 seconds and expire at 90 seconds. Hidden documents cancel animation; reduced motion shows latest supported observations without spatial animation. Labels, keyboard focus and at least 44px touch targets remain usable.
+Evidence and access: GPS, live ETA estimates and timetable models remain distinct. Timetable estimates are a saved opt-in, off by default, with dashed treatment and explicit non-live wording. Every active configured departure is represented within its service window; unsupported lines keep routes/stops only. Circle Line models both directions over its primary path using the existing 5-minute headway and 82-minute run time, without a branch schedule or physical-fleet claim. Artwork represents a researched fleet/type, not an identified physical unit.
 
-Finish: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance.
+Bus estimates freeze stale at 45 seconds and expire at 90 seconds. Hidden documents cancel animation. Reduced motion keeps ETA/GPS at the latest source-observed position and uses distributed 15-second timetable snapshots, stationary between snapshots. Keyboard focus, readable labels and at least 44px targets remain usable.
+
+Finish evidence: `.cache/circle-qa/finish-review.md` found no material UI defect and requested the scoped documentation synchronization. Provenance for the additional native-alpha Circle raster is in `public/transit/moving/circle-assets.json`; its exact prompt, source links, SHA-256 and calibrated front are recorded, and the ImageGen model version is unexposed.

@@ -5,7 +5,7 @@ typography:
   layer-caption:
     fontSize: "12px"
     fontWeight: 600
-    lineHeight: 1.25
+    lineHeight: 1.15
   layer-count:
     fontSize: "10px"
     fontWeight: 600
@@ -16,15 +16,15 @@ typography:
 components:
   layer-tile:
     typography: "{typography.layer-caption}"
-    width: "79.2px"
-    height: "70.2px"
-    rounded: "14.4px"
+    width: "55.44px"
+    height: "49.14px"
+    rounded: "10.08px"
   vehicle-marker:
     width: "56px"
     height: "72px"
   vehicle-art:
-    width: "48px"
-    height: "48px"
+    width: "33.6px"
+    height: "33.6px"
   vehicle-badge:
     typography: "{typography.vehicle-badge}"
 ---
@@ -71,7 +71,8 @@ wrapping metadata instead of a first-language-only layout.
 | `--ok` / `--warn` / `--err` | `#15803d` / `#a14b09` / `#b42318` | status |
 | `--radius` / `--radius-control` | `20px` / `12px` | floating cards / controls |
 | `--text-caption` | `12px` | fixed layer captions and supporting metadata; captions do not scale with tiles |
-| `--layer-toggle-scale` | `0.9` | layer tiles and glyphs scale from the 88 × 78 px baseline to 79.2 × 70.2 px; captions stay 12 px, count badges stay 10 px, and utility controls stay 44 px |
+| `--layer-toggle-scale` | `0.63` | layer tiles and glyphs use 0.7 of the previous 0.9 scale: 55.44 × 49.14 px from the 88 × 78 px baseline; captions stay 12 px, count badges stay 10 px, and utility controls stay 44 px |
+| `--layer-dock-height` | `calc(var(--layer-tile-height) + 16.8px)` | shared dock clearance for phone map controls and the bounded Transit routes panel |
 | `--shadow-panel` | soft forest-tinted shadow and inset highlight | floating-card depth |
 
 Layer colours are **double-encoded**: each layer also has its own marker shape
@@ -99,14 +100,15 @@ shimmer for loading, 200 ms colour/transform transitions on controls. Everything
 
 - Desktop: map fills the viewport; mint header top-left, detail card top-right, MapLibre
   controls bottom-right, and the **layer rail docked bottom-centre**. The dock reserves a
-  right-hand gutter (`calc(100vw - 150px)` at its widest) so the single-row labelled dock scrolls instead of
+  right-hand gutter (`min(742px, calc(100vw - 150px))` at its widest) so the single-row labelled dock scrolls instead of
   painting over the zoom/geolocate controls, and it retracts while a detail card is open.
 - Phone: header pinned to the top, the layer control is a **rail of coloured icons docked at the
   bottom of the window**, spanning the available width with 8 px side insets and listing every
   camera, road and supported transit layer in every build. Map controls and attribution sit above the full-width dock, not beside it.
   Both platforms use one horizontally scrolling row of icons with short, persistent captions below
   them. Captions follow the EN/中 language switch, use at most two lines, and stay inside the same
-  visibility-toggle button as the icon. Full names remain in tooltips and details. Utility buttons
+  visibility-toggle button as the icon. The short English captions include Traffic, Hazards,
+  Works and Highways; full names remain in tooltips and details. Utility buttons
   stay icon-only; no group headings, action labels or status strip are added. A layer
   the running build cannot reach is still listed, and its tooltip reports unavailability.
   Hovering or focusing an icon shows **one shared tooltip bubble above the rail**; tapping toggles
@@ -125,9 +127,14 @@ shimmer for loading, 200 ms colour/transform transitions on controls. Everything
   remain separate from the artwork and are repeated in service-code underlines.
 - The collapsible Transit routes control sits at the upper right, below the header and above
   the map tools. Its ivory panel is 312 px wide on desktop and at most 332 px on phones,
-  with 12 px padding, 8 px gaps and a height bounded by the viewport and shared dock-height
-  token. It scrolls on short phones so the mode, search, selection and return controls remain
-  reachable. Phone search and select fields use 16 px text; row metadata and notes use 12 px.
+  with 10 px padding, 4 px gaps and a height bounded by the viewport and shared dock-height
+  token. Stop names and estimated positions share a two-column settings row; the focus summary
+  has a compact 44 px return action. The route list takes the remaining height, with a 140 px
+  minimum and 320 px flex basis. At 700 px viewport height or less, the panel scrolls as a whole so
+  the mode, search, selection and return controls remain reachable. Phone search and Transport
+  values use 16 px text; row metadata and notes use 12 px. Transport retains a native select
+  across its full hit area, with a visible wrapping value and chevron above the visually transparent
+  select. The complete mode name stays readable without replacing native selection behaviour.
 - Transit service rows combine an 18 px checkbox within a large label target, a route-colour
   underline and a separate 44 px fit action. All on / All off actions use secondary-surface fills;
   the pressed action uses forest green with white text. Search reveals services in batches
@@ -182,13 +189,21 @@ shimmer for loading, 200 ms colour/transform transitions on controls. Everything
 
 ### Moving vehicle marker
 
-The map uses the 3D fleet illustrations in `public/transit/` — the same artwork as
-menus and detail views — at the `vehicle-art` size inside the larger `vehicle-marker`
-button. A fixed-view isometric render has no geographic heading, so the body stays
-upright and only the separate direction arrow rotates with the directed
-screen-projected route tangent, including pitched and rotated views. The
-`vehicle-badge` stays upright as well. Fleet symbols represent researched vehicle
-types rather than identifying a physical unit.
+The map retains the dimensional fleet illustrations in `public/transit/` at the
+`vehicle-art` size inside the larger `vehicle-marker` button. Moving artwork uses
+0.7 of its previous size; the marker target and service badge retain their frontmatter
+dimensions. Each raster has calibrated rear and front pixels in
+`src/lib/transit-sprites.ts`. The body rotates by the directed screen-projected route
+tangent minus that native front bearing, including reverse travel and pitched/rotated
+views. The separate arrow follows travel; the `vehicle-badge` stays upright.
+Fleet symbols represent researched vehicle types rather than identifying a physical unit.
+
+Circle Line uses one map-only ImageGen raster at
+`public/transit/moving/train-circle.png`, with visible roof, sidewalls and leading cab.
+Its original menu/detail image remains in place. The adjacent `circle-assets.json`
+records the exact prompt, source links, native alpha, front calibration and SHA-256;
+the tool does not expose its model version. Other moving vehicles retain the existing
+fleet artwork with per-image calibration.
 
 Stable marker elements preserve keyboard focus through feed refreshes. Supported
 travel uses display-refresh updates and fractional pixel placement. Small fresh
@@ -198,11 +213,19 @@ or backward corrections that would reverse travel, use `vehicle-reacquire` to fa
 out and reappear at the supported position. Heading takes the shortest turn and
 retains its last route tangent while stopped.
 
-Hidden documents cancel animation scheduling. Reduced motion shows the latest
-supported observed position without continuous spatial animation. Bus estimates
-stop progressing at 45 seconds, use a half-opacity stale treatment, and disappear
-at 90 seconds. Routes and stops remain available when no usable ETA/GPS supports
-a vehicle position; timetable animation is never a substitute.
+Hidden documents cancel animation scheduling. Reduced motion keeps ETA/GPS at the
+latest source-observed position and distributes timetable estimates along their routes
+using discrete snapshots at the sidecar's `timetable-snapshot` interval. Markers stay
+stationary between snapshots. Bus estimates stop progressing at 45 seconds, use a
+half-opacity stale treatment, and disappear at 90 seconds.
+
+Timetable models are a saved opt-in, off by default. Scheduled markers have a dashed
+route-colour outline and badge border, reduced saturation and image opacity of 0.72;
+the panel and details identify them as timetable estimates, never live vehicle positions.
+All active configured departures are represented within their service windows. Circle
+Line distributes both modelled directions across the primary loop using its existing
+headway and run-time inputs. The model adds no branch schedule and is not a physical-fleet
+census. Unsupported lines keep routes and stops only.
 
 ## Content rules
 

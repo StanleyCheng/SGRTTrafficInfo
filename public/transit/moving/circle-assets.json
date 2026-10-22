@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "createdDate": "2026-10-22",
+  "purpose": "Map-only Circle Line moving sprite; existing menu artwork remains unchanged.",
+  "assets": [
+    {
+      "id": "train-circle-moving",
+      "parentAssetId": "train-circle",
+      "file": "train-circle.png",
+      "publicPath": "/transit/moving/train-circle.png",
+      "label": "Circle MRT moving sprite",
+      "representative": true,
+      "description": "Representative Alstom Metropolis C851E leading carriage in authentic silver/white, black glazing and orange lower side/nose band; polished miniature 3D three-quarter/isometric view.",
+      "sourceURLs": [
+        "https://www.lta.gov.sg/content/ltagov/en/getting_around/public_transport/rail_network/circle_line/_jcr_content/par/tab_yellow_new/tab-content-tab_yellow_new/textimage_1819530082/image.img.jpg/1681180492796.jpg",
+        "https://www.lta.gov.sg/content/ltagov/en/getting_around/public_transport/rail_network/circle_line.html"
+      ],
+      "sourceMetadataFile": "/transit/assets.json",
+      "referenceAsset": "/transit/train-circle.png",
+      "referenceAssetSha256": "1f3d2be0acf0b0d1cf32420d8b7102cbcd83558e93cf969ba131725c06cd44bb",
+      "generation": {
+        "tool": "built-in ImageGen",
+        "model": "not exposed by tool",
+        "mode": "edit using existing train-circle.png as reference",
+        "transparentBackgroundRequested": true,
+        "nativeTransparentAlpha": true,
+        "generationCount": 1,
+        "prompt": "Use case: precise-object-edit\nAsset type: ONE map-only transparent PNG moving-vehicle sprite for SGRTTrafficInfo, a representative Singapore Circle Line C851E MRT leading car. The final display is 33.6 CSS pixels, so retain a crisp, compact miniature silhouette.\nInput image 1: existing train-circle.png is the edit target and visual reference for the vehicle's authentic livery, silhouette, materials and established three-dimensional illustration style. Refine this one vehicle; do not invent a different fleet type.\nPrimary request: produce one refined precise miniature 3D orthographic three-quarter/isometric cutout. Preserve the reference's long silver/white metro carriage, near-black glazing, authentic bold orange stripe immediately below the side windows wrapping the lower leading nose, silver double sliding doors, grey roof and low rectangular roof equipment, dark bogies and undercarriage. One car only with a short flat rear gangway at lower-left. The leading C851E cab is upper-right: an unmistakably sloped angular rounded nose with a broad dark windshield and subtle low headlamp details. Keep the sidewalls substantial and visible, show the roof clearly, and give the cab enough visible front face to distinguish it at miniature size.\nComposition/framing: square canvas, one whole complete vehicle centered, approximately 8 to 10 percent transparent padding around the complete silhouette. The projected long axis runs from rear lower-left toward nose upper-right, roughly 60 degrees clockwise from the top of the image (around 30 degrees ascending left to right). Rear lower-left, nose upper-right. Maintain plausible C851E leading-car proportions and the reference's dimensional three-quarter perspective; do not flatten into an overhead plan view. Precise clean geometry, smooth realistic silver materials, crisp silhouette and simplified readable details suitable for a tiny map marker.\nLighting: restrained soft neutral studio illumination on the vehicle only, clear dimensional roof and sidewall shading, no external shadow.\nScene/backdrop: genuinely transparent native alpha background, an isolated cutout. Empty space must be truly transparent. Preserve solid silver/white painted surfaces and dark glazing.\nConstraints: one train car only; no following cars, no track, no rails, no floor, no platform, no ground, no background, no checkerboard painting, no cast shadow, no drop shadow, no people, no scenery, no arrows, no text, no route number, no logo, no watermark. Do not turn the orange stripe into a route badge or recolour the train to the map line colour. Preserve a polished miniature 3D isometric look with visible roof, sidewalls and leading cab.",
+        "promptEmbedded": true,
+        "rawGeneratedPath": "/Users/stanley/.codex/generated_images/01a16389-4397-7ae1-9711-bc0210e8ef1c/exec-7e967754-16be-45cd-9f01-6d4d743bff8e.png",
+        "rawGeneratedWidth": 1254,
+        "rawGeneratedHeight": 1254,
+        "postProcessing": "ImageMagick alpha trim, proportional resize to fit 210x210, centered transparent extent to 256x256, saved PNG32 RGBA. Native generated alpha preserved through resize; no repaint, chroma key or background removal."
+      },
+      "format": {
+        "width": 256,
+        "height": 256,
+        "channels": "RGBA",
+        "targetCssSizePx": 33.6,
+        "baseCssSizePx": 48,
+        "scaleFromBase": 0.7,
+        "alphaBoundingBox": [
+          23,
+          64,
+          233,
+          211
+        ],
+        "horizontalPaddingPx": 23,
+        "horizontalPaddingFraction": 0.08984375,
+        "artworkAxis": "rear lower-left to leading nose upper-right",
+        "observedOrientation": "Upper-right sloped C851E cab has broad dark windshield and orange front band; lower-left flat inter-car gangway is the rear.",
+        "projection": "3D orthographic three-quarter/isometric, visible roof and substantial sidewalls",
+        "headingMeasurement": "Centers manually selected from the final 256x256 image in pixel coordinates; projected rear-to-nose long axis. x increases right, y increases down."
+      },
+      "noseCenter": {
+        "x": 216,
+        "y": 111
+      },
+      "rearCenter": {
+        "x": 43,
+        "y": 177
+      },
+      "frontBearingDegrees": 69.1180025347544,
+      "frontBearingFormula": "((atan2(noseCenter.x - rearCenter.x, -(noseCenter.y - rearCenter.y)) * 180 / PI) + 360) % 360",
+      "validation": {
+        "visuallyInspected": true,
+        "visuallyInspectedOn": [
+          "#fffef9",
+          "#203b36"
+        ],
+        "nativeAlphaPreserved": true,
+        "alphaMin": 0,
+        "alphaMax": 255,
+        "transparentPixelFraction": 0.74700927734375,
+        "nearOpaquePixelFraction": 0.238067626953125,
+        "nearOpaqueThreshold": 250,
+        "nativeSourceDominantObjectAlpha": 253,
+        "cornerPixelsTransparent": true,
+        "wholeVehicleInsideFrame": true,
+        "menuReferenceUnchanged": true,
+        "noBackgroundGroundTrackExternalShadowTextLogo": true
+      },
+      "bytes": 45408,
+      "sha256": "272ab5a4a57a0b9259f00c8a040365251f6df9625c112a777ee59745903bcded"
+    }
+  ]
+}

@@ -26,7 +26,8 @@ export interface ScheduledLine {
   headwayMinutes: number;
   runTimeMinutes: number;
   direction: 1 | -1;
-  maxVehicles: number;
+  /** Model additional directions explicitly; never duplicate a physical identity. */
+  directions?: readonly (1 | -1)[];
   basis: string;
   sources: { service: ScheduleSource; headway: ScheduleSource; runTime: ScheduleSource };
 }
@@ -86,67 +87,67 @@ const FERRY_SCHEDULE: ScheduleSource = {
   note: "Official departure board: Marina South Pier to Lazarus hourly 9:00am–3:00pm (50 min), Lazarus to Kusu hourly 9:50am–3:50pm (25 min).",
 };
 
-const rail = (routeId: string, label: string, serviceStart: string, serviceEnd: string, runTimeMinutes: number, maxVehicles: number): ScheduledLine => ({
+const rail = (routeId: string, label: string, serviceStart: string, serviceEnd: string, runTimeMinutes: number): ScheduledLine => ({
   routeId, label, mode: "train", serviceStart, serviceEnd, headwayMinutes: 5, runTimeMinutes,
-  direction: 1, maxVehicles, basis: "LTA network frequency (5-min estimator) and SBST published run time",
+  direction: 1, basis: "LTA network frequency (5-min estimator) and SBST published run time",
   sources: { service: SBST_FIRST_LAST, headway: LTA_RAIL, runTime: SBST_TIMES },
 });
 
 export const SCHEDULE_LINES: ScheduledLine[] = [
-  rail("train:NE", "North East Line", "05:47", "23:55", 37, 6),
-  rail("train:DT", "Downtown Line", "05:30", "23:40", 64, 6),
+  rail("train:NE", "North East Line", "05:47", "23:55", 37),
+  rail("train:DT", "Downtown Line", "05:30", "23:40", 64),
   {
     routeId: "train:CC", label: "Circle Line", mode: "train",
     serviceStart: "05:37", serviceEnd: "23:56", headwayMinutes: 5, runTimeMinutes: 82,
-    direction: 1, maxVehicles: 6,
-    basis: "SMRT full-loop first/last at Dhoby Ghaut; 82-min run derived from the published last-train sequence over the 39 km loop",
+    direction: 1, directions: [1, -1],
+    basis: "Both-direction uniform-headway model; SMRT full-loop first/last at Dhoby Ghaut; 82-min run derived from the published last-train sequence over the 39 km loop",
     sources: { service: SMRT_CCL, headway: LTA_RAIL, runTime: SMRT_CCL },
   },
-  rail("train:SE", "Sengkang LRT East Loop", "05:25", "00:35", 10, 2),
-  rail("train:SW", "Sengkang LRT West Loop", "05:18", "00:37", 12, 2),
-  rail("train:PE", "Punggol LRT East Loop", "05:20", "00:38", 11, 2),
-  rail("train:PW", "Punggol LRT West Loop", "05:18", "00:40", 11, 2),
+  rail("train:SE", "Sengkang LRT East Loop", "05:25", "00:35", 10),
+  rail("train:SW", "Sengkang LRT West Loop", "05:18", "00:37", 12),
+  rail("train:PE", "Punggol LRT East Loop", "05:20", "00:38", 11),
+  rail("train:PW", "Punggol LRT West Loop", "05:18", "00:40", 11),
   {
     routeId: "ferry:558921059", label: "Marina South Pier – St John's Island", mode: "ferry",
     serviceStart: "09:00", serviceEnd: "15:00", headwayMinutes: 60, runTimeMinutes: 50,
-    direction: 1, maxVehicles: 2, basis: "Official hourly departure board",
+    direction: 1, basis: "Official hourly departure board",
     sources: { service: FERRY_SCHEDULE, headway: FERRY_SCHEDULE, runTime: FERRY_SCHEDULE },
   },
   {
     routeId: "ferry:160832374", label: "St John's Island – Kusu Island", mode: "ferry",
     serviceStart: "09:50", serviceEnd: "15:50", headwayMinutes: 60, runTimeMinutes: 25,
-    direction: 1, maxVehicles: 2, basis: "Official hourly departure board",
+    direction: 1, basis: "Official hourly departure board",
     sources: { service: FERRY_SCHEDULE, headway: FERRY_SCHEDULE, runTime: FERRY_SCHEDULE },
   },
   {
     routeId: "sentosa:2353581", label: "Sentosa Express to Beach", mode: "sentosa",
     serviceStart: "07:00", serviceEnd: "24:00", headwayMinutes: 5, runTimeMinutes: 7,
-    direction: 1, maxVehicles: 3, basis: "Official 4–7 min frequency; single-car model uses a 5-min headway and the 7-min upper bound",
+    direction: 1, basis: "Official 4–7 min frequency; single-car model uses a 5-min headway and the 7-min upper bound",
     sources: { service: SENTOSA_EXPRESS_PAGE, headway: SENTOSA_FREQUENCY, runTime: SENTOSA_FREQUENCY },
   },
   {
     routeId: "sentosa:9663249", label: "Sentosa Express to VivoCity", mode: "sentosa",
     serviceStart: "07:00", serviceEnd: "24:00", headwayMinutes: 5, runTimeMinutes: 7,
-    direction: 1, maxVehicles: 3, basis: "Official 4–7 min frequency; single-car model uses a 5-min headway and the 7-min upper bound",
+    direction: 1, basis: "Official 4–7 min frequency; single-car model uses a 5-min headway and the 7-min upper bound",
     sources: { service: SENTOSA_EXPRESS_PAGE, headway: SENTOSA_FREQUENCY, runTime: SENTOSA_FREQUENCY },
   },
   {
     routeId: "cablecar:28755868", label: "Mount Faber Line", mode: "cablecar",
     serviceStart: "08:45", serviceEnd: "21:30", headwayMinutes: 26, runTimeMinutes: 13,
-    direction: 1, maxVehicles: 2, basis: "Single-cabin round-trip model: 13 min one way, 26 min round trip",
+    direction: 1, basis: "Single-cabin round-trip model: 13 min one way, 26 min round trip",
     sources: { service: CABLE_CAR_HOURS, headway: CABLE_CAR_FAQ, runTime: CABLE_CAR_FAQ },
   },
   {
     routeId: "cablecar:364599223", label: "Sentosa Line", mode: "cablecar",
     serviceStart: "08:45", serviceEnd: "21:30", headwayMinutes: 14, runTimeMinutes: 7,
-    direction: 1, maxVehicles: 2, basis: "Single-cabin round-trip model: 7 min one way, 14 min round trip",
+    direction: 1, basis: "Single-cabin round-trip model: 7 min one way, 14 min round trip",
     sources: { service: CABLE_CAR_HOURS, headway: CABLE_CAR_FAQ, runTime: CABLE_CAR_FAQ },
   },
   ...["skytrain:9664403", "skytrain:9664404", "skytrain:9664405", "skytrain:9664406", "skytrain:9664407",
     "skytrain:9664408", "skytrain:9664409", "skytrain:9664410", "skytrain:9664416", "skytrain:9664417"].map((routeId): ScheduledLine => ({
     routeId, label: "Changi Skytrain", mode: "skytrain",
     serviceStart: "05:00", serviceEnd: "02:00", headwayMinutes: 5, runTimeMinutes: 5,
-    direction: 1, maxVehicles: 2, basis: "CAG 5–10 min transfer time (5-min estimator); MHI 5-min interval paper",
+    direction: 1, basis: "CAG 5–10 min transfer time (5-min estimator); MHI 5-min interval paper",
     sources: { service: CAG_TRANSFER, headway: MHI_SKYTRAIN, runTime: CAG_TRANSFER },
   })),
 ];
@@ -213,20 +214,21 @@ export function scheduledVehiclesForLine(line: ScheduledLine, route: TransitRout
       active.push({ departure, arrival });
     }
   }
-  const selected = active.slice(-Math.max(1, line.maxVehicles));
-  return selected.map(({ departure, arrival }) => {
-    const fromDistance = line.direction === 1 ? 0 : length;
-    const toDistance = line.direction === 1 ? length : 0;
+  // Every active departure belongs on the route. Keeping only the newest few
+  // biased long lines towards their start, leaving the rest of the loop empty.
+  return active.flatMap(({ departure, arrival }) => (line.directions ?? [line.direction]).map((direction) => {
+    const fromDistance = direction === 1 ? 0 : length;
+    const toDistance = direction === 1 ? length : 0;
     return assertVehicleEvidence({
-      id: `${route.id}:schedule:${line.direction}:${Math.round(departure)}`,
+      id: `${route.id}:schedule:${direction}:${Math.round(departure)}`,
       routeId: route.id, service: route.service, destination: route.destination,
       evidence: "schedule", mode: route.mode, lineKey: routeGroupId(route), icon: routeIcon(route),
-      direction: line.direction, fromDistance, toDistance,
+      direction, fromDistance, toDistance,
       observedAt: fromSingaporeMinutes(departure), arrivalAt: fromSingaporeMinutes(arrival),
       staleAt: fromSingaporeMinutes(arrival), expiresAt: fromSingaporeMinutes(arrival),
       serviceStartedAt: fromSingaporeMinutes(departure), serviceEndsAt: fromSingaporeMinutes(arrival),
     }, { coordinates: false, arrivals: false, timetable: true });
-  });
+  }));
 }
 
 /**

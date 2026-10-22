@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-22T08:18:24.974Z",
+  "generatedAt": "2026-10-22T12:48:08.054Z",
   "title": "Design System: Pastel Civic Atlas",
   "extensions": {
     "typographyMeta": {
@@ -14,7 +14,7 @@
       },
       "vehicle-badge": {
         "displayName": "Upright vehicle service badge",
-        "purpose": "Map service text remains independent of the vehicle body; its frontmatter type and existing route colour are preserved."
+        "purpose": "Service text stays upright while the calibrated vehicle body and direction arrow follow screen-projected travel, including reverse travel."
       }
     },
     "motion": [
@@ -27,6 +27,16 @@
         "name": "vehicle-reacquire",
         "value": "320ms",
         "purpose": "A correction above 80m or a backward correction that would reverse travel fades out at the previous position and fades in at the supported revised position."
+      },
+      {
+        "name": "vehicle-heading-smoothing",
+        "value": "90ms",
+        "purpose": "Exponential shortest-turn heading smoothing uses a 90ms time constant. Initial placement, reduced motion and active camera movement use the projected tangent directly. Each image rotates by the heading minus its calibrated native front bearing."
+      },
+      {
+        "name": "timetable-snapshot",
+        "value": "15000ms",
+        "purpose": "Reduced motion distributes opted-in timetable estimates along each route in discrete clock-aligned snapshots. ETA/GPS stays at the latest source-observed position."
       }
     ]
   },
@@ -35,9 +45,9 @@
       "name": "Captioned layer tile",
       "kind": "button",
       "refersTo": "layer-tile",
-      "description": "Approved layer-picker resize only. The 88 × 78 px baseline uses --layer-toggle-scale; caption and badge text remain fixed. The source-derived congestion glyph illustrates the shared tile.",
-      "html": "<div class=\"ds-layer-example\"><button class=\"ds-layer-tile\" type=\"button\" aria-pressed=\"false\" aria-label=\"Congestion · loading\" aria-describedby=\"ds-layer-hint\"><svg viewBox=\"0 0 20 20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M2 5.5h16M2 10h16M2 14.5h16\"/><path d=\"M5 3.5v4M10 8v4M15 12.5v4\" opacity=\".45\"/></svg><span class=\"ds-layer-caption\">Congestion</span><span class=\"ds-layer-count\">—</span></button><span class=\"ds-layer-hint\" id=\"ds-layer-hint\" role=\"tooltip\">Congestion · loading</span></div>",
-      "css": ".ds-layer-example{position:relative;display:inline-block;font-family:var(--font-sans)}.ds-layer-tile{--layer-color:var(--c-traffic);position:relative;display:grid;grid-template-rows:calc(24px * var(--layer-toggle-scale)) calc(30px * var(--layer-toggle-scale));gap:calc(4px * var(--layer-toggle-scale));width:calc(88px * var(--layer-toggle-scale));height:var(--layer-tile-height);padding:calc(8px * var(--layer-toggle-scale)) calc(6px * var(--layer-toggle-scale));align-content:center;place-items:center;border:1px solid color-mix(in srgb,var(--layer-color) 26%,var(--line));border-radius:calc(var(--radius-tile) * var(--layer-toggle-scale));background:color-mix(in srgb,var(--layer-color) 9%,var(--surface));color:var(--layer-color);font-family:var(--font-sans);cursor:pointer;transition:background 160ms,border-color 160ms,transform 120ms}.ds-layer-tile>svg{width:calc(22px * var(--layer-toggle-scale));height:calc(22px * var(--layer-toggle-scale))}.ds-layer-caption{width:100%;font-size:var(--text-caption);font-weight:600;line-height:1.25;text-align:center;text-wrap:balance;color:var(--ink)}.ds-layer-count{position:absolute;top:calc(3px * var(--layer-toggle-scale));right:calc(3px * var(--layer-toggle-scale));min-width:calc(20px * var(--layer-toggle-scale));padding:calc(1px * var(--layer-toggle-scale)) calc(4px * var(--layer-toggle-scale));border-radius:999px;background:var(--surface);border:1px solid var(--line);font-size:10px;font-weight:600;color:var(--ink-2);font-variant-numeric:tabular-nums;letter-spacing:-0.01em}.ds-layer-tile[aria-pressed=true]{border-width:2px;border-color:var(--layer-color);background:color-mix(in srgb,var(--layer-color) 20%,var(--surface));transform:translateY(-1px)}.ds-layer-tile:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.ds-layer-hint{display:none;position:absolute;bottom:calc(100% + 8px);left:0;width:max-content;max-width:240px;padding:7px 10px;border-radius:10px;background:var(--ink);color:var(--surface);font-size:var(--text-caption);font-weight:500;line-height:1.4;pointer-events:none}.ds-layer-example:hover .ds-layer-hint,.ds-layer-example:focus-within .ds-layer-hint{display:block}@media(prefers-reduced-motion:reduce){.ds-layer-tile{transition:none}}"
+      "description": "The dock uses a 0.63 scale from the 88 × 78px baseline, or 0.7 of its former 0.9 scale. Caption and count text retain their frontmatter sizes, and utility targets stay at least 44px. Short Traffic copy retains the full name in its tooltip.",
+      "html": "<div class=\"ds-layer-example\"><button class=\"ds-layer-tile\" type=\"button\" data-active=\"false\" aria-pressed=\"false\" aria-label=\"Congestion · loading\" aria-describedby=\"ds-layer-hint\"><svg viewBox=\"0 0 20 20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M2 5.5h16M2 10h16M2 14.5h16\"/><path d=\"M5 3.5v4M10 8v4M15 12.5v4\" opacity=\".45\"/></svg><span class=\"ds-layer-caption\">Traffic</span><span class=\"ds-layer-count\">—</span></button><span class=\"ds-layer-hint\" id=\"ds-layer-hint\" role=\"tooltip\">Congestion · loading</span></div>",
+      "css": ".ds-layer-example{position:relative;display:inline-block;font-family:var(--font-sans)}.ds-layer-tile{--layer-color:var(--c-traffic);position:relative;display:grid;grid-template-rows:calc(20px * var(--layer-toggle-scale)) 28px;gap:1px;width:calc(88px * var(--layer-toggle-scale));height:var(--layer-tile-height);padding:3px calc(4px * var(--layer-toggle-scale));align-content:center;place-items:center;border:1px solid color-mix(in srgb,var(--layer-color) 26%,var(--line));border-radius:calc(var(--radius-tile) * var(--layer-toggle-scale));background:color-mix(in srgb,var(--layer-color) 9%,var(--surface));color:var(--layer-color);font-family:var(--font-sans);cursor:pointer;transition:background 160ms,border-color 160ms,transform 120ms}.ds-layer-tile>svg{width:calc(22px * var(--layer-toggle-scale));height:calc(22px * var(--layer-toggle-scale));justify-self:start;margin-left:2px}.ds-layer-caption{width:calc(100% + 5px);font-size:var(--text-caption);font-weight:600;line-height:1.15;text-align:center;text-wrap:balance;overflow-wrap:anywhere;color:var(--ink)}.ds-layer-count{position:absolute;top:calc(3px * var(--layer-toggle-scale));right:calc(3px * var(--layer-toggle-scale));min-width:calc(20px * var(--layer-toggle-scale));padding:calc(1px * var(--layer-toggle-scale)) calc(4px * var(--layer-toggle-scale));border-radius:999px;background:var(--surface);border:1px solid var(--line);font-size:10px;font-weight:600;color:var(--ink-2);font-variant-numeric:tabular-nums;letter-spacing:-0.01em}.ds-layer-tile[data-active=true]{border-width:2px;border-color:var(--layer-color);background:color-mix(in srgb,var(--layer-color) 20%,var(--surface))}.ds-layer-tile[aria-pressed=true]{transform:translateY(-1px)}.ds-layer-tile:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.ds-layer-hint{display:none;position:absolute;bottom:calc(100% + 8px);left:0;width:max-content;max-width:240px;padding:7px 10px;border-radius:10px;background:var(--ink);color:var(--surface);font-size:var(--text-caption);font-weight:500;line-height:1.4;pointer-events:none}.ds-layer-example:hover .ds-layer-hint,.ds-layer-example:focus-within .ds-layer-hint{display:block}@media(prefers-reduced-motion:reduce){.ds-layer-tile{transition:none}}"
     }
   ]
 }

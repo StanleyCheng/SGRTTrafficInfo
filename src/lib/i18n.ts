@@ -151,7 +151,7 @@ const en = {
   "road.panel.allOff": "Road-condition layers are hidden.",
   "road.panel.cameraGroup": "Enforcement cameras",
   "road.layer.traffic-speed.name": "Live congestion",
-  "road.layer.traffic-speed.label": "Congestion",
+  "road.layer.traffic-speed.label": "Traffic",
   "road.layer.traffic-speed.note":
     "Road segments coloured green to red by current speed band",
   "road.layer.incidents.name": "Accidents & breakdowns",
@@ -159,10 +159,10 @@ const en = {
   "road.layer.incidents.note":
     "Accidents, breakdowns, blocks and diversions, filterable by route",
   "road.layer.hazards.name": "Flood alerts & signal faults",
-  "road.layer.hazards.label": "Floods & signals",
+  "road.layer.hazards.label": "Hazards",
   "road.layer.hazards.note": "Appears only while an official alert is active",
   "road.layer.roadworks.name": "Roadworks & planned closures",
-  "road.layer.roadworks.label": "Roadworks",
+  "road.layer.roadworks.label": "Works",
   "road.layer.roadworks.note":
     "Dates from the permit register; live works add direction and lane",
   "road.legend.clear": "Free",
@@ -211,7 +211,7 @@ const en = {
   "road.layer.zones.note":
     "Zoom-gated safety overlay with the statutory speed limit",
   "road.layer.expressway.name": "Expressway times & EMAS",
-  "road.layer.expressway.label": "Expressways",
+  "road.layer.expressway.label": "Highways",
   "road.layer.expressway.note": "Compact corridor cards and signboard messages",
 
   "road.filter.vehicleType": "Vehicle type",

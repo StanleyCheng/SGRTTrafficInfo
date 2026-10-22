@@ -1,7 +1,7 @@
 import maplibregl, { type GeoJSONSource, type Map as LibreMap, type MapLayerMouseEvent } from "maplibre-gl";
 import { pointAlongRoute, reconcileVehicleMotion, routeGroupId, screenRouteHeading, smoothHeading,
-  vehicleMotionAt, vehicleMotionIsAnimating, type Position, type TransitCatalog, type TransitRoute, type TransitVehicle, type VehicleMotion } from "@/lib/transit";
-import { fleetSprite } from "@/lib/transit-sprites";
+  vehicleMotionAt, vehicleMotionIsAnimating, vehicleHeadingPoints, reducedVehicleDistanceAt, type Position, type TransitCatalog, type TransitRoute, type TransitVehicle, type VehicleMotion } from "@/lib/transit";
+import { movingSprite } from "@/lib/transit-sprites";
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 const FADE_MS = 160;
@@ -15,7 +15,7 @@ export interface TransitRenderOptions {
 interface VehicleMarker {
   marker: maplibregl.Marker; button: HTMLButtonElement; art: HTMLDivElement; image: HTMLImageElement;
   arrow: SVGSVGElement; label: HTMLSpanElement; motion: VehicleMotion; route: TransitRoute;
-  heading: number | null; headingPoints: [Position, Position] | null; distance: number | null;
+  spriteFront: number; heading: number | null; headingPoints: [Position, Position] | null; distance: number | null;
   phase: { kind: "active"; enteredAt: number } | { kind: "retiring"; startedAt: number };
 }
 
@@ -74,7 +74,7 @@ export function createTransitRenderer(map: LibreMap) {
     for (const [key, entry] of entries) {
       const { vehicle } = entry.motion;
       if (now >= vehicle.expiresAt || (entry.phase.kind === "retiring" && now - entry.phase.startedAt >= FADE_MS)) { remove(key, entry); continue; }
-      const state = reduced.matches ? { distance: vehicleMotionAt({ vehicle, correction: { kind: "none" } }, vehicle.observedAt).distance, opacity: 1 }
+      const state = reduced.matches ? { distance: reducedVehicleDistanceAt(vehicle, now), opacity: 1 }
         : vehicleMotionAt(entry.motion, now);
       const path = entry.route.paths[0];
       const point = pointAlongRoute(path, state.distance);
@@ -82,13 +82,13 @@ export function createTransitRenderer(map: LibreMap) {
       // Retain the last route tangent when stopped. Project it again when the
       // camera moves: bearing subtraction alone is wrong on a pitched map.
       if (!entry.headingPoints || entry.distance === null || Math.abs(state.distance - entry.distance) > 0.01) {
-        entry.headingPoints = [pointAlongRoute(path, state.distance - 4).position, pointAlongRoute(path, state.distance + 4).position];
+        entry.headingPoints = vehicleHeadingPoints(path, state.distance, vehicle.direction);
         entry.distance = state.distance;
       }
       const target = screenRouteHeading(map.project(entry.headingPoints[0]), map.project(entry.headingPoints[1]), entry.heading ?? 0);
       entry.heading = entry.heading === null || reduced.matches || map.isMoving() ? target : smoothHeading(entry.heading, target, elapsed);
-      // Fixed-view artwork stays upright; the arrow carries the heading.
-      entry.arrow.style.transform = `rotate(${entry.heading}deg)`;
+      entry.art.style.transform = `rotate(${entry.heading - entry.spriteFront}deg)`;
+      entry.arrow.style.transform = `rotate(${entry.heading}deg) translateY(-23px)`;
       const stale = now >= vehicle.staleAt;
       entry.button.dataset.state = stale ? "stale" : vehicle.evidence === "schedule" ? "scheduled" : "recent";
       entry.button.dataset.evidence = vehicle.evidence;
@@ -115,19 +115,19 @@ export function createTransitRenderer(map: LibreMap) {
     const now = Date.now(), seen = new Set<string>(), occupied = new Set<string>();
     const routes = new Map(next.routes.map((route) => [route.id, route]));
     for (const vehicle of next.vehicles) {
-      const route = routes.get(vehicle.routeId), sprite = fleetSprite(vehicle.icon);
+      const route = routes.get(vehicle.routeId), sprite = movingSprite(vehicle.icon);
       if (!route?.paths[0] || !sprite || now >= vehicle.expiresAt) continue;
       const key = `${vehicle.routeId}/${vehicle.id}`;
       const previous = entries.get(key);
       const motion = previous ? reconcileVehicleMotion(previous.motion, vehicle, now, reduced.matches) : { vehicle, correction: { kind: "none" } } satisfies VehicleMotion;
       const screen = map.project(pointAlongRoute(route.paths[0], vehicleMotionAt(motion, now).distance).position);
       const cell = `${Math.floor(screen.x / 60)}:${Math.floor(screen.y / 60)}`;
-      if (!next.focusedGroup && map.getZoom() < 13 && occupied.has(cell)) continue;
+      if (vehicle.evidence !== "schedule" && !next.focusedGroup && map.getZoom() < 13 && occupied.has(cell)) continue;
       occupied.add(cell); seen.add(key);
       if (previous) {
-        previous.motion = motion; previous.route = route;
+        previous.motion = motion; previous.route = route; previous.spriteFront = sprite.frontBearingDegrees;
         previous.button.style.setProperty("--vehicle-route-colour", route.colour);
-        previous.image.src = `${BASE}${sprite}`; previous.label.textContent = vehicle.service;
+        if (previous.image.getAttribute("src") !== `${BASE}${sprite.path}`) previous.image.src = `${BASE}${sprite.path}`; previous.label.textContent = vehicle.service;
         if (previous.phase.kind === "retiring") previous.phase = { kind: "active", enteredAt: now - FADE_MS };
         continue;
       }
@@ -136,17 +136,18 @@ export function createTransitRenderer(map: LibreMap) {
       button.style.setProperty("--vehicle-route-colour", route.colour);
       const art = document.createElement("div"); art.className = "atlas-vehicle-art";
       const image = document.createElement("img");
-      image.src = `${BASE}${sprite}`; image.alt = ""; image.draggable = false;
+      image.src = `${BASE}${sprite.path}`; image.alt = ""; image.draggable = false;
       const label = document.createElement("span"); label.textContent = vehicle.service;
       const arrow = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      arrow.classList.add("atlas-vehicle-heading");
       arrow.setAttribute("viewBox", "0 0 16 16"); arrow.setAttribute("aria-hidden", "true");
       const arrowPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
       arrowPath.setAttribute("d", "M4 12 8 3 12 12"); arrow.append(arrowPath);
-      art.append(image, arrow); button.append(art, label);
+      art.append(image); button.append(art, label, arrow);
       const marker = new maplibregl.Marker({ element: button, anchor: "center", pitchAlignment: "viewport", rotationAlignment: "viewport", subpixelPositioning: true })
         .setLngLat(pointAlongRoute(route.paths[0], vehicleMotionAt(motion, now).distance).position).addTo(map);
       const entry: VehicleMarker = { marker, button, art, image, arrow, label, motion, route,
-        heading: null, headingPoints: null, distance: null, phase: { kind: "active", enteredAt: now } };
+        spriteFront: sprite.frontBearingDegrees, heading: null, headingPoints: null, distance: null, phase: { kind: "active", enteredAt: now } };
       button.addEventListener("click", (event) => { event.stopPropagation(); options?.onVehicle(entry.motion.vehicle); });
       button.addEventListener("keydown", (event) => event.stopPropagation());
       entries.set(key, entry);

@@ -209,6 +209,13 @@ export function vehicleDistanceAt(vehicle: TransitVehicle, now: number) {
   return vehicle.fromDistance + (vehicle.toDistance - vehicle.fromDistance) * fraction;
 }
 
+/** Discrete timetable snapshots preserve full-route coverage under Reduce Motion.
+ * ETA/GPS retains the latest source-observed position, as before.
+ */
+export function reducedVehicleDistanceAt(vehicle: TransitVehicle, now: number) {
+  return vehicleDistanceAt(vehicle, vehicle.evidence === "schedule" ? now - now % 15000 : vehicle.observedAt);
+}
+
 export const VEHICLE_CORRECTION_MS = 1500;
 export const VEHICLE_REACQUIRE_MS = 320;
 export interface VehicleMotion {
@@ -224,7 +231,7 @@ export function vehicleMotionAt(motion: VehicleMotion, now: number) {
     // Freeze the correction as well as the evidence trajectory when it is stale.
     const progress = Math.max(0, Math.min(1, (Math.min(now, vehicle.staleAt) - correction.startedAt) / VEHICLE_CORRECTION_MS));
     const eased = progress * progress * (3 - 2 * progress);
-    return { distance: Math.max(0, Math.min(vehicle.toDistance, target + correction.offset * (1 - eased))), opacity: 1 };
+    return { distance: Math.max(0, Math.min(Math.max(vehicle.fromDistance, vehicle.toDistance) + Math.max(0, correction.offset), target + correction.offset * (1 - eased))), opacity: 1 };
   }
   if (correction.kind === "reacquire") {
     const progress = Math.max(0, Math.min(1, (now - correction.startedAt) / VEHICLE_REACQUIRE_MS));
@@ -246,13 +253,17 @@ export function reconcileVehicleMotion(previous: VehicleMotion, vehicle: Transit
   const from = vehicleMotionAt(previous, now).distance, target = vehicleDistanceAt(vehicle, now);
   const offset = from - target;
   if (reducedMotion || now >= vehicle.staleAt || Math.abs(offset) < 0.05) return { vehicle, correction: { kind: "none" } };
-  const speed = (vehicle.toDistance - vehicle.fromDistance) / Math.max(1, (vehicle.arrivalAt - vehicle.observedAt) / 1000);
+  const speed = Math.abs(vehicle.toDistance - vehicle.fromDistance) / Math.max(1, (vehicle.arrivalAt - vehicle.observedAt) / 1000);
   // A backward revision that cannot be absorbed without reversing is a new
   // estimate to reacquire, not evidence of a bus travelling backwards.
   const safeBacktrack = Math.max(0, speed) * (VEHICLE_CORRECTION_MS / 1000) / 1.5;
-  return { vehicle, correction: Math.abs(offset) > 80 || offset > safeBacktrack
+  return { vehicle, correction: Math.abs(offset) > 80 || offset * vehicle.direction > safeBacktrack
     ? { kind: "reacquire", startedAt: now, fromDistance: from }
     : { kind: "blend", startedAt: now, offset } };
+}
+/** Tangent in actual travel order, including reverse timetable trajectories. */
+export function vehicleHeadingPoints(path: Position[], metres: number, direction: 1 | -1): [Position, Position] {
+  return [pointAlongRoute(path, metres - 4 * direction).position, pointAlongRoute(path, metres + 4 * direction).position];
 }
 export function screenRouteHeading(from: { x: number; y: number }, to: { x: number; y: number }, fallback = 0) {
   return Math.hypot(to.x - from.x, to.y - from.y) < 0.001 ? fallback

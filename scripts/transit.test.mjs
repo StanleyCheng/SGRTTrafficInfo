@@ -2,11 +2,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import fs from "node:fs";
-import { FLEET_SPRITES, fleetSprite } from "../src/lib/transit-sprites.ts";
+import { FLEET_SPRITES, fleetSprite, movingSprite, MOVING_SPRITE_AXES } from "../src/lib/transit-sprites.ts";
 import { assertVehicleEvidence, inferBusVehicles, parseBusObservations, parseTransitCatalog, pointAlongRoute,
   projectOnRoute, routeInView, vehicleDistanceAt, routeGroupId, filteredTransitRoutes,
   TRANSIT_DEFAULTS, TRANSIT_FILTER_DEFAULTS, TRANSIT_ICONS, sampledBusStops, routeMetrics,
-  reconcileVehicleMotion, vehicleMotionAt, vehicleMotionIsAnimating, smoothHeading, screenRouteHeading, VEHICLE_CORRECTION_MS, VEHICLE_REACQUIRE_MS } from "../src/lib/transit.ts";
+  reconcileVehicleMotion, vehicleMotionAt, vehicleMotionIsAnimating, reducedVehicleDistanceAt, vehicleHeadingPoints, smoothHeading, screenRouteHeading, VEHICLE_CORRECTION_MS, VEHICLE_REACQUIRE_MS } from "../src/lib/transit.ts";
 import { SCHEDULE_LINES, SCHEDULE_UNAVAILABLE, inferScheduledVehicles, scheduledVehiclesForLine } from "../src/lib/transit-schedule.ts";
 
 const now = 1000000;
@@ -127,7 +127,7 @@ test("shipped catalogue includes the current Circle extension and all nine rail 
   assert.ok(actual.routes.some((item) => item.mode === "ferry" && /Ubin/.test(item.name)));
 });
 
-const motionVehicle = { id: "fixture", routeId: route.id, service: "42", destination: "C", evidence: "eta", icon: "bus-single-deck",
+const motionVehicle = { id: "fixture", routeId: route.id, service: "42", destination: "C", evidence: "eta", icon: "bus-single-deck", direction: 1,
   fromDistance: 100, toDistance: 1100, observedAt: now, arrivalAt: now + 100000, staleAt: now + 45000, expiresAt: now + 90000 };
 const plainMotion = (vehicle = motionVehicle) => ({ vehicle, correction: { kind: "none" } });
 
@@ -208,7 +208,7 @@ test("separate supported estimates with the same arrival second have distinct ma
   assert.equal(new Set(vehicles.map(vehicle => vehicle.id)).size, 2);
 });
 
-test("every mode and bus type maps to shipped 3D fleet artwork the map never rotates", () => {
+test("every mode and bus type maps to shipped 3D fleet artwork and a calibrated moving front", () => {
   const manifest = JSON.parse(fs.readFileSync(new URL("../public/transit/assets.json", import.meta.url), "utf8"));
   const byId = new Map(manifest.assets.map((asset) => [asset.id, asset]));
   for (const icon of [...Object.values(TRANSIT_ICONS), "bus-double-deck", "bus-articulated"]) {
@@ -310,7 +310,7 @@ test("scheduled estimates are opt-in, deterministic and never labelled live", ()
   assert.equal(scheduledVehiclesForLine(line, testRoute, at(6, 0)).length, 1);
   assert.equal(scheduledVehiclesForLine(line, testRoute, at(8, 0)).length, 2, "the last departure still runs");
   assert.equal(scheduledVehiclesForLine(line, testRoute, at(8, 20)).length, 0, "motion never leaks past the arrival");
-  assert.equal(scheduledVehiclesForLine({ ...line, maxVehicles: 1 }, testRoute, at(6, 25)).length, 1);
+
 
   const active = inferScheduledVehicles(actual, at(12),
     new Set(["train:NE", "train:DT", "ferry:558921059", "sentosa:2353581", "cablecar:28755868", "skytrain:9664403"]), true);
@@ -330,4 +330,65 @@ test("scheduled estimates are opt-in, deterministic and never labelled live", ()
     }
     assert.ok(scheduled.headwayMinutes > 0 && scheduled.runTimeMinutes > 0);
   }
+});
+
+test("Circle Line keeps every active departure across its full primary loop in both directions", () => {
+  const actual = parseTransitCatalog(JSON.parse(fs.readFileSync(new URL("../public/transit/catalog.json", import.meta.url))));
+  const stamp = Date.UTC(2026, 9, 22, 4, 0);
+  const line = SCHEDULE_LINES.find(line => line.routeId === "train:CC");
+  const route = actual.routes.find(route => route.id === "train:CC");
+  const vehicles = scheduledVehiclesForLine(line, route, stamp);
+  const length = routeMetrics(route.paths[0]).at(-1);
+  assert.equal(scheduledVehiclesForLine(line, route, stamp + 3 * 60000).length, 34, "all17 departures per direction survive at12:03");
+  for (const direction of [1, -1]) {
+    const stream = vehicles.filter(vehicle => vehicle.direction === direction);
+    assert.equal(stream.length, 16, "all16 departures still travelling at12:00 survive; no six-marker cap");
+    const quarters = new Set(stream.map(vehicle => Math.min(3, Math.floor(vehicleDistanceAt(vehicle, stamp) / length * 4))));
+    assert.equal(quarters.size, 4, "all four quarters of the loop receive estimates");
+  }
+  assert.equal(new Set(vehicles.map(vehicle => vehicle.id)).size, vehicles.length);
+  assert.ok(vehicles.every(vehicle => vehicle.evidence === "schedule"));
+});
+test("image-space front calibration follows directed movement, including reversed paths", () => {
+  for (const icon of Object.keys(FLEET_SPRITES)) assert.ok(Number.isFinite(movingSprite(icon).frontBearingDegrees));
+  assert.equal(movingSprite("unsupported"), null);
+  const forward = vehicleHeadingPoints(path, 500, 1), reverse = vehicleHeadingPoints(path, 500, -1);
+  assert.deepEqual(reverse, [...forward].reverse());
+  const project = p => ({ x: p[0] * 100000, y: -p[1] * 100000 });
+  const forwardHeading = screenRouteHeading(project(forward[0]), project(forward[1]));
+  const reverseHeading = screenRouteHeading(project(reverse[0]), project(reverse[1]));
+  assert.equal(Math.abs(forwardHeading - reverseHeading), 180);
+});
+test("small corrections preserve decreasing-distance reverse travel", () => {
+  const previous = { ...motionVehicle, direction: -1, fromDistance: 1100, toDistance: 100 };
+  const stamp = now + 10000, fresh = { ...previous, observedAt: stamp, fromDistance: 970, arrivalAt: stamp + 87000, staleAt: stamp + 45000 };
+  const motion = reconcileVehicleMotion(plainMotion(previous), fresh, stamp);
+  assert.equal(motion.correction.kind, "blend");
+  assert.equal(vehicleMotionAt(motion, stamp).distance, 1000);
+  assert.equal(vehicleMotionAt(motion, stamp + 1500).distance, vehicleDistanceAt(fresh, stamp + 1500));
+});
+
+test("all moving sprites have calibrated fronts and the generated Circle asset retains provenance", () => {
+  for (const icon of Object.keys(FLEET_SPRITES)) {
+    const sprite = movingSprite(icon), axis = MOVING_SPRITE_AXES[icon];
+    assert.ok(fs.existsSync(new URL(`../public${sprite.path}`, import.meta.url)));
+    assert.equal(sprite.frontBearingDegrees, Math.atan2(axis.front[0]-axis.rear[0],axis.rear[1]-axis.front[1])*180/Math.PI);
+  }
+  const manifest=JSON.parse(fs.readFileSync(new URL("../public/transit/moving/circle-assets.json", import.meta.url)));
+  const asset=manifest.assets[0], sprite=movingSprite("train-circle");
+  const png=fs.readFileSync(new URL(`../public${sprite.path}`, import.meta.url));
+  assert.equal(crypto.createHash("sha256").update(png).digest("hex"),asset.sha256);
+  assert.ok(Math.abs(sprite.frontBearingDegrees-asset.frontBearingDegrees)<1e-9);
+  assert.ok(asset.generation.prompt.length>100&&asset.generation.promptEmbedded);
+  assert.equal(png[25],6);assert.equal(png.readUInt32BE(16),256);
+});
+
+test("reduced motion retains timetable distribution instead of stacking every departure at its origin", () => {
+  const actual = parseTransitCatalog(JSON.parse(fs.readFileSync(new URL("../public/transit/catalog.json", import.meta.url))));
+  const stamp = Date.UTC(2026,9,22,4,3), route = actual.routes.find(route => route.id === "train:CC");
+  const vehicles = inferScheduledVehicles(actual,stamp,new Set([route.id]),true);
+  const length = routeMetrics(route.paths[0]).at(-1);
+  assert.equal(new Set(vehicles.map(vehicle => Math.min(3,Math.floor(reducedVehicleDistanceAt(vehicle,stamp)/length*4)))).size,4);
+  for (const vehicle of vehicles) assert.equal(reducedVehicleDistanceAt(vehicle,stamp),reducedVehicleDistanceAt(vehicle,stamp+7000));
+  assert.equal(reducedVehicleDistanceAt(motionVehicle,now+30000),motionVehicle.fromDistance);
 });
