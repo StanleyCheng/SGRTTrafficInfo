@@ -1,8 +1,13 @@
-/** Map-only artwork: front-up (0°), or travel-axis-up for the symmetric cable car.
- * Menus/details deliberately continue using the original fleet illustrations.
- * Provenance and exact generation prompts live beside these assets.
+/** Representative vehicle artwork for the map.
+ *
+ * The map draws the same 3D fleet illustrations as the menus and detail views
+ * (`public/transit/*.png`). A fixed-view isometric render has no geographic heading,
+ * so the body never rotates; the marker's arrow carries the travel direction.
+ *
+ * Provenance, references and exact generation prompts live in `assets.json` and
+ * `extra-assets.json` beside the PNGs.
  */
-export const OVERHEAD_SPRITES = {
+export const FLEET_SPRITES = {
   "bus-single-deck": "bus-single-deck",
   "bus-double-deck": "bus-double-deck",
   "bus-articulated": "bus-articulated",
@@ -19,7 +24,8 @@ export const OVERHEAD_SPRITES = {
   "train-skytrain": "train-skytrain",
   "cable-car": "cable-car",
 } as const;
-export function overheadSprite(icon: string) {
-  if (!Object.hasOwn(OVERHEAD_SPRITES, icon)) return null;
-  return { path: `/transit/overhead/${icon}.png`, axisBearingDegrees: 0 };
+
+/** Public path of the fleet illustration, or null for an unknown vehicle type. */
+export function fleetSprite(icon: string): string | null {
+  return Object.hasOwn(FLEET_SPRITES, icon) ? `/transit/${icon}.png` : null;
 }

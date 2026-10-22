@@ -60,3 +60,27 @@ Thirteen rendered checks passed with intercepted synthetic route/feed fixtures, 
 Screenshot evidence is in `.impeccable/review/`; the first narrow-phone screenshot had a compositing artifact and was replaced after the independent reviewer requested a recapture.
 
 The near-arrival regression retains the same marker and records movement on all 50 sampled intervals after ETA, between correction ages 613ms and 1445ms. Seven valid final captures cover desktop, mobile, Traditional Chinese mobile, 320px phone, pitched vehicles, mobile vehicles and stale vehicles. The permanent review record is `.impeccable/review/vehicle-motion-review.md`; the final verdict clears the one scored scheduling fix. Live feed availability and production behavior still require release verification.
+
+## Amendment, 22 October 2026 — map artwork reverted to the 3D fleet set
+
+Decision 1 and 2 above were superseded by a later operator instruction: bring the 3D
+vehicle icons back on every route and layer. Consequences, implemented and validated:
+
+- Markers now draw the same 3D fleet illustrations as the menus and detail views
+  (`fleetSprite` in `src/lib/transit-sprites.ts`), not the front-up overhead renders.
+  Artwork is 48×48 inside the unchanged 56×72px marker button; the service badge, the
+  44px hit target and the route-constrained motion contract are unchanged.
+- A fixed-view isometric illustration has no geographic heading, so the body is never
+  rotated. The direction arrow carries the heading and takes the smoothed, screen-projected
+  route tangent, including pitched and rotated views.
+- The fifteen overhead sprites and their three provenance manifests were deleted on the
+  same operator instruction, so one artwork set ships instead of two. `FLEET_SPRITES` in
+  `src/lib/transit-sprites.ts` is the single source of truth for which vehicle types have
+  artwork, and a test asserts every one of them resolves to a shipped PNG.
+- `TRANSIT_ICONS.cablecar` resolves to `cable-car`, matching the shipped
+  `public/transit/cable-car.png`; the earlier `car-cable` id 404'd in the layer rail,
+  route summary and marker artwork.
+- Verified in headless Chrome against live DataMall data: 30 markers, every marker image
+  `/transit/<fleet>.png` at 256px natural width, empty body transform, rotating arrow,
+  all six layer glyphs loading real artwork, zero failed sprite requests and zero
+  `/transit/overhead/` requests. Screenshot: `.cache/screens/vehicle-3d-restored.png`.

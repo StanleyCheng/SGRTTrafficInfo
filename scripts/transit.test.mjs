@@ -1,11 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { createHash } from "node:crypto";
-import { OVERHEAD_SPRITES, overheadSprite } from "../src/lib/transit-sprites.ts";
+import { FLEET_SPRITES, fleetSprite } from "../src/lib/transit-sprites.ts";
 import { inferBusVehicles, parseBusObservations, parseTransitCatalog, pointAlongRoute,
   projectOnRoute, routeInView, vehicleDistanceAt, routeGroupId, filteredTransitRoutes,
-  TRANSIT_DEFAULTS, TRANSIT_FILTER_DEFAULTS, sampledBusStops, routeMetrics,
+  TRANSIT_DEFAULTS, TRANSIT_FILTER_DEFAULTS, TRANSIT_ICONS, sampledBusStops, routeMetrics,
   reconcileVehicleMotion, vehicleMotionAt, vehicleMotionIsAnimating, smoothHeading, screenRouteHeading, VEHICLE_CORRECTION_MS, VEHICLE_REACQUIRE_MS } from "../src/lib/transit.ts";
 
 const now = 1000000;
@@ -207,21 +206,14 @@ test("separate supported estimates with the same arrival second have distinct ma
   assert.equal(new Set(vehicles.map(vehicle => vehicle.id)).size, 2);
 });
 
-test("each registered overhead sprite ships transparent 256px artwork with source provenance and an intact hash", () => {
-  const manifests = ["road-water-assets.json", "mrt-assets.json", "other-rail-assets.json"];
-  const assets = manifests.flatMap(name => JSON.parse(fs.readFileSync(new URL(`../public/transit/overhead/${name}`, import.meta.url))).assets);
-  assert.deepEqual(assets.map(a => a.id).sort(), Object.keys(OVERHEAD_SPRITES).sort());
-  for (const asset of assets) {
-    const sprite = overheadSprite(asset.id);
-    assert.equal(sprite.path, asset.publicPath);
-    const png = fs.readFileSync(new URL(`../public${sprite.path}`, import.meta.url));
-    assert.equal(png.readUInt32BE(16), 256); assert.equal(png.readUInt32BE(20), 256);
-    assert.equal(png[25], 6, "PNG retains RGBA transparency");
-    assert.equal(createHash("sha256").update(png).digest("hex"), asset.sha256);
-    assert.ok(asset.referenceSources.length > 0 && asset.referenceSources.every(source => source.url.startsWith("https://")));
-    assert.ok(asset.generation.prompt.length > 100 && asset.representative);
+test("every mode and bus type maps to shipped 3D fleet artwork the map never rotates", () => {
+  for (const icon of [...Object.values(TRANSIT_ICONS), "bus-double-deck", "bus-articulated"]) {
+    const sprite = fleetSprite(icon);
+    assert.ok(sprite, `no map sprite for ${icon}`);
+    assert.ok(fs.existsSync(new URL(`../public${sprite}`, import.meta.url)), `missing ${sprite}`);
   }
-  assert.equal(overheadSprite("unsupported-fleet"), null);
+  assert.equal(fleetSprite("unsupported-fleet"), null);
+  assert.equal(Object.keys(FLEET_SPRITES).length, 15);
 });
 
 test("display-refresh scheduling continues when a small correction outlasts the fresh ETA", () => {

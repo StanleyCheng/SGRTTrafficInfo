@@ -14,7 +14,7 @@
       },
       "vehicle-badge": {
         "displayName": "Upright vehicle service badge",
-        "purpose": "Map service text remains independent of the rotating overhead body; its frontmatter type and existing route colour are preserved."
+        "purpose": "Map service text remains independent of the vehicle body; its frontmatter type and existing route colour are preserved."
       }
     },
     "motion": [

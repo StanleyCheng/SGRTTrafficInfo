@@ -996,12 +996,12 @@ button,
 ::selection { color: var(--ink); background: var(--mint); }
 
 .atlas-map-mode { font-weight: 700; font-size: 13px; font-variant-numeric: tabular-nums; }
-.atlas-vehicle-marker { width: 56px; height: 68px; padding: 0; background: transparent; border: 0; cursor: pointer; color: var(--ink); }
+.atlas-vehicle-marker { width: 56px; height: 72px; padding: 0; background: transparent; border: 0; cursor: pointer; color: var(--ink); }
 .atlas-vehicle-marker > * { opacity: var(--vehicle-opacity, 1); }
-.atlas-vehicle-art { position: absolute; width: 28px; height: 28px; left: 14px; top: 20px; transform-origin: center; }
-.atlas-vehicle-art img { display: block; width: 28px; height: 28px; object-fit: contain; }
-.atlas-vehicle-marker span { position: absolute; top: 48px; left: 50%; transform: translateX(-50%); display: block; width: max-content; padding: 2px 5px; background: var(--surface); color: var(--vehicle-route-colour); font: 700 12px var(--font-sans); border-radius: 4px; line-height: 16px; }
-.atlas-vehicle-art svg { position: absolute; top: -5px; left: 10px; width: 8px; height: 8px; fill: none; stroke: var(--ink); stroke-width: 2px; stroke-linecap: round; stroke-linejoin: round; }
+.atlas-vehicle-art { position: absolute; width: 48px; height: 48px; left: 4px; top: 6px; transform-origin: center; }
+.atlas-vehicle-art img { display: block; width: 48px; height: 48px; object-fit: contain; }
+.atlas-vehicle-marker span { position: absolute; top: 52px; left: 50%; transform: translateX(-50%); display: block; width: max-content; padding: 2px 5px; background: var(--surface); color: var(--vehicle-route-colour); font: 700 12px var(--font-sans); border-radius: 4px; line-height: 16px; }
+.atlas-vehicle-art svg { position: absolute; top: -6px; left: 18px; width: 12px; height: 12px; fill: none; stroke: var(--ink); stroke-width: 2px; stroke-linecap: round; stroke-linejoin: round; transform-origin: center; }
 .atlas-vehicle-marker[data-state="stale"] > * { opacity: calc(var(--vehicle-opacity, 1) * 0.5); }
 .atlas-map-mode[aria-pressed="true"] { color: var(--accent-ink); background: var(--accent); }
 .atlas-transit-glyph { width: 38px; height: 26px; object-fit: contain; }

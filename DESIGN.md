@@ -21,10 +21,10 @@ components:
     rounded: "14.4px"
   vehicle-marker:
     width: "56px"
-    height: "68px"
+    height: "72px"
   vehicle-art:
-    width: "28px"
-    height: "28px"
+    width: "48px"
+    height: "48px"
   vehicle-badge:
     typography: "{typography.vehicle-badge}"
 ---
@@ -182,13 +182,13 @@ shimmer for loading, 200 ms colour/transform transitions on controls. Everything
 
 ### Moving vehicle marker
 
-The map uses transparent overhead fleet artwork at the `vehicle-art` size inside the
-larger `vehicle-marker` button. The artwork is centered on the route position; its
-body and direction cue rotate with the directed screen-projected route tangent,
-including pitched and rotated views. The separate `vehicle-badge` stays upright.
-Menu and detail illustrations retain their established artwork and size. Fleet
-symbols represent researched vehicle types rather than identifying a physical unit;
-the symmetric cable car has a travel axis rather than a distinct front.
+The map uses the 3D fleet illustrations in `public/transit/` — the same artwork as
+menus and detail views — at the `vehicle-art` size inside the larger `vehicle-marker`
+button. A fixed-view isometric render has no geographic heading, so the body stays
+upright and only the separate direction arrow rotates with the directed
+screen-projected route tangent, including pitched and rotated views. The
+`vehicle-badge` stays upright as well. Fleet symbols represent researched vehicle
+types rather than identifying a physical unit.
 
 Stable marker elements preserve keyboard focus through feed refreshes. Supported
 travel uses display-refresh updates and fractional pixel placement. Small fresh
