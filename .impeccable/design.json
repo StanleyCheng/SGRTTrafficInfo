@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-22T01:06:00.056Z",
+  "generatedAt": "2026-10-22T08:18:24.974Z",
   "title": "Design System: Pastel Civic Atlas",
   "extensions": {
     "typographyMeta": {
@@ -11,8 +11,24 @@
       "layer-count": {
         "displayName": "Layer count badge",
         "purpose": "The count badge keeps a fixed text size independently of --layer-toggle-scale."
+      },
+      "vehicle-badge": {
+        "displayName": "Upright vehicle service badge",
+        "purpose": "Map service text remains independent of the rotating overhead body; its frontmatter type and existing route colour are preserved."
       }
-    }
+    },
+    "motion": [
+      {
+        "name": "vehicle-correction",
+        "value": "1500ms",
+        "purpose": "Small supported ETA revisions blend along the route with smoothstep easing; a fresh unfinished blend continues after ETA until completion, bounded by staleness and expiry."
+      },
+      {
+        "name": "vehicle-reacquire",
+        "value": "320ms",
+        "purpose": "A correction above 80m or a backward correction that would reverse travel fades out at the previous position and fades in at the supported revised position."
+      }
+    ]
   },
   "components": [
     {

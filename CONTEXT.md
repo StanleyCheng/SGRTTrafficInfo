@@ -31,3 +31,15 @@ _Avoid_: Live GPS, exact location
 **Unavailable position**:
 A vehicle position for which neither usable GPS nor ETA evidence is available. The route and stops may remain visible, but there is no moving vehicle position to show.
 _Avoid_: Scheduled estimate, live vehicle
+
+**Vehicle heading**:
+The travel direction indicated by the front of a vehicle's artwork along its route. A separate direction arrow does not substitute for the vehicle itself facing that direction.
+_Avoid_: Arrow direction, route colour
+
+**Overhead fleet sprite**:
+A representative fleet icon viewed from above, with a clearly defined front. It preserves the vehicle type and livery without claiming an identified vehicle.
+_Avoid_: Exact vehicle, rotatable 3D model
+
+**Position correction**:
+An adjustment between successive supported estimates for the same vehicle. Small corrections preserve visual continuity; large corrections reacquire the supported position without depicting a rapid journey between the two estimates.
+_Avoid_: Observed journey, real acceleration

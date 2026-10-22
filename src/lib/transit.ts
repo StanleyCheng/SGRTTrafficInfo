@@ -119,9 +119,14 @@ export function parseTransitCatalog(value: unknown): TransitCatalog {
 export function distance(a: Position, b: Position) {
   return Math.hypot((a[0] - b[0]) * 111280 * Math.cos(a[1] * Math.PI / 180), (a[1] - b[1]) * 111280);
 }
+// Catalogue paths are immutable. Reuse their distances for every animation frame.
+const pathMetrics = new WeakMap<Position[], number[]>();
 export function routeMetrics(path: Position[]) {
+  const cached = pathMetrics.get(path);
+  if (cached) return cached;
   const distances = [0];
   for (let i = 1; i < path.length; i++) distances.push(distances[i - 1] + distance(path[i - 1], path[i]));
+  pathMetrics.set(path, distances);
   return distances;
 }
 export function projectOnRoute(path: Position[], position: Position, minimum = 0, maximum = Infinity) {
@@ -145,22 +150,73 @@ export function projectOnRoute(path: Position[], position: Position, minimum = 0
   return best;
 }
 export function pointAlongRoute(path: Position[], metres: number) {
-  let remaining = Math.max(0, metres);
-  for (let i = 1; i < path.length; i++) {
-    const a = path[i - 1], b = path[i], segment = distance(a, b);
-    if (remaining <= segment || i === path.length - 1) {
-      const fraction = Math.min(1, remaining / (segment || 1));
-      const position: Position = [a[0] + (b[0] - a[0]) * fraction, a[1] + (b[1] - a[1]) * fraction];
-      return { position, bearing: Math.atan2((b[0] - a[0]) * Math.cos(a[1] * Math.PI / 180), b[1] - a[1]) * 180 / Math.PI };
-    }
-    remaining -= segment;
-  }
-  return { position: path[0] ?? [103.8198, 1.3521] satisfies Position, bearing: 0 };
+  if (path.length < 2) return { position: path[0] ?? [103.8198, 1.3521] satisfies Position, bearing: 0 };
+  const metrics = routeMetrics(path), along = Math.max(0, Math.min(metres, metrics[metrics.length - 1]));
+  let low = 1, high = path.length - 1;
+  while (low < high) { const middle = (low + high) >>> 1; if (metrics[middle] < along) low = middle + 1; else high = middle; }
+  const a = path[low - 1], b = path[low];
+  const fraction = (along - metrics[low - 1]) / (metrics[low] - metrics[low - 1] || 1);
+  const position: Position = [a[0] + (b[0] - a[0]) * fraction, a[1] + (b[1] - a[1]) * fraction];
+  return { position, bearing: Math.atan2((b[0] - a[0]) * Math.cos(a[1] * Math.PI / 180), b[1] - a[1]) * 180 / Math.PI };
 }
 export function vehicleDistanceAt(vehicle: TransitVehicle, now: number) {
   const time = Math.min(now, vehicle.staleAt);
   const fraction = Math.max(0, Math.min(1, (time - vehicle.observedAt) / Math.max(1, vehicle.arrivalAt - vehicle.observedAt)));
   return vehicle.fromDistance + (vehicle.toDistance - vehicle.fromDistance) * fraction;
+}
+
+export const VEHICLE_CORRECTION_MS = 1500;
+export const VEHICLE_REACQUIRE_MS = 320;
+export interface VehicleMotion {
+  vehicle: TransitVehicle;
+  correction: { kind: "none" } | { kind: "blend"; startedAt: number; offset: number }
+    | { kind: "reacquire"; startedAt: number; fromDistance: number };
+}
+export function vehicleMotionAt(motion: VehicleMotion, now: number) {
+  const { vehicle, correction } = motion;
+  const target = vehicleDistanceAt(vehicle, now);
+  if (now >= vehicle.expiresAt) return { distance: target, opacity: 0 };
+  if (correction.kind === "blend") {
+    // Freeze the correction as well as the evidence trajectory when it is stale.
+    const progress = Math.max(0, Math.min(1, (Math.min(now, vehicle.staleAt) - correction.startedAt) / VEHICLE_CORRECTION_MS));
+    const eased = progress * progress * (3 - 2 * progress);
+    return { distance: Math.max(0, Math.min(vehicle.toDistance, target + correction.offset * (1 - eased))), opacity: 1 };
+  }
+  if (correction.kind === "reacquire") {
+    const progress = Math.max(0, Math.min(1, (now - correction.startedAt) / VEHICLE_REACQUIRE_MS));
+    return progress < 0.5 ? { distance: correction.fromDistance, opacity: 1 - progress * 2 }
+      : { distance: target, opacity: (progress - 0.5) * 2 };
+  }
+  return { distance: target, opacity: 1 };
+}
+/** A correction may outlast arrival; keep display-refresh updates until it ends. */
+export function vehicleMotionIsAnimating(motion: VehicleMotion, now: number) {
+  const { vehicle, correction } = motion;
+  if (now >= vehicle.expiresAt) return false;
+  if (correction.kind === "reacquire" && now < correction.startedAt + VEHICLE_REACQUIRE_MS) return true;
+  if (now >= vehicle.staleAt) return false;
+  return now < vehicle.arrivalAt || (correction.kind === "blend" && now < correction.startedAt + VEHICLE_CORRECTION_MS);
+}
+export function reconcileVehicleMotion(previous: VehicleMotion, vehicle: TransitVehicle, now: number, reducedMotion = false): VehicleMotion {
+  if (vehicle.observedAt <= previous.vehicle.observedAt) return previous;
+  const from = vehicleMotionAt(previous, now).distance, target = vehicleDistanceAt(vehicle, now);
+  const offset = from - target;
+  if (reducedMotion || now >= vehicle.staleAt || Math.abs(offset) < 0.05) return { vehicle, correction: { kind: "none" } };
+  const speed = (vehicle.toDistance - vehicle.fromDistance) / Math.max(1, (vehicle.arrivalAt - vehicle.observedAt) / 1000);
+  // A backward revision that cannot be absorbed without reversing is a new
+  // estimate to reacquire, not evidence of a bus travelling backwards.
+  const safeBacktrack = Math.max(0, speed) * (VEHICLE_CORRECTION_MS / 1000) / 1.5;
+  return { vehicle, correction: Math.abs(offset) > 80 || offset > safeBacktrack
+    ? { kind: "reacquire", startedAt: now, fromDistance: from }
+    : { kind: "blend", startedAt: now, offset } };
+}
+export function screenRouteHeading(from: { x: number; y: number }, to: { x: number; y: number }, fallback = 0) {
+  return Math.hypot(to.x - from.x, to.y - from.y) < 0.001 ? fallback
+    : Math.atan2(to.x - from.x, from.y - to.y) * 180 / Math.PI;
+}
+export function smoothHeading(current: number, target: number, elapsedMs: number) {
+  const turn = ((target - current + 180) % 360 + 360) % 360 - 180;
+  return current + turn * (1 - Math.exp(-Math.max(0, elapsedMs) / 90));
 }
 export function routeInView(route: TransitRoute, view: TransitViewport) {
   // A bounding-box intersection includes a path crossing the viewport even if no vertex lies inside it.
@@ -235,12 +291,10 @@ export function inferBusVehicles(catalog: TransitCatalog, observations: BusObser
       .sort((a, b) => Math.abs(vehicleDistanceAt(a, now) - from) - Math.abs(vehicleDistanceAt(b, now) - from))[0];
     if (existing) usedPrevious.add(existing.id);
     if (existing && obs.observedAt <= existing.observedAt) { candidates.push(existing); continue; }
-    const continuousFrom = existing && Math.abs(vehicleDistanceAt(existing, obs.observedAt) - from) < 80
-      ? Math.min(to, vehicleDistanceAt(existing, obs.observedAt)) : from;
-    candidates.push({ id: existing?.id ?? `${route.id}:${obs.stopId}:${Math.round(obs.arrivalAt / 1000)}`,
+    candidates.push({ id: existing?.id ?? `${route.id}:${obs.stopId}:${Math.round(obs.arrivalAt / 1000)}:${Math.round(from)}`,
       routeId: route.id, service: obs.service, destination: route.destination, evidence: "eta",
       icon: obs.type === "DD" ? "bus-double-deck" : obs.type === "BD" ? "bus-articulated" : "bus-single-deck",
-      fromDistance: continuousFrom, toDistance: to, observedAt: obs.observedAt, arrivalAt: obs.arrivalAt,
+      fromDistance: from, toDistance: to, observedAt: obs.observedAt, arrivalAt: obs.arrivalAt,
       staleAt: obs.observedAt + 45000, expiresAt: obs.observedAt + 90000 });
   }
   return candidates;

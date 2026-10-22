@@ -1,16 +1,31 @@
 import maplibregl, { type GeoJSONSource, type Map as LibreMap, type MapLayerMouseEvent } from "maplibre-gl";
-import { pointAlongRoute, routeGroupId, vehicleDistanceAt, type Position, type TransitCatalog, type TransitRoute, type TransitVehicle } from "@/lib/transit";
+import { pointAlongRoute, reconcileVehicleMotion, routeGroupId, screenRouteHeading, smoothHeading,
+  vehicleMotionAt, vehicleMotionIsAnimating, type Position, type TransitCatalog, type TransitRoute, type TransitVehicle, type VehicleMotion } from "@/lib/transit";
+import { overheadSprite } from "@/lib/transit-sprites";
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
-export function renderTransit(map: LibreMap, options: {
+const FADE_MS = 160;
+export interface TransitRenderOptions {
   catalog: TransitCatalog | null; routes: TransitRoute[]; vehicles: TransitVehicle[];
   selectedRouteId: string | null;
   focusedGroup: string | null; stopNames: boolean;
   onVehicle: (vehicle: TransitVehicle) => void; onRoute: (id: string | null, position?: Position) => void;
   vehicleLabel: (vehicle: TransitVehicle, stale: boolean) => string;
-}) {
+}
+interface VehicleMarker {
+  marker: maplibregl.Marker; button: HTMLButtonElement; art: HTMLDivElement; image: HTMLImageElement;
+  label: HTMLSpanElement; motion: VehicleMotion; route: TransitRoute; spriteAxis: number;
+  heading: number | null; headingPoints: [Position, Position] | null; distance: number | null;
+  phase: { kind: "active"; enteredAt: number } | { kind: "retiring"; startedAt: number };
+}
+
+/** One lifetime per map: fresh estimates update existing markers without losing focus. */
+export function createTransitRenderer(map: LibreMap) {
   let disposed = false, frame = 0, lastFrame = 0;
-  let reducedTimer: ReturnType<typeof setTimeout> | undefined;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let options: TransitRenderOptions | null = null;
+  let sourceState: Pick<TransitRenderOptions, "catalog" | "routes" | "selectedRouteId" | "focusedGroup" | "stopNames"> | null = null;
+  const entries = new Map<string, VehicleMarker>();
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
   const tokens = getComputedStyle(document.documentElement);
   const surface = tokens.getPropertyValue("--surface").trim();
@@ -33,87 +48,135 @@ export function renderTransit(map: LibreMap, options: {
         "text-anchor": "top", "text-offset": [0, 0.7] },
       paint: { "text-color": ink, "text-halo-color": surface, "text-halo-width": 2 } });
   }
-  map.setLayoutProperty("transit-station-labels", "visibility", options.stopNames ? "visible" : "none");
-  map.setLayerZoomRange("transit-station-dots", options.focusedGroup ? 0 : 12, 24);
-  const routeById = new Map(options.routes.map((route) => [route.id, route]));
-  const drawn = options.routes;
-  map.getSource<GeoJSONSource>("transit-routes")?.setData({ type: "FeatureCollection", features: drawn.flatMap((route) => route.paths.map((coordinates) => ({
-    type: "Feature", geometry: { type: "LineString", coordinates },
-    properties: { routeId: route.id, colour: route.colour, selected: routeGroupId(route) === options.focusedGroup || route.id === options.selectedRouteId },
-  }))) });
-  const stopColours = new Map(drawn.flatMap((route) => route.stopIds.map((id) => [id, route.colour] satisfies [string, string])));
-  map.getSource<GeoJSONSource>("transit-stops")?.setData({ type: "FeatureCollection", features: (options.catalog?.stops ?? [])
-    .filter((stop) => stopColours.has(stop.id)).map((stop) => ({ type: "Feature", geometry: { type: "Point", coordinates: stop.position },
-      properties: { name: stop.name, colour: stopColours.get(stop.id) } })) });
-
-  // DOM markers keep image movement and native button hit targets independent of
-  // the asynchronous GeoJSON tiling and symbol-placement workers.
-  const markers: { marker: maplibregl.Marker; button: HTMLButtonElement; arrow: SVGSVGElement;
-    vehicle: TransitVehicle; route: TransitRoute }[] = [];
-  const occupied = new Set<string>();
-  for (const vehicle of options.vehicles) {
-    const route = routeById.get(vehicle.routeId);
-    if (!route?.paths[0] || Date.now() >= vehicle.expiresAt) continue;
-    const point = pointAlongRoute(route.paths[0], vehicleDistanceAt(vehicle, Date.now()));
-    const screen = map.project(point.position);
-    const cell = `${Math.floor(screen.x / 60)}:${Math.floor(screen.y / 60)}`;
-    if (!options.focusedGroup && map.getZoom() < 13 && occupied.has(cell)) continue;
-    occupied.add(cell);
-    const button = document.createElement("button");
-    button.type = "button"; button.className = "atlas-vehicle-marker";
-    button.dataset.routeId = route.id;
-    button.style.setProperty("--vehicle-route-colour", route.colour);
-    const image = document.createElement("img");
-    image.src = `${BASE}/transit/${vehicle.icon}.png`; image.alt = ""; image.draggable = false;
-    const label = document.createElement("span"); label.textContent = vehicle.service;
-    const arrow = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    arrow.setAttribute("viewBox", "0 0 16 16"); arrow.setAttribute("aria-hidden", "true");
-    const arrowPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    arrowPath.setAttribute("d", "M4 12 8 3 12 12"); arrow.append(arrowPath);
-    button.append(image, label, arrow);
-    button.addEventListener("click", (event) => { event.stopPropagation(); options.onVehicle(vehicle); });
-    button.addEventListener("keydown", (event) => event.stopPropagation());
-    const marker = new maplibregl.Marker({ element: button, anchor: "center", pitchAlignment: "viewport" })
-      .setLngLat(point.position).addTo(map);
-    markers.push({ marker, button, arrow, vehicle, route });
+  function updateSources(next: TransitRenderOptions) {
+    if (sourceState?.stopNames !== next.stopNames) map.setLayoutProperty("transit-station-labels", "visibility", next.stopNames ? "visible" : "none");
+    if (sourceState?.focusedGroup !== next.focusedGroup) map.setLayerZoomRange("transit-station-dots", next.focusedGroup ? 0 : 12, 24);
+    if (sourceState?.routes !== next.routes || sourceState?.selectedRouteId !== next.selectedRouteId || sourceState?.focusedGroup !== next.focusedGroup) {
+      map.getSource<GeoJSONSource>("transit-routes")?.setData({ type: "FeatureCollection", features: next.routes.flatMap((route) => route.paths.map((coordinates) => ({
+        type: "Feature", geometry: { type: "LineString", coordinates },
+        properties: { routeId: route.id, colour: route.colour, selected: routeGroupId(route) === next.focusedGroup || route.id === next.selectedRouteId },
+      }))) });
+    }
+    if (sourceState?.routes !== next.routes || sourceState?.catalog !== next.catalog) {
+      const colours = new Map(next.routes.flatMap((route) => route.stopIds.map((id) => [id, route.colour] satisfies [string, string])));
+      map.getSource<GeoJSONSource>("transit-stops")?.setData({ type: "FeatureCollection", features: (next.catalog?.stops ?? [])
+        .filter((stop) => colours.has(stop.id)).map((stop) => ({ type: "Feature", geometry: { type: "Point", coordinates: stop.position },
+          properties: { name: stop.name, colour: colours.get(stop.id) } })) });
+    }
+    sourceState = next;
   }
-  const drawVehicles = (time: number) => {
-    if (disposed) return;
-    if (!document.hidden && time - lastFrame > 40) {
-      lastFrame = time;
-      const now = Date.now();
-      for (const { marker, button, arrow, vehicle, route } of markers) {
-        if (now >= vehicle.expiresAt) { marker.remove(); continue; }
-        const point = pointAlongRoute(route.paths[0], vehicleDistanceAt(vehicle, reduced.matches ? vehicle.observedAt : now));
-        marker.setLngLat(point.position);
-        const stale = now >= vehicle.staleAt;
-        button.dataset.state = stale ? "stale" : "recent";
-        button.setAttribute("aria-label", options.vehicleLabel(vehicle, stale));
-        arrow.style.transform = `rotate(${point.bearing - map.getBearing()}deg)`;
+  function remove(key: string, entry: VehicleMarker) { entry.marker.remove(); entries.delete(key); }
+  function cancel() { cancelAnimationFrame(frame); clearTimeout(timer); frame = 0; timer = undefined; }
+  function draw(time: number) {
+    if (disposed || document.hidden || !options) return;
+    const now = Date.now(), elapsed = lastFrame ? Math.min(100, time - lastFrame) : 16;
+    lastFrame = time;
+    for (const [key, entry] of entries) {
+      const { vehicle } = entry.motion;
+      if (now >= vehicle.expiresAt || (entry.phase.kind === "retiring" && now - entry.phase.startedAt >= FADE_MS)) { remove(key, entry); continue; }
+      const state = reduced.matches ? { distance: vehicleMotionAt({ vehicle, correction: { kind: "none" } }, vehicle.observedAt).distance, opacity: 1 }
+        : vehicleMotionAt(entry.motion, now);
+      const path = entry.route.paths[0];
+      const point = pointAlongRoute(path, state.distance);
+      entry.marker.setLngLat(point.position);
+      // Retain the last route tangent when stopped. Project it again when the
+      // camera moves: bearing subtraction alone is wrong on a pitched map.
+      if (!entry.headingPoints || entry.distance === null || Math.abs(state.distance - entry.distance) > 0.01) {
+        entry.headingPoints = [pointAlongRoute(path, state.distance - 4).position, pointAlongRoute(path, state.distance + 4).position];
+        entry.distance = state.distance;
       }
+      const target = screenRouteHeading(map.project(entry.headingPoints[0]), map.project(entry.headingPoints[1]), entry.heading ?? 0) - entry.spriteAxis;
+      entry.heading = entry.heading === null || reduced.matches || map.isMoving() ? target : smoothHeading(entry.heading, target, elapsed);
+      entry.art.style.transform = `rotate(${entry.heading}deg)`;
+      const stale = now >= vehicle.staleAt;
+      entry.button.dataset.state = stale ? "stale" : "recent";
+      const label = options.vehicleLabel(vehicle, stale);
+      if (entry.button.getAttribute("aria-label") !== label) entry.button.setAttribute("aria-label", label);
+      const fade = reduced.matches ? 1 : entry.phase.kind === "retiring" ? 1 - (now - entry.phase.startedAt) / FADE_MS
+        : Math.min(1, (now - entry.phase.enteredAt) / FADE_MS);
+      entry.button.style.setProperty("--vehicle-opacity", String(state.opacity * Math.max(0, fade)));
     }
-    if (markers.some(({ vehicle }) => Date.now() < vehicle.expiresAt)) {
-      if (reduced.matches) reducedTimer = setTimeout(() => drawVehicles(performance.now()), 1000);
-      else frame = requestAnimationFrame(drawVehicles);
+  }
+  function schedule() {
+    cancel();
+    if (disposed || document.hidden || !entries.size) return;
+    const now = Date.now();
+    const moving = !reduced.matches && [...entries.values()].some((entry) => entry.phase.kind === "retiring"
+      || now - entry.phase.enteredAt < FADE_MS || vehicleMotionIsAnimating(entry.motion, now));
+    if (moving) frame = requestAnimationFrame(tick);
+    else timer = setTimeout(() => tick(performance.now()), 1000);
+  }
+  function tick(time: number) { draw(time); schedule(); }
+  function update(next: TransitRenderOptions) {
+    if (disposed) return;
+    options = next; updateSources(next);
+    const now = Date.now(), seen = new Set<string>(), occupied = new Set<string>();
+    const routes = new Map(next.routes.map((route) => [route.id, route]));
+    for (const vehicle of next.vehicles) {
+      const route = routes.get(vehicle.routeId), sprite = overheadSprite(vehicle.icon);
+      if (!route?.paths[0] || !sprite || now >= vehicle.expiresAt) continue;
+      const key = `${vehicle.routeId}/${vehicle.id}`;
+      const previous = entries.get(key);
+      const motion = previous ? reconcileVehicleMotion(previous.motion, vehicle, now, reduced.matches) : { vehicle, correction: { kind: "none" } } satisfies VehicleMotion;
+      const screen = map.project(pointAlongRoute(route.paths[0], vehicleMotionAt(motion, now).distance).position);
+      const cell = `${Math.floor(screen.x / 60)}:${Math.floor(screen.y / 60)}`;
+      if (!next.focusedGroup && map.getZoom() < 13 && occupied.has(cell)) continue;
+      occupied.add(cell); seen.add(key);
+      if (previous) {
+        previous.motion = motion; previous.route = route; previous.spriteAxis = sprite.axisBearingDegrees;
+        previous.button.style.setProperty("--vehicle-route-colour", route.colour);
+        previous.image.src = `${BASE}${sprite.path}`; previous.label.textContent = vehicle.service;
+        if (previous.phase.kind === "retiring") previous.phase = { kind: "active", enteredAt: now - FADE_MS };
+        continue;
+      }
+      const button = document.createElement("button");
+      button.type = "button"; button.className = "atlas-vehicle-marker"; button.dataset.routeId = route.id;
+      button.style.setProperty("--vehicle-route-colour", route.colour);
+      const art = document.createElement("div"); art.className = "atlas-vehicle-art";
+      const image = document.createElement("img");
+      image.src = `${BASE}${sprite.path}`; image.alt = ""; image.draggable = false;
+      const label = document.createElement("span"); label.textContent = vehicle.service;
+      const arrow = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      arrow.setAttribute("viewBox", "0 0 16 16"); arrow.setAttribute("aria-hidden", "true");
+      const arrowPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      arrowPath.setAttribute("d", "M4 12 8 3 12 12"); arrow.append(arrowPath);
+      art.append(image, arrow); button.append(art, label);
+      const marker = new maplibregl.Marker({ element: button, anchor: "center", pitchAlignment: "viewport", rotationAlignment: "viewport", subpixelPositioning: true })
+        .setLngLat(pointAlongRoute(route.paths[0], vehicleMotionAt(motion, now).distance).position).addTo(map);
+      const entry: VehicleMarker = { marker, button, art, image, label, motion, route, spriteAxis: sprite.axisBearingDegrees,
+        heading: null, headingPoints: null, distance: null, phase: { kind: "active", enteredAt: now } };
+      button.addEventListener("click", (event) => { event.stopPropagation(); options?.onVehicle(entry.motion.vehicle); });
+      button.addEventListener("keydown", (event) => event.stopPropagation());
+      entries.set(key, entry);
     }
-  };
-  if (markers.length) frame = requestAnimationFrame(drawVehicles);
+    for (const [key, entry] of entries) {
+      if (seen.has(key)) continue;
+      // Filtering is immediate; a disappeared identity from a fresh feed dissolves.
+      if (!routes.has(entry.route.id) || reduced.matches) remove(key, entry);
+      else if (entry.phase.kind !== "retiring") entry.phase = { kind: "retiring", startedAt: now };
+    }
+    draw(performance.now()); schedule();
+  }
+  function wake() { lastFrame = 0; draw(performance.now()); schedule(); }
   const selectRoute = (event: MapLayerMouseEvent) => {
     const id: unknown = event.features?.[0]?.properties?.routeId;
-    if (typeof id === "string") options.onRoute(id, [event.lngLat.lng, event.lngLat.lat]);
+    if (typeof id === "string") options?.onRoute(id, [event.lngLat.lng, event.lngLat.lat]);
   };
   const pointer = () => { map.getCanvas().style.cursor = "pointer"; };
   const clearPointer = () => { map.getCanvas().style.cursor = ""; };
-  map.on("click", "transit-route-hit", selectRoute);
-  map.on("mouseenter", "transit-route-hit", pointer);
-  map.on("mouseleave", "transit-route-hit", clearPointer);
-  return () => {
-    disposed = true; cancelAnimationFrame(frame); clearTimeout(reducedTimer);
-    markers.forEach(({ marker }) => marker.remove());
+  function destroy() {
+    if (disposed) return;
+    disposed = true; cancel(); entries.forEach(({ marker }) => marker.remove()); entries.clear();
+    document.removeEventListener("visibilitychange", wake); reduced.removeEventListener("change", wake);
+    map.off("move", wake); map.off("remove", destroy);
     map.off("click", "transit-route-hit", selectRoute);
-    map.off("mouseenter", "transit-route-hit", pointer);
-    map.off("mouseleave", "transit-route-hit", clearPointer);
-  };
+    map.off("mouseenter", "transit-route-hit", pointer); map.off("mouseleave", "transit-route-hit", clearPointer);
+  }
+  document.addEventListener("visibilitychange", wake); reduced.addEventListener("change", wake);
+  map.on("move", wake); map.on("remove", destroy);
+  map.on("click", "transit-route-hit", selectRoute);
+  map.on("mouseenter", "transit-route-hit", pointer); map.on("mouseleave", "transit-route-hit", clearPointer);
+  return { update, destroy };
 }
 
 /** Separate lifetime from moving-marker refreshes, so an open popup keeps focus. */

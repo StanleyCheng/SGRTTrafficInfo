@@ -1,0 +1,448 @@
+{
+  "schemaVersion": 1,
+  "createdDate": "2026-10-22",
+  "purpose": "Map-only strict overhead miniature 3D MRT sprites with leading front at image top; original angled menu/detail sprites remain at original paths.",
+  "limitations": [
+    "Generated illustrations are representative fleet/type symbols, not photographs or evidence of the vehicle serving a trip.",
+    "The 28px display uses authentic narrow train proportions; fine roof and side livery details simplify at this scale.",
+    "These assets prepare the shared sprite catalog; MRT animation requires verified ETA data and never fabricates positions.",
+    "Model version is not exposed by the built-in ImageGen tool; no specific model version is claimed."
+  ],
+  "assets": [
+    {
+      "id": "train-nsew",
+      "label": "North-South / East-West MRT",
+      "representative": true,
+      "description": "Representative Alstom MOVIA R151 leading carriage; one-car symbol for a longer train",
+      "observedLivery": "White/silver, black glazing, red upper stripe and green lower stripe",
+      "referenceSources": [
+        {
+          "title": "LTA R151 rolling stock photograph",
+          "url": "https://www.lta.gov.sg/content/ltagov/en/getting_around/public_transport/rail_network/north_south_line/_jcr_content/par/tab_yellow_new/tab-content-tab_yellow_new/textimage_2032893586/image.img.jpg/1665641457145.jpg"
+        },
+        {
+          "title": "LTA NSEW fleet",
+          "url": "https://www.lta.gov.sg/content/ltagov/en/getting_around/public_transport/rail_network/north_south_line.html"
+        }
+      ],
+      "parentAssetId": "train-nsew",
+      "parentRegistry": "public/transit/assets.json",
+      "file": "train-nsew.png",
+      "publicPath": "/transit/overhead/train-nsew.png",
+      "frontBearingDegrees": 0,
+      "orientation": {
+        "type": "designated-leading-cab",
+        "axis": "vertical, leading cab toward top at 12 oclock",
+        "frontBearingDegrees": 0,
+        "note": "Upper cab is designated leading end for map rotation; this representative image does not identify an actual operating unit."
+      },
+      "generation": {
+        "tool": "built-in ImageGen",
+        "model": "not exposed by tool",
+        "transparentBackgroundRequested": true,
+        "prompt": "Use case: precise-object-edit\nAsset type: one map-only OVERHEAD3D transparent PNG vehicle sprite for Singapore MRT, legible at 28 pixels.\nInput image: the existing R151 sprite is a shape/livery reference only. Re-render it in a completely new camera; do not preserve its diagonal camera.\nSubject: representative Alstom MOVIA R151 North-South/East-West MRT leading cab and a short forward passenger body section, one continuous train object. Preserve the real rounded tapered cab, broad glossy black curved windshield panel and white sweeping cheeks. White/light silver metal body, continuous near-black side window band; thin red stripe above side windows, thin green stripe below side windows, grey roof with low grey HVAC equipment. Red and green are authentic narrow perimeter bands only; roof stays grey, never red or green. Reference source: https://www.lta.gov.sg/content/ltagov/en/getting_around/public_transport/rail_network/north_south_line.html .\nPrimary request and CAMERA: strict bird's-eye overhead miniature 3D orthographic render, camera directly above the train looking straight down at its roof. NO isometric/diagonal/oblique camera. The entire long axis is perfectly VERTICAL on the canvas. Designated leading FRONT CAB at 12 o'clock, image TOP; rear connection at image BOTTOM. Roof predominates, small bevelled side perimeter reveals real livery and glazing without tilting the train. Clearly distinguish rounded cab at top from flat rear. This must look like a train seen from a satellite, sculpted with subtle object shading, not a flat pictogram.\nComposition: single centered object with about 10% empty padding at top/bottom and consistent 8-12% safe padding for all parts. Use the cab plus shortened representative body, overall length about 3.5 times width so cab shape remains legible at map-marker size. Maintain convincing real cab/body proportions; no disconnected pieces, no full six-car train.\nMaterials: restrained realistic white/silver paint, grey metal roof, black glass. Crisp strong silhouette and simple visible rooftop details. Soft neutral studio lighting within the object only.\nBackground: genuine native transparent alpha. Empty space transparent; opaque white paint remains opaque.\nAvoid: tracks, road, ground plane, platforms, water, scenery, shadows outside object, text, numbers, logos, labels, watermark, arrows, compass, diagonally oriented train, side-on view, route-colour painted roof, unsupported paint.",
+        "referenceImageRoles": [
+          "Original angled train-nsew sprite: actual fleet shape, observed livery and material reference; original camera discarded."
+        ],
+        "builtInCallsForAsset": 1
+      },
+      "format": {
+        "width": 256,
+        "height": 256,
+        "channels": "RGBA",
+        "displayBoxPx": 28,
+        "view": "strict overhead orthographic miniature 3D",
+        "frontBearingDegrees": 0,
+        "postProcessing": "Crop bounds measured from native alpha greater than 1; fit proportionally within 204x204 using Lanczos; center on transparent 256x256 RGBA. Alpha within the crop is preserved and resampled, never thresholded or repainted. No background removal or chroma key.",
+        "sourceImageSize": [
+          1024,
+          1536
+        ],
+        "sourceCropBoundingBox": [
+          369,
+          66,
+          658,
+          1470
+        ]
+      },
+      "validation": {
+        "alphaMin": 0,
+        "alphaMax": 255,
+        "transparentPixelFraction": 0.8749,
+        "cornerPixelsTransparent": true,
+        "alphaBoundingBox": [
+          107,
+          26,
+          149,
+          230
+        ],
+        "visibleAlphaBoundingBox": [
+          107,
+          26,
+          149,
+          230
+        ],
+        "opaqueNearWhitePixels": 658,
+        "nativeAlphaPreserved": true,
+        "promptEmbedded": true,
+        "visuallyInspectedOn": [
+          "#fffef9",
+          "#203b36"
+        ],
+        "visuallyInspectedDisplayBoxPx": 28,
+        "visuallyConfirmedOrientation": "Leading cab at image top, rear gangway at bottom",
+        "longAxisDeviationFromVerticalDegrees": 0.002
+      },
+      "bytes": 22190,
+      "sha256": "8f717d67cac6c5d0b5fd83f068e41d51329a94bc1f6b6d194fab5739989c9e3b"
+    },
+    {
+      "id": "train-north-east",
+      "label": "North East MRT",
+      "representative": true,
+      "description": "Representative newer Alstom Metropolis C851E leading carriage; fleets on the same line vary",
+      "observedLivery": "White/silver body with black glazing and purple lower band",
+      "referenceSources": [
+        {
+          "title": "LTA operating fleet",
+          "url": "https://www.lta.gov.sg/content/ltagov/en/getting_around/public_transport/rail_network/north_east_line.html"
+        },
+        {
+          "title": "LTA introduction of newer NEL trains",
+          "url": "https://www.lta.gov.sg/content/ltagov/en/newsroom/2023/7/news-releases/new-trains-for-north-east-line-to-be-rolled-out-for-passenger-se.html"
+        },
+        {
+          "title": "LTA-supplied C851E photo reproduced by SGTrains",
+          "url": "https://blog.sgtrains.com/2021/04/arrival-of-new-c851e-nel-trains/"
+        }
+      ],
+      "parentAssetId": "train-north-east",
+      "parentRegistry": "public/transit/assets.json",
+      "file": "train-north-east.png",
+      "publicPath": "/transit/overhead/train-north-east.png",
+      "frontBearingDegrees": 0,
+      "orientation": {
+        "type": "designated-leading-cab",
+        "axis": "vertical, leading cab toward top at 12 oclock",
+        "frontBearingDegrees": 0,
+        "note": "Upper cab is designated leading end for map rotation; this representative image does not identify an actual operating unit."
+      },
+      "generation": {
+        "tool": "built-in ImageGen",
+        "model": "not exposed by tool",
+        "transparentBackgroundRequested": true,
+        "prompt": "Use case: precise-object-edit\nAsset type: one map-only OVERHEAD3D transparent PNG vehicle sprite for Singapore MRT, readable at 28 pixels.\nInput image: existing North East Line train sprite is reference for actual fleet shape, paint and materials; replace its camera completely.\nSubject: representative Singapore North East Line Alstom Metropolis C851E leading MRT cab with short forward passenger body section. White/light silver metro body and grey metal roof, continuous near-black side window band, authentic broad purple lower-side band below windows and around low nose. Angular steeply slanted cab at top, wide black windshield, white outer cab cheeks. Grey rooftop low equipment boxes. The purple livery appears only at the narrow visible side/nose perimeter; NEVER purple roof or whole purple train. Manufacturer/LTA fleet design already researched; sources https://www.lta.gov.sg/content/ltagov/en/getting_around/public_transport/rail_network/north_east_line.html and https://www.lta.gov.sg/content/ltagov/en/newsroom/2023/7/news-releases/new-trains-for-north-east-line-to-be-rolled-out-for-passenger-se.html .\nCAMERA and orientation: STRICT BIRD'S-EYE OVERHEAD orthographic view, camera directly above roof looking straight DOWN. Train long axis is perfectly VERTICAL. Leading FRONT CAB clearly at 12 o'clock, canvas TOP. Flat rear gangway at canvas BOTTOM. No isometric, three-quarter, diagonal or oblique view. Show roof predominately; slight sculpted edge bevel reveals a thin authentic livery/window perimeter without camera tilt. Front's black glazing and sloping nose must be distinguishable at top.\nStyle: polished miniature 3D object, realistic restrained metal, opaque white paint, black glass, subtle internal object shading, clean strong silhouette. Simplify roof details so the shape reads at 28 pixels.\nComposition: one centered continuous leading cab/body sprite, no following cars. Cab plus shortened representative forward body, length about 3.5 times width without widening the cab unrealistically. Entire object within square image with 10% empty margin. No clipping.\nBackground: genuinely transparent native alpha; preserve opaque white/silver paint. All empty space clear.\nAvoid: ground, track, platform, drop shadow, external glow, cast shadow, scenery, people, text, number, route logo, labels, watermark, arrows, compass, diagonal train, side-on train, purple roof, unsupported paint.",
+        "referenceImageRoles": [
+          "Original angled train-north-east sprite: actual fleet shape, observed livery and material reference; original camera discarded."
+        ],
+        "builtInCallsForAsset": 1
+      },
+      "format": {
+        "width": 256,
+        "height": 256,
+        "channels": "RGBA",
+        "displayBoxPx": 28,
+        "view": "strict overhead orthographic miniature 3D",
+        "frontBearingDegrees": 0,
+        "postProcessing": "Crop bounds measured from native alpha greater than 1; fit proportionally within 204x204 using Lanczos; center on transparent 256x256 RGBA. Alpha within the crop is preserved and resampled, never thresholded or repainted. No background removal or chroma key.",
+        "sourceImageSize": [
+          1254,
+          1254
+        ],
+        "sourceCropBoundingBox": [
+          497,
+          64,
+          757,
+          1192
+        ]
+      },
+      "validation": {
+        "alphaMin": 0,
+        "alphaMax": 255,
+        "transparentPixelFraction": 0.8597,
+        "cornerPixelsTransparent": true,
+        "alphaBoundingBox": [
+          104,
+          26,
+          151,
+          230
+        ],
+        "visibleAlphaBoundingBox": [
+          104,
+          26,
+          151,
+          230
+        ],
+        "opaqueNearWhitePixels": 952,
+        "nativeAlphaPreserved": true,
+        "promptEmbedded": true,
+        "visuallyInspectedOn": [
+          "#fffef9",
+          "#203b36"
+        ],
+        "visuallyInspectedDisplayBoxPx": 28,
+        "visuallyConfirmedOrientation": "Leading cab at image top, rear gangway at bottom",
+        "longAxisDeviationFromVerticalDegrees": 0.014
+      },
+      "bytes": 23925,
+      "sha256": "9c86bc6b4aa09525cb4e1450c39e0399dc54f483963335a4b15bfc8fe2d1bec9"
+    },
+    {
+      "id": "train-circle",
+      "label": "Circle MRT",
+      "representative": true,
+      "description": "Representative newer Alstom Metropolis C851E leading carriage; fleets on the same line vary",
+      "observedLivery": "White/silver body with black glazing and orange lower band",
+      "referenceSources": [
+        {
+          "title": "LTA C851E rolling stock photograph",
+          "url": "https://www.lta.gov.sg/content/ltagov/en/getting_around/public_transport/rail_network/circle_line/_jcr_content/par/tab_yellow_new/tab-content-tab_yellow_new/textimage_1819530082/image.img.jpg/1681180492796.jpg"
+        },
+        {
+          "title": "LTA Circle Line fleet",
+          "url": "https://www.lta.gov.sg/content/ltagov/en/getting_around/public_transport/rail_network/circle_line.html"
+        }
+      ],
+      "parentAssetId": "train-circle",
+      "parentRegistry": "public/transit/assets.json",
+      "file": "train-circle.png",
+      "publicPath": "/transit/overhead/train-circle.png",
+      "frontBearingDegrees": 0,
+      "orientation": {
+        "type": "designated-leading-cab",
+        "axis": "vertical, leading cab toward top at 12 oclock",
+        "frontBearingDegrees": 0,
+        "note": "Upper cab is designated leading end for map rotation; this representative image does not identify an actual operating unit."
+      },
+      "generation": {
+        "tool": "built-in ImageGen",
+        "model": "not exposed by tool",
+        "transparentBackgroundRequested": true,
+        "prompt": "Use case: precise-object-edit\nAsset type: map-only OVERHEAD3D transparent Singapore MRT sprite, recognizable at 28px.\nInput image: Circle Line original sprite is the reference for actual Alstom C851E vehicle identity and livery; re-render it with completely different overhead camera.\nSubject: one representative Singapore Circle Line Alstom Metropolis C851E leading cab plus a short forward passenger body. Preserve angular steeply slanted nose and very wide black front windshield, white/silver narrow metro body, near-black continuous window band, authentic broad orange lower side/nose band. Roof is realistic light grey metal with low grey equipment/HVAC boxes. Orange is confined to the visible thin lower side and nose perimeter, never an orange roof or solid orange body. Source: https://www.lta.gov.sg/content/ltagov/en/getting_around/public_transport/rail_network/circle_line.html .\nRequired CAMERA: strict bird's-eye OVERHEAD orthographic view directly above looking straight DOWN at roof. Roof predominates; subtle bevelled side edges show real dark glazing and orange lower-band perimeter without tilting camera. Long axis perfectly VERTICAL. The leading angular FRONT cab is at 12 o'clock, image TOP, with visible black front glass on sloped nose. Flat rear gangway at image BOTTOM. No isometric, oblique, three-quarter, sideways or diagonal view.\nComposition: one continuous train object centered in square canvas. Entire silhouette visible with approximately 10% empty padding. Render representative leading cab and shortened forward body, about 3.5-to-1 overall length/width while keeping convincing real metro proportions. No following car or detached parts.\nStyle and materials: precise polished miniature 3D product object, grey metal roof, white/silver opaque body, black glass, authentic orange perimeter, soft neutral shading confined to object. Crisp silhouette and restrained rooftop detail that remains readable at tiny map-marker scale.\nBackground: genuinely transparent native alpha; keep white paint fully opaque and gaps clear.\nAvoid: tracks, ground, floor, platforms, external shadow, external glow, scenery, people, text, branding, signage, numbers, watermark, arrows, compass, colored roof, unsupported paint, diagonal orientation.",
+        "referenceImageRoles": [
+          "Original angled train-circle sprite: actual fleet shape, observed livery and material reference; original camera discarded."
+        ],
+        "builtInCallsForAsset": 1
+      },
+      "format": {
+        "width": 256,
+        "height": 256,
+        "channels": "RGBA",
+        "displayBoxPx": 28,
+        "view": "strict overhead orthographic miniature 3D",
+        "frontBearingDegrees": 0,
+        "postProcessing": "Crop bounds measured from native alpha greater than 1; fit proportionally within 204x204 using Lanczos; center on transparent 256x256 RGBA. Alpha within the crop is preserved and resampled, never thresholded or repainted. No background removal or chroma key.",
+        "sourceImageSize": [
+          1254,
+          1254
+        ],
+        "sourceCropBoundingBox": [
+          491,
+          16,
+          761,
+          1215
+        ]
+      },
+      "validation": {
+        "alphaMin": 0,
+        "alphaMax": 255,
+        "transparentPixelFraction": 0.8627,
+        "cornerPixelsTransparent": true,
+        "alphaBoundingBox": [
+          105,
+          26,
+          151,
+          230
+        ],
+        "visibleAlphaBoundingBox": [
+          105,
+          26,
+          151,
+          230
+        ],
+        "opaqueNearWhitePixels": 1060,
+        "nativeAlphaPreserved": true,
+        "promptEmbedded": true,
+        "visuallyInspectedOn": [
+          "#fffef9",
+          "#203b36"
+        ],
+        "visuallyInspectedDisplayBoxPx": 28,
+        "visuallyConfirmedOrientation": "Leading cab at image top, rear gangway at bottom",
+        "longAxisDeviationFromVerticalDegrees": 0.001
+      },
+      "bytes": 22103,
+      "sha256": "8ea9efd03f2b6f00d75ea4a502d654160d773358c6e4537109c722459fc48934"
+    },
+    {
+      "id": "train-downtown",
+      "label": "Downtown MRT",
+      "representative": true,
+      "description": "Representative Bombardier MOVIA C951/C951A leading carriage, with simplified details",
+      "observedLivery": "White/silver body, black glazing and turquoise-green / blue bands",
+      "referenceSources": [
+        {
+          "title": "LTA Downtown Line blue and green livery",
+          "url": "https://www.lta.gov.sg/content/ltagov/en/getting_around/public_transport/rail_network/downtown_line.html"
+        }
+      ],
+      "parentAssetId": "train-downtown",
+      "parentRegistry": "public/transit/assets.json",
+      "file": "train-downtown.png",
+      "publicPath": "/transit/overhead/train-downtown.png",
+      "frontBearingDegrees": 0,
+      "orientation": {
+        "type": "designated-leading-cab",
+        "axis": "vertical, leading cab toward top at 12 oclock",
+        "frontBearingDegrees": 0,
+        "note": "Upper cab is designated leading end for map rotation; this representative image does not identify an actual operating unit."
+      },
+      "generation": {
+        "tool": "built-in ImageGen",
+        "model": "not exposed by tool",
+        "transparentBackgroundRequested": true,
+        "prompt": "Use case: precise-object-edit\nAsset type: one map-only OVERHEAD3D transparent Singapore MRT vehicle sprite, legible at 28px.\nInput image: original Downtown Line sprite supplies actual researched fleet shape, paint and materials only. Re-render in new strict overhead camera.\nSubject: representative Singapore Downtown Line Bombardier MOVIA C951/C951A leading cab with shortened forward passenger body section. Preserve rounded modern white nose cheeks enclosing tall black windshield and central evacuation-door hint; authentic white/silver metro body, black side window band, adjoining turquoise-green band ABOVE medium-blue band below windows, both seen as thin perimeter bands from above. Grey metal roof with low grey HVAC boxes. Never paint roof blue/turquoise; never solid blue train. Source: https://www.lta.gov.sg/content/ltagov/en/getting_around/public_transport/rail_network/downtown_line.html .\nCAMERA: strict BIRD'S-EYE OVERHEAD orthographic camera directly above the train looking straight down at roof. Axis exactly VERTICAL. FRONT rounded cab clearly at 12 o'clock, image TOP; flat rear gangway at image BOTTOM. Roof predominates, with softly bevelled side edges showing authentic livery and glazing perimeter. No isometric, oblique, three-quarter, diagonal or side-on camera. Cab windshield should read clearly on sloped top nose.\nComposition: one continuous centered leading cab/body object, representative forward section length about 3.5 times width with realistic metro cab shape. Entire silhouette inside square canvas with 10% empty padding, nothing cut off. No following cars.\nStyle: polished precise miniature 3D product object, restrained realism, opaque white/silver paint and grey roof metal, dark glass, authentic two side bands only. Simple rooftop structure and crisp strong silhouette for map-marker size. Lighting and subtle shading stay inside object.\nBackground: genuinely transparent native alpha; opaque white paint must remain opaque.\nAvoid: tracks, platforms, road, floor, external shadow, external glow, scenery, text, labels, logo, number, watermark, arrows, compass, colored roof, unsupported paint, diagonal orientation.",
+        "referenceImageRoles": [
+          "Original angled train-downtown sprite: actual fleet shape, observed livery and material reference; original camera discarded."
+        ],
+        "builtInCallsForAsset": 1
+      },
+      "format": {
+        "width": 256,
+        "height": 256,
+        "channels": "RGBA",
+        "displayBoxPx": 28,
+        "view": "strict overhead orthographic miniature 3D",
+        "frontBearingDegrees": 0,
+        "postProcessing": "Crop bounds measured from native alpha greater than 1; fit proportionally within 204x204 using Lanczos; center on transparent 256x256 RGBA. Alpha within the crop is preserved and resampled, never thresholded or repainted. No background removal or chroma key.",
+        "sourceImageSize": [
+          1254,
+          1254
+        ],
+        "sourceCropBoundingBox": [
+          473,
+          54,
+          778,
+          1208
+        ]
+      },
+      "validation": {
+        "alphaMin": 0,
+        "alphaMax": 255,
+        "transparentPixelFraction": 0.84,
+        "cornerPixelsTransparent": true,
+        "alphaBoundingBox": [
+          101,
+          26,
+          155,
+          230
+        ],
+        "visibleAlphaBoundingBox": [
+          101,
+          26,
+          155,
+          230
+        ],
+        "opaqueNearWhitePixels": 1048,
+        "nativeAlphaPreserved": true,
+        "promptEmbedded": true,
+        "visuallyInspectedOn": [
+          "#fffef9",
+          "#203b36"
+        ],
+        "visuallyInspectedDisplayBoxPx": 28,
+        "visuallyConfirmedOrientation": "Leading cab at image top, rear gangway at bottom",
+        "longAxisDeviationFromVerticalDegrees": 0.024
+      },
+      "bytes": 26050,
+      "sha256": "a5399cf7fbfc15f179829900c99e7471adb12ee2037816c34d6d7e2b8b5e8ab5"
+    },
+    {
+      "id": "train-thomson-east-coast",
+      "label": "Thomson-East Coast MRT",
+      "representative": true,
+      "description": "Representative Kawasaki / CRRC Sifang T251 leading carriage; details simplified",
+      "observedLivery": "White/silver body, black glazing and warm brown / yellow accent bands",
+      "referenceSources": [
+        {
+          "title": "LTA TEL trains and train illustration",
+          "url": "https://www.lta.gov.sg/content/ltagov/en/getting_around/public_transport/rail_network/thomson_east_coast_line.html"
+        },
+        {
+          "title": "LTA TEL exterior and features infographic",
+          "url": "https://www.lta.gov.sg/content/ltagov/en/getting_around/public_transport/rail_network/thomson_east_coast_line/_jcr_content/par/tab_yellow_new/tab-content-tab_yellow_new/textimage_2147039379/image.img.png/1580282384676.png"
+        }
+      ],
+      "parentAssetId": "train-thomson-east-coast",
+      "parentRegistry": "public/transit/assets.json",
+      "file": "train-thomson-east-coast.png",
+      "publicPath": "/transit/overhead/train-thomson-east-coast.png",
+      "frontBearingDegrees": 0,
+      "orientation": {
+        "type": "designated-leading-cab",
+        "axis": "vertical, leading cab toward top at 12 oclock",
+        "frontBearingDegrees": 0,
+        "note": "Upper cab is designated leading end for map rotation; this representative image does not identify an actual operating unit."
+      },
+      "generation": {
+        "tool": "built-in ImageGen",
+        "model": "not exposed by tool",
+        "transparentBackgroundRequested": true,
+        "prompt": "Use case: precise-object-edit\nAsset type: one map-only OVERHEAD3D transparent Singapore MRT train sprite, readable at 28px.\nInput image: original Thomson-East Coast train sprite is reference for real T251 fleet identity and paint only; create a new strict overhead view.\nSubject: representative Singapore Thomson-East Coast Line Kawasaki/CRRC Sifang T251 leading cab and short forward passenger body. Preserve modern angular tapering cab nose and large slanted black windshield, white outer cheeks, white/silver body, very wide near-black side window band, warm brown stripe directly below window band plus separate narrow yellow stripe underneath. Grey metal roof and low grey roof HVAC boxes. Brown and yellow livery appears as narrow visible side/nose perimeter only; roof must remain realistic grey/silver. Do not turn real side livery into brown/yellow roof. Sources: https://www.lta.gov.sg/content/ltagov/en/getting_around/public_transport/rail_network/thomson_east_coast_line.html and https://www.lta.gov.sg/content/ltagov/en/getting_around/public_transport/rail_network/thomson_east_coast_line/_jcr_content/par/tab_yellow_new/tab-content-tab_yellow_new/textimage_2147039379/image.img.png/1580282384676.png .\nCAMERA: strict bird's-eye OVERHEAD orthographic camera directly above roof looking straight DOWN. Long train axis must be exactly VERTICAL. Designated leading FRONT CAB at 12 o'clock, image TOP; flat rear gangway at image BOTTOM. Roof predominates; slightly sculpted bevelled side perimeter reveals real livery/glass without camera tilt. Clearly distinguish top cab glass/sloping nose from bottom rear connection. No isometric, three-quarter, oblique, diagonal, or side-on view.\nComposition: single continuous leading-cab/body object centered in square, whole silhouette visible with approximately 10% empty padding. Use representative shortened forward body, overall length about 3.5 times width, preserving convincing cab proportions. No full train or following car.\nStyle: polished precise miniature 3D product render, restrained realistic white paint, grey metal, black glass, small authentic brown/yellow perimeter bands, soft object-only shading. Strong crisp silhouette and simplified visible rooftop equipment for map-marker legibility.\nBackground: genuine native transparent alpha; opaque white paint remains opaque. Empty space clear.\nAvoid: tracks, platforms, ground, floor, external shadows or glow, scenery, people, text, numbers, logos, labels, watermark, arrows, compass, diagonal train, colored roof, unsupported paint.",
+        "referenceImageRoles": [
+          "Original angled train-thomson-east-coast sprite: actual fleet shape, observed livery and material reference; original camera discarded."
+        ],
+        "builtInCallsForAsset": 1
+      },
+      "format": {
+        "width": 256,
+        "height": 256,
+        "channels": "RGBA",
+        "displayBoxPx": 28,
+        "view": "strict overhead orthographic miniature 3D",
+        "frontBearingDegrees": 0,
+        "postProcessing": "Crop bounds measured from native alpha greater than 1; fit proportionally within 204x204 using Lanczos; center on transparent 256x256 RGBA. Alpha within the crop is preserved and resampled, never thresholded or repainted. No background removal or chroma key.",
+        "sourceImageSize": [
+          1254,
+          1254
+        ],
+        "sourceCropBoundingBox": [
+          497,
+          79,
+          757,
+          1174
+        ]
+      },
+      "validation": {
+        "alphaMin": 0,
+        "alphaMax": 255,
+        "transparentPixelFraction": 0.8601,
+        "cornerPixelsTransparent": true,
+        "alphaBoundingBox": [
+          104,
+          26,
+          152,
+          229
+        ],
+        "visibleAlphaBoundingBox": [
+          104,
+          26,
+          152,
+          229
+        ],
+        "opaqueNearWhitePixels": 1675,
+        "nativeAlphaPreserved": true,
+        "promptEmbedded": true,
+        "visuallyInspectedOn": [
+          "#fffef9",
+          "#203b36"
+        ],
+        "visuallyInspectedDisplayBoxPx": 28,
+        "visuallyConfirmedOrientation": "Leading cab at image top, rear gangway at bottom",
+        "longAxisDeviationFromVerticalDegrees": 0.011
+      },
+      "bytes": 24304,
+      "sha256": "415af41d586ef855aa9ad039582643a511394854e643f3f2a71cdb3c7b93de64"
+    }
+  ]
+}

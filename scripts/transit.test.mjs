@@ -1,9 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import { createHash } from "node:crypto";
+import { OVERHEAD_SPRITES, overheadSprite } from "../src/lib/transit-sprites.ts";
 import { inferBusVehicles, parseBusObservations, parseTransitCatalog, pointAlongRoute,
   projectOnRoute, routeInView, vehicleDistanceAt, routeGroupId, filteredTransitRoutes,
-  TRANSIT_DEFAULTS, TRANSIT_FILTER_DEFAULTS, sampledBusStops } from "../src/lib/transit.ts";
+  TRANSIT_DEFAULTS, TRANSIT_FILTER_DEFAULTS, sampledBusStops, routeMetrics,
+  reconcileVehicleMotion, vehicleMotionAt, vehicleMotionIsAnimating, smoothHeading, screenRouteHeading, VEHICLE_CORRECTION_MS, VEHICLE_REACQUIRE_MS } from "../src/lib/transit.ts";
 
 const now = 1000000;
 const path = [[103.8, 1.3], [103.81, 1.3], [103.81, 1.31]];
@@ -121,4 +124,115 @@ test("shipped catalogue includes the current Circle extension and all nine rail 
     assert.ok(actual.routes.some((item) => item.mode === "train" && item.service === service));
   }
   assert.ok(actual.routes.some((item) => item.mode === "ferry" && /Ubin/.test(item.name)));
+});
+
+const motionVehicle = { id: "fixture", routeId: route.id, service: "42", destination: "C", evidence: "eta", icon: "bus-single-deck",
+  fromDistance: 100, toDistance: 1100, observedAt: now, arrivalAt: now + 100000, staleAt: now + 45000, expiresAt: now + 90000 };
+const plainMotion = (vehicle = motionVehicle) => ({ vehicle, correction: { kind: "none" } });
+
+test("small fresh ETA corrections start continuously and finish within 1.5 seconds", () => {
+  const refreshedAt = now + 10000;
+  const fresh = { ...motionVehicle, observedAt: refreshedAt, fromDistance: 230, arrivalAt: refreshedAt + 87000, staleAt: refreshedAt + 45000 };
+  const reconciled = reconcileVehicleMotion(plainMotion(), fresh, refreshedAt);
+  assert.equal(reconciled.correction.kind, "blend");
+  assert.equal(vehicleMotionAt(reconciled, refreshedAt).distance, 200);
+  const end = refreshedAt + VEHICLE_CORRECTION_MS;
+  assert.equal(vehicleMotionAt(reconciled, end).distance, vehicleDistanceAt(fresh, end));
+  let previous = 200;
+  for (let time = refreshedAt; time <= end; time += 16) {
+    const current = vehicleMotionAt(reconciled, time).distance;
+    assert.ok(current >= previous, "displayed travel never reverses during correction"); previous = current;
+  }
+  const interruptedAt = refreshedAt + 500;
+  const second = { ...fresh, fromDistance: 240, observedAt: interruptedAt };
+  assert.equal(vehicleMotionAt(reconcileVehicleMotion(reconciled, second, interruptedAt), interruptedAt).distance,
+    vehicleMotionAt(reconciled, interruptedAt).distance, "a second correction starts at the displayed position");
+});
+test("large revisions dissolve and reacquire without drawing intermediate route travel", () => {
+  const refreshedAt = now + 10000;
+  const fresh = { ...motionVehicle, observedAt: refreshedAt, fromDistance: 900 };
+  const motion = reconcileVehicleMotion(plainMotion(), fresh, refreshedAt);
+  assert.equal(motion.correction.kind, "reacquire");
+  assert.equal(vehicleMotionAt(motion, refreshedAt + 60).distance, 200);
+  assert.equal(vehicleMotionAt(motion, refreshedAt + VEHICLE_REACQUIRE_MS / 2).opacity, 0);
+  const finish = refreshedAt + VEHICLE_REACQUIRE_MS;
+  assert.equal(vehicleMotionAt(motion, finish).distance, vehicleDistanceAt(fresh, finish));
+  assert.equal(vehicleMotionAt(motion, finish).opacity, 1);
+});
+test("a backward ETA correction that would reverse travel reacquires instead", () => {
+  const refreshedAt = now + 10000;
+  const fresh = { ...motionVehicle, observedAt: refreshedAt, fromDistance: 170 };
+  assert.equal(reconcileVehicleMotion(plainMotion(), fresh, refreshedAt).correction.kind, "reacquire");
+  const tiny = { ...fresh, fromDistance: 198 };
+  const motion = reconcileVehicleMotion(plainMotion(), tiny, refreshedAt);
+  assert.equal(motion.correction.kind, "blend");
+  let previous = 200;
+  for (let time = refreshedAt; time <= refreshedAt + VEHICLE_CORRECTION_MS; time += 16) {
+    const current = vehicleMotionAt(motion, time).distance;
+    assert.ok(current >= previous); previous = current;
+  }
+});
+test("staleness freezes both correction and route progress; expiry removes visibility", () => {
+  const refreshedAt = now + 10000;
+  const fresh = { ...motionVehicle, observedAt: refreshedAt, fromDistance: 230, staleAt: refreshedAt + 500 };
+  const motion = reconcileVehicleMotion(plainMotion(), fresh, refreshedAt);
+  assert.deepEqual(vehicleMotionAt(motion, fresh.staleAt), vehicleMotionAt(motion, fresh.staleAt + 15000));
+  assert.equal(vehicleMotionAt(motion, fresh.expiresAt).opacity, 0);
+  assert.equal(reconcileVehicleMotion(motion, { ...fresh }, refreshedAt + 20000), motion, "cached evidence does not reset smoothing/freshness");
+  assert.equal(reconcileVehicleMotion(plainMotion(), fresh, refreshedAt, true).correction.kind, "none");
+});
+test("headings follow screen tangents in both directions and take the shortest turn across north", () => {
+  assert.equal(screenRouteHeading({ x: 1, y: 8 }, { x: 1, y: 2 }), 0);
+  assert.equal(screenRouteHeading({ x: 1, y: 2 }, { x: 1, y: 8 }), 180);
+  assert.equal(screenRouteHeading({ x: 1, y: 2 }, { x: 8, y: 2 }), 90);
+  assert.equal(screenRouteHeading({ x: 1, y: 2 }, { x: 1, y: 2 }, 75), 75);
+  assert.ok(smoothHeading(359, 1, 16) > 359 && smoothHeading(359, 1, 16) < 361);
+  assert.ok(smoothHeading(721, 359, 16) < 721 && smoothHeading(721, 359, 16) > 719);
+  assert.equal(smoothHeading(10, 90, 0), 10);
+});
+test("cached route metrics clamp endpoints and preserve the directed bend", () => {
+  const metrics = routeMetrics(path);
+  assert.equal(routeMetrics(path), metrics);
+  assert.deepEqual(pointAlongRoute(path, -1).position, path[0]);
+  assert.deepEqual(pointAlongRoute(path, Infinity).position, path.at(-1));
+  const reverse = [...path].reverse();
+  assert.equal(pointAlongRoute(path, 400).bearing, 90);
+  assert.equal(pointAlongRoute(reverse, 400).bearing, 180);
+  assert.deepEqual(pointAlongRoute([path[0], path[0]], 10).position, path[0]);
+});
+
+test("separate supported estimates with the same arrival second have distinct marker identities", () => {
+  const vehicles = inferBusVehicles(catalog, [observation, { ...observation, position: [103.802, 1.3] }], [], now);
+  assert.equal(vehicles.length, 2);
+  assert.equal(new Set(vehicles.map(vehicle => vehicle.id)).size, 2);
+});
+
+test("each registered overhead sprite ships transparent 256px artwork with source provenance and an intact hash", () => {
+  const manifests = ["road-water-assets.json", "mrt-assets.json", "other-rail-assets.json"];
+  const assets = manifests.flatMap(name => JSON.parse(fs.readFileSync(new URL(`../public/transit/overhead/${name}`, import.meta.url))).assets);
+  assert.deepEqual(assets.map(a => a.id).sort(), Object.keys(OVERHEAD_SPRITES).sort());
+  for (const asset of assets) {
+    const sprite = overheadSprite(asset.id);
+    assert.equal(sprite.path, asset.publicPath);
+    const png = fs.readFileSync(new URL(`../public${sprite.path}`, import.meta.url));
+    assert.equal(png.readUInt32BE(16), 256); assert.equal(png.readUInt32BE(20), 256);
+    assert.equal(png[25], 6, "PNG retains RGBA transparency");
+    assert.equal(createHash("sha256").update(png).digest("hex"), asset.sha256);
+    assert.ok(asset.referenceSources.length > 0 && asset.referenceSources.every(source => source.url.startsWith("https://")));
+    assert.ok(asset.generation.prompt.length > 100 && asset.representative);
+  }
+  assert.equal(overheadSprite("unsupported-fleet"), null);
+});
+
+test("display-refresh scheduling continues when a small correction outlasts the fresh ETA", () => {
+  const stamp = now + 10000;
+  const vehicle = { ...motionVehicle, fromDistance: 230, toDistance: 240, observedAt: stamp, arrivalAt: stamp + 500, staleAt: stamp + 45000 };
+  const motion = reconcileVehicleMotion(plainMotion(), vehicle, stamp);
+  assert.equal(motion.correction.kind, "blend");
+  assert.equal(vehicleMotionIsAnimating(motion, stamp + 500), true);
+  assert.equal(vehicleMotionIsAnimating(motion, stamp + 1499), true);
+  assert.equal(vehicleMotionIsAnimating(motion, stamp + 1500), false);
+  assert.equal(vehicleMotionIsAnimating(motion, vehicle.staleAt), false);
+  assert.equal(vehicleMotionIsAnimating(motion, vehicle.expiresAt), false);
+  assert.equal(vehicleMotionAt(motion, stamp + 1500).distance, 240);
 });

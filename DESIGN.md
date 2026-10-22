@@ -9,19 +9,32 @@ typography:
   layer-count:
     fontSize: "10px"
     fontWeight: 600
+  vehicle-badge:
+    fontSize: "12px"
+    fontWeight: 700
+    lineHeight: "16px"
 components:
   layer-tile:
     typography: "{typography.layer-caption}"
     width: "79.2px"
     height: "70.2px"
     rounded: "14.4px"
+  vehicle-marker:
+    width: "56px"
+    height: "68px"
+  vehicle-art:
+    width: "28px"
+    height: "28px"
+  vehicle-badge:
+    typography: "{typography.vehicle-badge}"
 ---
 
 # Design system — “Pastel Civic Atlas”
 
 Reference for every UI change in this repo. Tokens live in `src/app/globals.css`
 (Tailwind v4 `@theme inline`); never hardcode a colour, radius or font in a component.
-The frontmatter and `.impeccable/design.json` capture the approved layer-picker resize.
+The frontmatter and `.impeccable/design.json` capture the approved layer-picker resize
+and moving-vehicle marker contract.
 The incumbent token table and guidance below remain the reference for the broader atlas.
 
 ## Direction
@@ -164,6 +177,32 @@ shimmer for loading, 200 ms colour/transform transitions on controls. Everything
   and a forest-green zoom action. Source sections repeat the same three pastel fills.
 - No decorative gradients or map-wide CSS filters; colour changes must preserve
   readable basemap labels and distinct camera signals.
+
+## Components
+
+### Moving vehicle marker
+
+The map uses transparent overhead fleet artwork at the `vehicle-art` size inside the
+larger `vehicle-marker` button. The artwork is centered on the route position; its
+body and direction cue rotate with the directed screen-projected route tangent,
+including pitched and rotated views. The separate `vehicle-badge` stays upright.
+Menu and detail illustrations retain their established artwork and size. Fleet
+symbols represent researched vehicle types rather than identifying a physical unit;
+the symmetric cable car has a travel axis rather than a distinct front.
+
+Stable marker elements preserve keyboard focus through feed refreshes. Supported
+travel uses display-refresh updates and fractional pixel placement. Small fresh
+corrections blend along the route for the sidecar's `vehicle-correction` duration,
+including when arrival precedes the blend's finish. Large corrections above 80m,
+or backward corrections that would reverse travel, use `vehicle-reacquire` to fade
+out and reappear at the supported position. Heading takes the shortest turn and
+retains its last route tangent while stopped.
+
+Hidden documents cancel animation scheduling. Reduced motion shows the latest
+supported observed position without continuous spatial animation. Bus estimates
+stop progressing at 45 seconds, use a half-opacity stale treatment, and disappear
+at 90 seconds. Routes and stops remain available when no usable ETA/GPS supports
+a vehicle position; timetable animation is never a substitute.
 
 ## Content rules
 

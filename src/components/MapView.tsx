@@ -26,7 +26,7 @@ import type {
 } from "@/lib/types";
 import { useI18n } from "./i18n-provider";
 import { applyMapMode, type MapMode } from "./map-3d";
-import { renderTransit, renderTransitPopup } from "./transit-map";
+import { createTransitRenderer, renderTransitPopup, type TransitRenderOptions } from "./transit-map";
 import type { TransitViewport } from "@/lib/transit";
 
 const TILES = ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"];
@@ -99,7 +99,7 @@ export interface MapFocus {
 export interface MapViewProps {
   basemap?: BasemapId;
   mapMode?: MapMode;
-  transit: Parameters<typeof renderTransit>[1];
+  transit: TransitRenderOptions;
   routePopup: Parameters<typeof renderTransitPopup>[1] | null;
   onViewportChange: (viewport: TransitViewport) => void;
   points: CameraPoint[];
@@ -148,6 +148,7 @@ export default function MapView({
   });
   const appliedFocusKey = useRef<string | null>(null);
   const popup = useRef<maplibregl.Popup | null>(null);
+  const transitRenderer = useRef<ReturnType<typeof createTransitRenderer> | null>(null);
   const pointsById = useRef(new Map<string, CameraPoint>());
   const roadFeaturesById = useRef(new Map<string, RoadConditionFeature>());
   const iso = useRef({ onSelect, onRoadSelect, t, selectedId, selectedRoadId });
@@ -976,8 +977,12 @@ export default function MapView({
 
   useEffect(() => {
     if (!map.current || !ready) return;
-    return renderTransit(map.current, transit);
-  }, [transit, ready]);
+    const renderer = createTransitRenderer(map.current);
+    transitRenderer.current = renderer;
+    return () => { renderer.destroy(); if (transitRenderer.current === renderer) transitRenderer.current = null; };
+  }, [ready]);
+
+  useEffect(() => { if (ready) transitRenderer.current?.update(transit); }, [transit, ready]);
 
   useEffect(() => {
     if (!map.current || !ready || !routePopup) return;
