@@ -1,11 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import crypto from "node:crypto";
 import fs from "node:fs";
 import { FLEET_SPRITES, fleetSprite } from "../src/lib/transit-sprites.ts";
-import { inferBusVehicles, parseBusObservations, parseTransitCatalog, pointAlongRoute,
+import { assertVehicleEvidence, inferBusVehicles, parseBusObservations, parseTransitCatalog, pointAlongRoute,
   projectOnRoute, routeInView, vehicleDistanceAt, routeGroupId, filteredTransitRoutes,
   TRANSIT_DEFAULTS, TRANSIT_FILTER_DEFAULTS, TRANSIT_ICONS, sampledBusStops, routeMetrics,
   reconcileVehicleMotion, vehicleMotionAt, vehicleMotionIsAnimating, smoothHeading, screenRouteHeading, VEHICLE_CORRECTION_MS, VEHICLE_REACQUIRE_MS } from "../src/lib/transit.ts";
+import { SCHEDULE_LINES, SCHEDULE_UNAVAILABLE, inferScheduledVehicles, scheduledVehiclesForLine } from "../src/lib/transit-schedule.ts";
 
 const now = 1000000;
 const path = [[103.8, 1.3], [103.81, 1.3], [103.81, 1.31]];
@@ -207,13 +209,29 @@ test("separate supported estimates with the same arrival second have distinct ma
 });
 
 test("every mode and bus type maps to shipped 3D fleet artwork the map never rotates", () => {
+  const manifest = JSON.parse(fs.readFileSync(new URL("../public/transit/assets.json", import.meta.url), "utf8"));
+  const byId = new Map(manifest.assets.map((asset) => [asset.id, asset]));
   for (const icon of [...Object.values(TRANSIT_ICONS), "bus-double-deck", "bus-articulated"]) {
     const sprite = fleetSprite(icon);
     assert.ok(sprite, `no map sprite for ${icon}`);
-    assert.ok(fs.existsSync(new URL(`../public${sprite}`, import.meta.url)), `missing ${sprite}`);
+    const file = new URL(`../public${sprite}`, import.meta.url);
+    assert.ok(fs.existsSync(file), `missing ${sprite}`);
+    assert.ok(byId.has(icon), `missing manifest entry for ${icon}`);
+    assert.equal(byId.get(icon).file, `${icon}.png`);
   }
   assert.equal(fleetSprite("unsupported-fleet"), null);
   assert.equal(Object.keys(FLEET_SPRITES).length, 15);
+  assert.equal(manifest.assets.length, 15);
+  for (const asset of manifest.assets) {
+    const file = fs.readFileSync(new URL(`../public/transit/${asset.file}`, import.meta.url));
+    assert.equal(file.length, asset.bytes, `byte count drifted for ${asset.id}`);
+    assert.equal(crypto.createHash("sha256").update(file).digest("hex"), asset.sha256, `sha256 drifted for ${asset.id}`);
+    assert.equal(asset.format.width, 256);
+    assert.equal(asset.format.height, 256);
+    assert.equal(asset.format.channels, "RGBA");
+    assert.equal(asset.validation.cornerPixelsTransparent, true);
+    assert.ok(asset.validation.transparentPixelFraction > 0);
+  }
 });
 
 test("display-refresh scheduling continues when a small correction outlasts the fresh ETA", () => {
@@ -227,4 +245,80 @@ test("display-refresh scheduling continues when a small correction outlasts the 
   assert.equal(vehicleMotionIsAnimating(motion, vehicle.staleAt), false);
   assert.equal(vehicleMotionIsAnimating(motion, vehicle.expiresAt), false);
   assert.equal(vehicleMotionAt(motion, stamp + 1500).distance, 240);
+});
+
+const evidenceVehicle = { ...motionVehicle, mode: "bus", lineKey: "bus:42", direction: 1,
+  serviceStartedAt: now, serviceEndsAt: now + 90000 };
+test("evidence labels cannot outrun the data that built the vehicle", () => {
+  assert.throws(() => assertVehicleEvidence({ ...evidenceVehicle, evidence: "gps" },
+    { coordinates: false, arrivals: true, timetable: false }));
+  assert.doesNotThrow(() => assertVehicleEvidence({ ...evidenceVehicle, evidence: "gps" },
+    { coordinates: true, arrivals: false, timetable: false }));
+  assert.throws(() => assertVehicleEvidence({ ...evidenceVehicle, evidence: "schedule" },
+    { coordinates: false, arrivals: true, timetable: true }));
+  assert.throws(() => assertVehicleEvidence({ ...evidenceVehicle, evidence: "eta" },
+    { coordinates: true, arrivals: false, timetable: false }));
+  assert.throws(() => assertVehicleEvidence({ ...evidenceVehicle, direction: -1 },
+    { coordinates: false, arrivals: true, timetable: false }));
+});
+test("reverse motion follows the same path backwards without leaving it", () => {
+  const reverse = { ...evidenceVehicle, mode: "train", lineKey: "train:test", direction: -1,
+    fromDistance: 1100, toDistance: 100, arrivalAt: now + 40000, staleAt: now + 40000, expiresAt: now + 40000 };
+  assert.equal(vehicleDistanceAt(reverse, now), 1100);
+  assert.equal(vehicleDistanceAt(reverse, now + 40000), 100);
+  let previous = Infinity;
+  for (let time = now; time <= now + 40000; time += 1000) {
+    const current = vehicleDistanceAt(reverse, time);
+    assert.ok(current <= previous + 1e-9, "reverse travel is monotonic");
+    assert.ok(current >= 100 && current <= 1100);
+    previous = current;
+  }
+});
+test("scheduled estimates are opt-in, deterministic and never labelled live", () => {
+  const actual = parseTransitCatalog(JSON.parse(fs.readFileSync(new URL("../public/transit/catalog.json", import.meta.url), "utf8")));
+  const at = (hours, minutes = 0) => Date.UTC(2026, 9, 22, hours - 8, minutes);
+  const line = { routeId: "train:test", label: "Test", mode: "train", serviceStart: "06:00", serviceEnd: "08:00",
+    headwayMinutes: 10, runTimeMinutes: 20, direction: 1, maxVehicles: 4, basis: "fixture",
+    sources: { service: { url: "https://example.com", capturedAt: "2026-10-22" },
+      headway: { url: "https://example.com", capturedAt: "2026-10-22" },
+      runTime: { url: "https://example.com", capturedAt: "2026-10-22" } } };
+  const testRoute = { ...route, id: "train:test", mode: "train", service: "TT", name: "Test line", destination: "Test line" };
+  assert.equal(inferScheduledVehicles({ ...catalog, routes: [testRoute] }, at(7), new Set([testRoute.id]), false).length, 0);
+  const vehicles = scheduledVehiclesForLine(line, testRoute, at(6, 25));
+  assert.equal(vehicles.length, 2);
+  assert.ok(vehicles.every((vehicle) => vehicle.evidence === "schedule" && vehicle.mode === "train"));
+  assert.deepEqual(vehicles, scheduledVehiclesForLine(line, testRoute, at(6, 25)));
+  assert.ok(vehicles.every((vehicle) => vehicle.serviceEndsAt <= at(8)));
+  const length = routeMetrics(testRoute.paths[0]).at(-1);
+  assert.ok(vehicles.every((vehicle) => vehicle.fromDistance >= 0 && vehicle.toDistance <= length));
+  assert.equal(new Set(vehicles.map((vehicle) => vehicle.id)).size, vehicles.length);
+
+  const reverse = scheduledVehiclesForLine({ ...line, direction: -1 }, testRoute, at(6, 5));
+  assert.equal(reverse[0].direction, -1);
+  assert.ok(reverse[0].fromDistance > reverse[0].toDistance);
+  assert.ok(vehicleDistanceAt(reverse[0], at(6, 15)) < vehicleDistanceAt(reverse[0], at(6, 5)));
+
+  assert.equal(scheduledVehiclesForLine(line, testRoute, at(5, 59)).length, 0);
+  assert.equal(scheduledVehiclesForLine(line, testRoute, at(6, 0)).length, 1);
+  assert.equal(scheduledVehiclesForLine(line, testRoute, at(8, 0)).length, 2, "the last departure still runs");
+  assert.equal(scheduledVehiclesForLine(line, testRoute, at(8, 20)).length, 0, "motion never leaks past the arrival");
+  assert.equal(scheduledVehiclesForLine({ ...line, maxVehicles: 1 }, testRoute, at(6, 25)).length, 1);
+
+  const active = inferScheduledVehicles(actual, at(12),
+    new Set(["train:NE", "train:DT", "ferry:558921059", "sentosa:2353581", "cablecar:28755868", "skytrain:9664403"]), true);
+  assert.ok(active.length > 0);
+  assert.ok(active.every((vehicle) => vehicle.evidence === "schedule"));
+  for (const key of ["train:NS", "train:EW", "train:CC", "train:TE", "train:BP", "ferry:117595324"]) {
+    assert.ok(SCHEDULE_UNAVAILABLE.some((item) => item.lineKey === key), `missing unavailable record for ${key}`);
+  }
+  for (const scheduled of SCHEDULE_LINES) {
+    const found = actual.routes.find((item) => item.id === scheduled.routeId);
+    assert.ok(found, `missing route ${scheduled.routeId}`);
+    assert.equal(found.mode, scheduled.mode);
+    for (const source of Object.values(scheduled.sources)) {
+      assert.match(source.url, /^https:\/\//);
+      assert.match(source.capturedAt, /^\d{4}-\d{2}-\d{2}$/);
+    }
+    assert.ok(scheduled.headwayMinutes > 0 && scheduled.runTimeMinutes > 0);
+  }
 });

@@ -5,7 +5,7 @@ export type TransitActive = Record<TransitMode, boolean>;
 export const TRANSIT_DEFAULTS: TransitActive = { bus: false, train: false, ferry: false, sentosa: false, cablecar: false, skytrain: false };
 export const TRANSIT_ICONS = {
   bus: "bus-single-deck", train: "train-nsew", ferry: "ferry-island-cruise",
-  sentosa: "train-sentosa", cablecar: "cable-car", skytrain: "train-skytrain",
+  sentosa: "train-sentosa", cablecar: "car-cable", skytrain: "train-skytrain",
 } satisfies Record<TransitMode, string>;
 
 export interface TransitStop {
@@ -28,11 +28,52 @@ export interface BusObservation {
   monitored: boolean; type: "SD" | "DD" | "BD";
   visitNumber: number;
 }
+export type VehicleEvidence = "gps" | "eta" | "schedule";
 export interface TransitVehicle {
   id: string; routeId: string; service: string; destination: string;
-  evidence: "eta" | "gps"; icon: string;
+  evidence: VehicleEvidence; mode: TransitMode; lineKey: string; icon: string;
+  /** 1 travels from `fromDistance` to a larger `toDistance`; -1 travels back. */
+  direction: 1 | -1;
   fromDistance: number; toDistance: number;
   observedAt: number; arrivalAt: number; staleAt: number; expiresAt: number;
+  serviceStartedAt: number; serviceEndsAt: number;
+}
+
+/** The evidence actually read from a provider or timetable, not the label we want to show. */
+export interface VehicleEvidenceSource {
+  /** A provider supplied coordinates for this vehicle, as opposed to a position derived from an arrival estimate. */
+  coordinates: boolean;
+  /** Provider-supplied arrival predictions were used. */
+  arrivals: boolean;
+  /** Published timetable or headway only; no live vehicle data. */
+  timetable: boolean;
+}
+
+/**
+ * Rejects evidence labels that overstate what the data can support. The bus
+ * adapter uses arrival predictions even when it also uses LTA's estimated
+ * coordinates, so a bus is never promoted to "gps" without a real GPS feed.
+ */
+export function assertVehicleEvidence(vehicle: TransitVehicle, source: VehicleEvidenceSource) {
+  if (vehicle.evidence === "gps" && !source.coordinates) {
+    throw new Error(`Vehicle ${vehicle.id} claims GPS without provider coordinates`);
+  }
+  if (vehicle.evidence === "eta" && !source.arrivals) {
+    throw new Error(`Vehicle ${vehicle.id} claims ETA without arrival predictions`);
+  }
+  if (vehicle.evidence === "schedule" && (!source.timetable || source.arrivals || source.coordinates)) {
+    throw new Error(`Vehicle ${vehicle.id} claims a timetable estimate from live data`);
+  }
+  if (vehicle.direction === 1 && vehicle.toDistance < vehicle.fromDistance) {
+    throw new Error(`Vehicle ${vehicle.id} travels forward but ends behind its start`);
+  }
+  if (vehicle.direction === -1 && vehicle.toDistance > vehicle.fromDistance) {
+    throw new Error(`Vehicle ${vehicle.id} travels backward but ends ahead of its start`);
+  }
+  if (vehicle.serviceEndsAt < vehicle.serviceStartedAt) {
+    throw new Error(`Vehicle ${vehicle.id} has an inverted service window`);
+  }
+  return vehicle;
 }
 export interface TransitFeed {
   status: "ok" | "unconfigured" | "error";
@@ -162,6 +203,9 @@ export function pointAlongRoute(path: Position[], metres: number) {
 export function vehicleDistanceAt(vehicle: TransitVehicle, now: number) {
   const time = Math.min(now, vehicle.staleAt);
   const fraction = Math.max(0, Math.min(1, (time - vehicle.observedAt) / Math.max(1, vehicle.arrivalAt - vehicle.observedAt)));
+  // `direction` is an invariant, not a sign flip: a reverse vehicle stores a
+  // larger `fromDistance` and a smaller `toDistance`, so the same interpolation
+  // produces monotonic decreasing distance along the single mapped path.
   return vehicle.fromDistance + (vehicle.toDistance - vehicle.fromDistance) * fraction;
 }
 
@@ -291,11 +335,17 @@ export function inferBusVehicles(catalog: TransitCatalog, observations: BusObser
       .sort((a, b) => Math.abs(vehicleDistanceAt(a, now) - from) - Math.abs(vehicleDistanceAt(b, now) - from))[0];
     if (existing) usedPrevious.add(existing.id);
     if (existing && obs.observedAt <= existing.observedAt) { candidates.push(existing); continue; }
-    candidates.push({ id: existing?.id ?? `${route.id}:${obs.stopId}:${Math.round(obs.arrivalAt / 1000)}:${Math.round(from)}`,
+    candidates.push(assertVehicleEvidence({ id: existing?.id ?? `${route.id}:${obs.stopId}:${Math.round(obs.arrivalAt / 1000)}:${Math.round(from)}`,
       routeId: route.id, service: obs.service, destination: route.destination, evidence: "eta",
+      mode: "bus", lineKey: routeGroupId(route),
       icon: obs.type === "DD" ? "bus-double-deck" : obs.type === "BD" ? "bus-articulated" : "bus-single-deck",
-      fromDistance: from, toDistance: to, observedAt: obs.observedAt, arrivalAt: obs.arrivalAt,
-      staleAt: obs.observedAt + 45000, expiresAt: obs.observedAt + 90000 });
+      direction: 1, fromDistance: from, toDistance: to, observedAt: obs.observedAt, arrivalAt: obs.arrivalAt,
+      staleAt: obs.observedAt + 45000, expiresAt: obs.observedAt + 90000,
+      serviceStartedAt: obs.observedAt, serviceEndsAt: obs.observedAt + 90000 },
+      // Even when LTA supplies its estimated coordinate, the position is
+      // derived from arrival predictions rather than a vehicle GPS feed.
+      { coordinates: false, arrivals: true, timetable: false })
+    );
   }
   return candidates;
 }

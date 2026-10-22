@@ -5,6 +5,7 @@ import { STATIC_MODE } from "@/lib/client-data";
 import { filteredTransitRoutes, inferBusVehicles, isRecord, parseTransitCatalog, sampledBusStops,
   type BusObservation, type TransitActive, type TransitCatalog, type TransitFeed,
   type TransitFilters, type TransitVehicle, type TransitViewport } from "@/lib/transit";
+import { inferScheduledVehicles } from "@/lib/transit-schedule";
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 const BACKEND = process.env.NEXT_PUBLIC_TRANSIT_API_BASE?.replace(/\/$/, "");
@@ -34,7 +35,7 @@ function parseFeed(value: unknown): TransitFeed {
 }
 
 export function useTransit(active: TransitActive, viewport: TransitViewport | null, selectedRouteId: string | null,
-  filters: TransitFilters, focusedGroup: string | null, requested: boolean) {
+  filters: TransitFilters, focusedGroup: string | null, requested: boolean, estimated: boolean) {
   const [catalog, setCatalog] = useState<TransitCatalog | null>(null);
   const [catalogError, setCatalogError] = useState(false);
   const [feedStatus, setFeedStatus] = useState<TransitFeed["status"] | "loading">("unconfigured");
@@ -68,6 +69,19 @@ export function useTransit(active: TransitActive, viewport: TransitViewport | nu
 
   const routes = useMemo(() => catalog ? filteredTransitRoutes(catalog, active, filters, focusedGroup, viewport) : [],
   [catalog, active, viewport, filters, focusedGroup]);
+  // The renderer interpolates between vehicle endpoints; this clock only needs
+  // to add departures and drop arrivals, not repaint every frame.
+  const [scheduleNow, setScheduleNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!estimated) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset the timetable clock when the opt-in changes
+    setScheduleNow(Date.now());
+    const timer = setInterval(() => setScheduleNow(Date.now()), 15000);
+    return () => clearInterval(timer);
+  }, [estimated]);
+  const scheduled = useMemo(() => catalog && scheduleNow
+    ? inferScheduledVehicles(catalog, scheduleNow, new Set(routes.map((route) => route.id)), estimated)
+    : [], [catalog, routes, estimated, scheduleNow]);
   const service = focusedGroup?.startsWith("bus:") ? focusedGroup.slice(4) : null;
   const stopsKey = useMemo(() => {
     if (!catalog || !viewport || !active.bus || (focusedGroup && !service)) return "";
@@ -116,7 +130,9 @@ export function useTransit(active: TransitActive, viewport: TransitViewport | nu
   }, [active.bus, catalog, query, service]);
 
   const routeIds = new Set(routes.map((route) => route.id));
-  return { catalog, catalogError, routes, vehicles: active.bus ? vehicles.filter((vehicle) => routeIds.has(vehicle.routeId)) : [], coverage,
-    feedStatus: STATIC_MODE && !BACKEND ? "unconfigured" as const : feedStatus, stopsKey };
+  return { catalog, catalogError, routes, estimated,
+    vehicles: [...(active.bus ? vehicles.filter((vehicle) => routeIds.has(vehicle.routeId)) : []),
+      ...scheduled.filter((vehicle) => routeIds.has(vehicle.routeId))],
+    coverage, feedStatus: STATIC_MODE && !BACKEND ? "unconfigured" as const : feedStatus, stopsKey };
 }
 export type TransitState = ReturnType<typeof useTransit>;

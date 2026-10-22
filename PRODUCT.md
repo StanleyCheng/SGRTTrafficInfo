@@ -38,7 +38,7 @@ Preserve the established bilingual Singapore traffic-map identity and existing c
 
 ## Evidence on Hand
 
-The repository contains the existing traffic UI, official-source registries, feed-status handling, static export and responsive smoke checks. Transit route geometry, service selection and focus, researched generated artwork, an ETA bus adapter and evidence-aware motion are implemented. Sentosa Express, Cable Car and Skytrain have mapped routes and stops only; no live positions are verified for those modes. Artwork prompts, reference sources and alpha checks are recorded in `public/transit/assets.json` and `public/transit/extra-assets.json`. Official feed coverage must be verified before describing a vehicle position as available.
+The repository contains the existing traffic UI, official-source registries, feed-status handling, static export and responsive smoke checks. Transit route geometry, service selection and focus, researched artwork, an ETA bus adapter and evidence-aware motion are implemented. Sentosa Express, Cable Car and Skytrain have mapped routes and stops; their optional motion is a labelled timetable estimate, never a live position. Artwork prompts, reference sources and alpha checks are recorded in `public/transit/assets.json`. Official feed coverage must be verified before describing a vehicle position as available.
 
 ## Product Principles
 

@@ -48,11 +48,13 @@ const CAMERA_DEFAULTS: Record<LayerId, boolean> = {
   snapshot: false,
 };
 const BASEMAP_STORAGE_KEY = "sgdi.basemap";
+const ESTIMATE_STORAGE_KEY = "sgdi.transitEstimates";
 
 export default function App() {
   const { t } = useI18n();
   const [basemap, setBasemap] = useState<BasemapId>("osm");
   const [mapMode, setMapMode] = useState<MapMode>("2d");
+  const [estimatedTransit, setEstimatedTransit] = useState(false);
   const [transitActive, setTransitActive] = useState(TRANSIT_DEFAULTS);
   const [selectedTransitRoute, setSelectedTransitRoute] = useState<string | null>(null);
   const [routeControlsOpen, setRouteControlsOpen] = useState(false);
@@ -63,7 +65,7 @@ export default function App() {
   const [selectedVehicle, setSelectedVehicle] = useState<TransitVehicle | null>(null);
   const [clock, setClock] = useState(() => Date.now());
   const [viewport, setViewport] = useState<TransitViewport | null>(null);
-  const transit = useTransit(transitActive, viewport, selectedTransitRoute, transitFilters, focusedTransitGroup, routeControlsOpen);
+  const transit = useTransit(transitActive, viewport, selectedTransitRoute, transitFilters, focusedTransitGroup, routeControlsOpen, estimatedTransit);
   const { cameras, error: cameraError, retry: retryCameras } = useCameras();
   const [active, setActive] =
     useState<Record<LayerId, boolean>>(CAMERA_DEFAULTS);
@@ -93,6 +95,7 @@ export default function App() {
         // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate the persisted preference after the server render
         setMapMode("3d");
       }
+      if (window.localStorage.getItem(ESTIMATE_STORAGE_KEY) === "1") setEstimatedTransit(true);
       if (stored === "positron") {
         setBasemap("positron");
       }
@@ -107,6 +110,12 @@ export default function App() {
       try { window.localStorage.setItem("sgdi.mapMode", next); } catch { /* private mode */ }
       return next;
     });
+  }, []);
+
+  const toggleEstimatedTransit = useCallback((next: boolean) => {
+    setEstimatedTransit(next);
+    setSelectedVehicle(null);
+    try { window.localStorage.setItem(ESTIMATE_STORAGE_KEY, next ? "1" : "0"); } catch { /* private mode */ }
   }, []);
 
   const toggleBasemap = useCallback(() => {
@@ -302,7 +311,8 @@ export default function App() {
   const transitScene = useMemo(() => ({ catalog: transit.catalog, routes: transit.routes,
     vehicles: transit.vehicles, selectedRouteId: selectedTransitRoute, focusedGroup: focusedTransitGroup,
     stopNames, onVehicle: selectVehicle, onRoute: selectTransitRoute,
-    vehicleLabel: (vehicle: TransitVehicle, stale: boolean) => `${vehicle.service} → ${vehicle.destination} · ${t(stale ? "transit.stale" : "transit.eta")}` }),
+    vehicleLabel: (vehicle: TransitVehicle, stale: boolean) => `${vehicle.service} → ${vehicle.destination} · ${t(stale ? "transit.stale"
+      : vehicle.evidence === "schedule" ? "transit.evidenceSchedule" : vehicle.evidence === "gps" ? "transit.evidenceGps" : "transit.evidenceEta")}` }),
   [transit.catalog, transit.routes, transit.vehicles, selectedTransitRoute, focusedTransitGroup, stopNames, selectVehicle, selectTransitRoute, t]);
 
   const toggleLayer = useCallback(
@@ -354,6 +364,7 @@ export default function App() {
     );
   };
   const reset = () => {
+    toggleEstimatedTransit(false);
     setTransitActive(TRANSIT_DEFAULTS);
     setSelectedTransitRoute(null);
     setTransitFilters(TRANSIT_FILTER_DEFAULTS); setFocusedTransitGroup(null); setRoutePopupPosition(null); setStopNames(false);
@@ -414,6 +425,7 @@ export default function App() {
       {!showDetail && <TransitControls open={routeControlsOpen} onOpen={setRouteControlsOpen}
         catalog={transit.catalog} error={transit.catalogError} active={transitActive} filters={transitFilters}
         focusedGroup={focusedTransitGroup} stopNames={stopNames} onStopNames={setStopNames}
+        estimated={estimatedTransit} onEstimated={toggleEstimatedTransit}
         onFilter={filterTransitRoutes} onFocus={focusTransitRoute}
         onExitFocus={() => { setFocusedTransitGroup(null); setSelectedTransitRoute(null); }} state={transit} />}
 

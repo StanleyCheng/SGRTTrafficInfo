@@ -6,7 +6,7 @@
 - Route-line popup and fit action focus the full service, including all mapped directions and available bus estimates. Focus hides other overlays without discarding their settings. Return restores them.
 - Stop-name checkbox updates the map symbol layer. Labels use normal map collision placement; zoom closer to read crowded stops.
 - Bottom tiles enlarged from 0.7 to 0.9 of the original size; captions restored to 12px and count badges to 10px.
-- Added generated transparent representative sprites for the three extra modes, with embedded prompts and primary-source livery references in `public/transit/extra-assets.json`.
+- Added transparent representative sprites for the three extra modes, with embedded prompts or vector briefs and primary-source livery references in `public/transit/assets.json`.
 
 ## Evidence and limits
 

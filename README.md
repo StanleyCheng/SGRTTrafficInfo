@@ -38,11 +38,10 @@ bus estimates. Focus temporarily hides other transit, camera and road overlays; 
 selection** restores their chosen settings. The selector's stop-name toggle applies to displayed
 routes, with normal map collision placement. The bounded panel scrolls on short phones.
 
-The transparent vehicle illustrations in `public/transit/` are researched representative
-fleet/type icons. Their exact generation prompts, primary reference links and alpha checks are
-in `public/transit/assets.json` and `public/transit/extra-assets.json`. The extra assets cover
-Sentosa Express, a conventional Singapore Cable Car cabin and Changi Skytrain. They are fixed-view
-3D renders rather than rotatable models.
+The fifteen transparent vehicle illustrations in `public/transit/` are researched representative
+fleet/type icons. Their exact prompts or vector briefs, primary reference links, SHA-256 and alpha
+checks are in `public/transit/assets.json`, including Sentosa Express, a conventional Singapore
+Cable Car cabin and Changi Skytrain. They are fixed-view artwork rather than rotatable models.
 
 Bus positions use LTA Bus Arrival v3's live ETA and estimated coordinate evidence, snapped to
 the mapped route. They are labelled estimates, never raw GPS. The overview queries up to eight
@@ -54,8 +53,23 @@ need compatible predictions at two stops to infer progress. Schedule-only arriva
 Positions stop after 45 seconds without fresh evidence and disappear after 90 seconds.
 
 Routine live train positioning and domestic ferry feed coverage remain unverified. Sentosa
-Express, Cable Car and Skytrain also have no verified live positions. These layers show mapped
-routes and stops without timetable-only moving vehicles. No simulated vehicles ship.
+Express, Cable Car and Skytrain also have no verified live positions. Their movement is an
+explicit opt-in timetable estimate, marked `data-state="scheduled"` with a dashed ring, reduced
+opacity and the wording "Estimated from published timetable — NOT a live position". The same
+toggle is off by default and is saved locally.
+
+The scheduler records a source URL and capture date for every figure in
+`src/lib/transit-schedule.ts`. It uses operator/LTA publications, plus the MHI technical paper
+for the Skytrain's 5-minute interim headway because CAG publishes only "every few minutes". It
+covers the North East and Downtown lines, the four Sengkang–Punggol LRT loops, two Southern
+Islands ferry connections, both Sentosa directions, both cable car lines and the mapped Skytrain
+connections. SMRT's North-South, East-West, Circle, Thomson–East Coast and Bukit Panjang LRT
+lines stay static because no operator-published end-to-end run time was found; the Pulau Ubin
+bumboat stays static because NParks describes an on-demand service with no fixed headway. These
+gaps are listed in `SCHEDULE_UNAVAILABLE` and are not filled with guessed figures. The Sentosa
+run time is the published 7-minute upper bound of its 4–7 minute frequency; the cable car uses a
+single-cabin round-trip model based on the operator's 13-minute one-way and 26–30 minute
+round-trip figures.
 
 ### Run the transit backend
 

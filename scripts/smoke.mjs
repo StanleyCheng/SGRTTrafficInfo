@@ -1024,7 +1024,9 @@ async function main() {
         "traffic-speed": ["road-traffic-speed-line"],
         incidents: ["road-incidents-points"],
         hazards: ["road-hazards-points"],
-        roadworks: ["road-roadworks-points"],
+        // The roadworks permit register publishes a road name but no site
+        // geometry, so this layer is deliberately list-only. Its 9,679 records
+        // are still asserted through the Options list and badge, not a map mark.
         parking: ["road-parking-points"],
         erp: ["road-erp-line"],
         ev: ["road-ev-points"],

@@ -1003,6 +1003,10 @@ button,
 .atlas-vehicle-marker span { position: absolute; top: 52px; left: 50%; transform: translateX(-50%); display: block; width: max-content; padding: 2px 5px; background: var(--surface); color: var(--vehicle-route-colour); font: 700 12px var(--font-sans); border-radius: 4px; line-height: 16px; }
 .atlas-vehicle-art svg { position: absolute; top: -6px; left: 18px; width: 12px; height: 12px; fill: none; stroke: var(--ink); stroke-width: 2px; stroke-linecap: round; stroke-linejoin: round; transform-origin: center; }
 .atlas-vehicle-marker[data-state="stale"] > * { opacity: calc(var(--vehicle-opacity, 1) * 0.5); }
+/* Timetable estimates are intentionally quieter and ringed, so they never read as live GPS. */
+.atlas-vehicle-marker[data-state="scheduled"] img { opacity: 0.72; filter: saturate(0.55); }
+.atlas-vehicle-marker[data-state="scheduled"] .atlas-vehicle-art { outline: 1px dashed var(--vehicle-route-colour); outline-offset: 3px; border-radius: 50%; }
+.atlas-vehicle-marker[data-state="scheduled"] span { border: 1px dashed var(--vehicle-route-colour); }
 .atlas-map-mode[aria-pressed="true"] { color: var(--accent-ink); background: var(--accent); }
 .atlas-transit-glyph { width: 38px; height: 26px; object-fit: contain; }
 

@@ -84,3 +84,11 @@ vehicle icons back on every route and layer. Consequences, implemented and valid
   `/transit/<fleet>.png` at 256px natural width, empty body transform, rotating arrow,
   all six layer glyphs loading real artwork, zero failed sprite requests and zero
   `/transit/overhead/` requests. Screenshot: `.cache/screens/vehicle-3d-restored.png`.
+
+## Later amendment, 22 October 2026 — completed sprite ids
+
+The newer sprite/motion plan specified the exact id `car-cable`. The file was renamed from
+`cable-car.png` to `car-cable.png`, and every reference was migrated in the same change:
+`TRANSIT_ICONS`, `FLEET_SPRITES`, `routeIcon`, `assets.json`, tests and documentation. Unlike
+the earlier mismatch, the file and all three consumers now agree; the browser network log shows
+`/transit/car-cable.png` returning 200.

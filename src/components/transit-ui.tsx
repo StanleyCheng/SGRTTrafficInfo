@@ -1,17 +1,10 @@
 "use client";
 
 import type { TransitState } from "@/hooks/use-transit";
-import { TRANSIT_ICONS, type TransitCatalog, type TransitMode, type TransitRoute, type TransitVehicle } from "@/lib/transit";
+import type { TransitCatalog, TransitMode, TransitRoute, TransitVehicle } from "@/lib/transit";
+import { routeIcon } from "@/lib/transit-sprites";
 import { useI18n } from "./i18n-provider";
 import { CloseIcon } from "./icons";
-
-export function transitIcon(route: TransitRoute) {
-  if (route.mode === "ferry" && /Ubin/i.test(route.name)) return "ferry-ubin-bumboat";
-  if (route.mode !== "train") return TRANSIT_ICONS[route.mode];
-  if (["NS", "EW"].includes(route.service)) return "train-nsew";
-  if (["SE", "SW", "PE", "PW"].includes(route.service)) return "train-lrt-sengkang-punggol";
-  return ({ NE: "train-north-east", CC: "train-circle", DT: "train-downtown", TE: "train-thomson-east-coast" })[route.service] ?? "train-lrt";
-}
 export function VehicleArtwork({ name, className = "" }: { name: string; className?: string }) {
   // Generated sprites are deliberately plain images: their alpha must survive static export.
   // eslint-disable-next-line @next/next/no-img-element
@@ -27,9 +20,11 @@ export function TransitOptions({ mode, state, selectedRouteId, onRoute, onFocus,
   const routes = state.catalog?.routes.filter((route) => route.mode === mode) ?? [];
   const selected = routes.find((route) => route.id === selectedRouteId);
   const message = state.catalogError ? "transit.catalogError" : !state.catalog ? "status.loading"
-    : mode !== "bus" ? mode === "ferry" ? "transit.noFerryPosition" : mode === "train" ? "transit.noTrainPosition" : "transit.noPosition"
+    : mode !== "bus" ? state.estimated ? "transit.scheduleNotice"
+      : mode === "ferry" ? "transit.noFerryPosition" : mode === "train" ? "transit.noTrainPosition" : "transit.noPosition"
       : state.feedStatus === "unconfigured" ? "transit.unconfigured" : state.feedStatus === "error" ? "transit.feedError"
         : state.feedStatus === "loading" ? "status.loading" : "transit.sample";
+  const vehicles = state.vehicles.filter((vehicle) => vehicle.mode === mode && (!selected || vehicle.routeId === selected.id)).slice(0, 12);
   return <div className="atlas-transit-options">
     <p className="atlas-layer-notice" role="status">{t(message)}</p>
     <label htmlFor={`transit-route-${mode}`}>{t("transit.selectRoute")}</label>
@@ -38,18 +33,20 @@ export function TransitOptions({ mode, state, selectedRouteId, onRoute, onFocus,
       {routes.map((route) => <option value={route.id} key={route.id}>{route.mode === "bus" ? `${route.service} · ` : ""}{route.name}{route.mode === "bus" ? ` → ${route.destination}` : ""}</option>)}
     </select>
     {selected && <div className="atlas-transit-route-summary">
-      <VehicleArtwork name={transitIcon(selected)} className="atlas-transit-artwork" />
+      <VehicleArtwork name={routeIcon(selected)} className="atlas-transit-artwork" />
       <div><strong className="atlas-transit-route-code" style={{ borderColor: selected.colour }}>{selected.service}</strong><p>{selected.destination}</p>
         <p className="text-muted">{t(selected.colourSource === "official" ? "transit.officialColour" : "transit.displayColour")}</p></div>
     </div>}
     {selected && <button type="button" className="atlas-route-primary" onClick={() => onFocus(selected)}>{t("routes.showWhole")}</button>}
     <p>{t("transit.routesCount", { count: routes.length })}</p>
-    {mode === "bus" && state.vehicles.length > 0 && <ul className="atlas-transit-vehicle-list" aria-label={t("transit.estimates")}>
-      {state.vehicles.filter((vehicle) => !selected || vehicle.routeId === selected.id).slice(0, 12).map((vehicle) => <li key={vehicle.id}>
-        <button type="button" onClick={() => onVehicle(vehicle)}>{vehicle.service} → {vehicle.destination}<span>{t("transit.eta")}</span></button>
+    {vehicles.length > 0 && <ul className="atlas-transit-vehicle-list" aria-label={t("transit.estimates")}>
+      {vehicles.map((vehicle) => <li key={vehicle.id}>
+        <button type="button" onClick={() => onVehicle(vehicle)}>{vehicle.service} → {vehicle.destination}<span>{t(
+          vehicle.evidence === "schedule" ? "transit.timetableEstimate" : vehicle.evidence === "gps" ? "transit.evidenceGps" : "transit.evidenceEta")}</span></button>
       </li>)}
     </ul>}
-    <p className="atlas-popup-note">{t("transit.positionRule")}</p>
+    <p className="atlas-popup-note">{t(state.estimated ? "transit.scheduleRule" : "transit.positionRule")}</p>
+    {state.estimated && <p className="atlas-popup-note">{t("transit.schedulePartial")}</p>}
     <p className="atlas-popup-note">{t("transit.representative")}</p>
     {state.catalog && <details className="atlas-transit-sources"><summary>{t("transit.sources")}</summary>
       <p>{state.catalog.attribution}</p>
@@ -70,10 +67,16 @@ export function TransitVehicleDetail({ vehicle, catalog, now, onClose }: {
       <button type="button" className="atlas-icon-button" aria-label={t("common.close")} onClick={onClose}><CloseIcon /></button></header>
     <div className="atlas-transit-route-summary"><VehicleArtwork name={vehicle.icon} className="atlas-transit-artwork" />
       <strong style={{ color: route?.colour }}>{vehicle.destination}</strong></div>
-    <dl><dt>{t("transit.positionSource")}</dt><dd>{t(vehicle.evidence === "gps" ? "transit.gps" : "transit.eta")}</dd>
-      <dt>{t("transit.freshness")}</dt><dd>{t(now >= vehicle.staleAt ? "transit.stale" : "transit.updating")}</dd>
-      <dt>{t("status.updated")}</dt><dd>{new Date(vehicle.observedAt).toLocaleTimeString(lang === "zh" ? "zh-HK" : "en-SG")}</dd></dl>
+    <dl><dt>{t("transit.positionSource")}</dt><dd>{t(vehicle.evidence === "schedule" ? "transit.evidenceSchedule"
+      : vehicle.evidence === "gps" ? "transit.evidenceGps" : "transit.evidenceEta")}</dd>
+      <dt>{t("transit.freshness")}</dt><dd>{t(now >= vehicle.staleAt ? "transit.stale"
+        : vehicle.evidence === "schedule" ? "transit.timetableEstimate" : "transit.updating")}</dd>
+      <dt>{t("status.updated")}</dt><dd>{new Date(vehicle.observedAt).toLocaleTimeString(lang === "zh" ? "zh-HK" : "en-SG")}</dd>
+      {vehicle.evidence === "schedule" && <>
+        <dt>{t("transit.scheduleWindow")}</dt>
+        <dd>{new Date(vehicle.serviceStartedAt).toLocaleTimeString(lang === "zh" ? "zh-HK" : "en-SG")} – {new Date(vehicle.serviceEndsAt).toLocaleTimeString(lang === "zh" ? "zh-HK" : "en-SG")}</dd>
+      </>}</dl>
     <p>{t("transit.representative")}</p>
-    <p>{t("transit.positionRule")}</p>
+    <p>{t(vehicle.evidence === "schedule" ? "transit.scheduleRule" : "transit.positionRule")}</p>
   </section>;
 }

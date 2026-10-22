@@ -1,13 +1,14 @@
 {
   "schemaVersion": 1,
   "createdDate": "2026-10-22",
-  "purpose": "Representative researched Singapore public-transport 3D cutout sprites for SGRTTrafficInfo. Vehicle livery is separate from map route identity.",
+  "purpose": "Representative researched Singapore public-transport vehicle cutouts for SGRTTrafficInfo. Vehicle livery is separate from map route identity.",
   "limitations": [
     "Generated illustrations are representative fleet/type symbols, not photographs or proof of the actual vehicle serving a trip.",
     "Bus and rail fleets include other liveries and models; feed type/line alone does not identify a precise unit.",
     "Ferry icons represent their named service or photographed vessel type; privately managed bumboats and other domestic operators may use different shapes and liveries.",
     "These fixed-view PNG sprites are not interactive 3D models. All source photos are references only and are not redistributed here.",
-    "Model version is not exposed by the built-in ImageGen tool; no specific model version is claimed."
+    "Model version is not exposed by the built-in ImageGen tool; no specific model version is claimed.",
+    "Sentosa Express and Changi Skytrain use local vector illustrations; the cable car sprite is ImageGen source artwork recoloured locally. These are representative cutouts, not photographs."
   ],
   "assets": [
     {
@@ -622,6 +623,206 @@
       },
       "bytes": 53058,
       "sha256": "266ef467a9ac8fff743ee8ad7afbc019b7fb89c36410c46294fee04bc838c190"
+    },
+    {
+      "id": "train-sentosa",
+      "file": "train-sentosa.png",
+      "publicPath": "/transit/train-sentosa.png",
+      "label": "Sentosa Express",
+      "representative": true,
+      "description": "Representative Hitachi small-type straddle-beam monorail car in one solid purple livery; one car of a two-car trainset, with no beam or track drawn.",
+      "observedLivery": "Solid purple body with a narrow white skirt band, light-grey roof, near-black panoramic glazing and a low headlight cluster on the nose.",
+      "referenceSources": [
+        {
+          "title": "Hitachi Sentosa Express contract announcement",
+          "url": "https://www.hitachi.com/New/cnews/E/2002/0621/index.html",
+          "evidence": "Manufacturer confirms the small straddle-type monorail and two-vehicle configuration; the sprite shows one car of that trainset."
+        },
+        {
+          "title": "Sentosa Development Corporation, The Sentosa Story 2023, printed page 71",
+          "url": "https://www.sentosa.com.sg/-/media/sentosa/campaign-jubilee/thesentosastory2023.pdf#page=75",
+          "evidence": "Operator publication photographs show the monorail and the fleet's solid single-colour trainsets."
+        },
+        {
+          "title": "Transport Safety Investigation Bureau report, printed page 2 footnote 1",
+          "url": "https://isomer-user-content.by.gov.sg/287/3d87634b-3c87-48af-8ee6-7d1ded83a7f2/sentosa-express-pax-trapped-on-11-march-2024.pdf#page=6",
+          "evidence": "Government report describes colour-identified trainsets. Purple is a representative fleet colour, not an identified unit."
+        },
+        {
+          "title": "Sentosa Express official station and route guide",
+          "url": "https://www.sentosa.com.sg/en/things-to-do/attractions/sentosa-express/",
+          "evidence": "Operator page confirms the VivoCity–Resorts World–Imbiah–Beach route and daily 7am–12am service."
+        }
+      ],
+      "generation": {
+        "tool": "local SVG illustration rendered with librsvg and ImageMagick",
+        "model": "none (deterministic vector geometry)",
+        "transparentBackgroundRequested": true,
+        "prompt": "Use case: stylized-concept\nAsset type: transparent PNG sprite for a Singapore public transport map; isolated single vehicle, recognisable at 40 pixels.\nStyle/medium: precise, polished miniature 3D product render, restrained realistic materials, clean simplified details, crisp silhouette. Orthographic isometric three-quarter view from above. Entire vehicle visible, centred, filling about 82% of a square canvas with safe padding. Every vehicle in this set must point toward the upper-right/northeast: its FRONT at upper-right, rear at lower-left. Show roof, front, and near side. Soft neutral lighting within the object only.\nScene/backdrop: genuinely transparent alpha background, empty cutout. No floor, platform, road, track, water, wake, scenery, people, drop shadow, cast shadow, title, caption, legend, border or watermark. No legible logos, route numbers or signage; retain livery colours and physical proportions. Preserve opaque white paint; only empty space is transparent.\n\nSubject: one representative Sentosa Express (Singapore) monorail trainset car, matching actual photographs at https://en.wikipedia.org/wiki/Sentosa_Express . HITACHI small-type straddle-beam monorail car, 25 m two-car train, shown as ONE car. Long rounded-rectangular monorail body that STRADDLES a narrow concrete beam: no rails, no flanges, no pantograph, no catenary, no bogies visible under the floor. Wide near-black panoramic window band wrapping the upper body, flat white roof with two slim longitudinal roof ribs and a small air-conditioning hump, one wide double passenger door on the near side at each end of the car, smooth moulded nose with a large curved windscreen and a single rounded headlight cluster low on the nose. Body painted one solid bright colour — use PURPLE — with a narrow white band along the skirt and a light-grey roof; the real fleet paints each trainset a single solid colour (green, orange, blue, purple, pink, red, yellow), so keep this one flat solid purple, not multi-coloured, not a gradient, not the map line colour. Driverless, so no driver visible. NO MRT carriage proportions, no train coupling at the near end, no station platform, no beam or track under the vehicle. Front at UPPER-RIGHT, rear at LOWER-LEFT, long axis ascending left to right.",
+        "postProcessing": "Trimmed to alpha bounds, fitted within 224 by 224 pixels and centred on a 256 by 256 transparent canvas.",
+        "note": "No image-generation model was available in this run; the prompt was used as a vector-art brief and rendered deterministically."
+      },
+      "format": {
+        "width": 256,
+        "height": 256,
+        "channels": "RGBA",
+        "paddingPx": 16,
+        "maxSourceCanvasPx": 224,
+        "headingNote": "Fixed-view isometric artwork has no geographic heading. Use the separate travel-direction arrow; do not derive movement direction from the sprite.",
+        "artworkAxis": "lower-left to upper-right in image space",
+        "observedOrientation": "Front nose, curved windscreen and headlight cluster at upper-right; rear at lower-left. Single purple car, no beam or track.",
+        "visuallyDistinctFront": "upper-right nose"
+      },
+      "validation": {
+        "transparentPixelFraction": 0.7155,
+        "alphaMin": 0,
+        "alphaMax": 255,
+        "cornerPixelsTransparent": true,
+        "opaqueNearWhitePixels": 0,
+        "alphaBoundingBox": [
+          16,
+          48,
+          239,
+          207
+        ],
+        "visuallyInspectedOn": [
+          "#fffef9",
+          "#203b36"
+        ],
+        "promptEmbedded": true
+      },
+      "bytes": 29541,
+      "sha256": "a88ba8e42683f4a7752cb76a327c2925db8efa1ae3e6ae4f633052eb682da078"
+    },
+    {
+      "id": "train-skytrain",
+      "file": "train-skytrain.png",
+      "publicPath": "/transit/train-skytrain.png",
+      "label": "Changi Airport Skytrain",
+      "representative": true,
+      "description": "Representative Mitsubishi Crystal Mover airport people-mover car; a short single car, not an MRT carriage.",
+      "observedLivery": "Silver-grey body, graphite lower skirt, near-black side window band, thin blue pinstripe, grey roof air-conditioning pods and a dark raked nose with an LED headlight strip.",
+      "referenceSources": [
+        {
+          "title": "MHI Technical Review Vol. 44 No. 2 (2007), Automated People Mover Crystal Mover for Singapore Changi International Airport",
+          "url": "https://www.mhi.com/technology/review/sites/g/files/jwhtju2326/files/tr/pdf/e442/e442010.pdf#page=3",
+          "evidence": "Manufacturer figure 6 and text establish the short Changi-specific Crystal Mover car, roof equipment and one-car operation."
+        },
+        {
+          "title": "Land Transport Guru, Changi Airport Skytrain",
+          "url": "https://landtransportguru.net/train-cga/",
+          "evidence": "Photographs show the silver body, broad dark glazing and flat roof pods used for the representative proportions."
+        },
+        {
+          "title": "Changi Airport, transfer between terminals",
+          "url": "https://www.changiairport.com/en/at-changi/transport-and-directions/transferring-between-terminals-jewel.html",
+          "evidence": "Operator page confirms the T1–T2–T3 airside and public Skytrain connections and 5:00am–2:00am service."
+        }
+      ],
+      "generation": {
+        "tool": "local SVG illustration rendered with librsvg and ImageMagick",
+        "model": "none (deterministic vector geometry)",
+        "transparentBackgroundRequested": true,
+        "prompt": "Use case: stylized-concept\nAsset type: transparent PNG sprite for a Singapore public transport map; isolated single vehicle, recognisable at 40 pixels.\nStyle/medium: precise, polished miniature 3D product render, restrained realistic materials, clean simplified details, crisp silhouette. Orthographic isometric three-quarter view from above. Entire vehicle visible, centred, filling about 82% of a square canvas with safe padding. Every vehicle in this set must point toward the upper-right/northeast: its FRONT at upper-right, rear at lower-left. Show roof, front, and near side. Soft neutral lighting within the object only.\nScene/backdrop: genuinely transparent alpha background, empty cutout. No floor, platform, road, track, water, wake, scenery, people, drop shadow, cast shadow, title, caption, legend, border or watermark. No legible logos, route numbers or signage; retain livery colours and physical proportions. Preserve opaque white paint; only empty space is transparent.\n\nSubject: one representative Changi Airport Skytrain (Singapore) automated people mover car, Mitsubishi Crystal Mover, matching photographs at https://landtransportguru.net/train-cga/ and the MHI technical paper https://www.mhi.com/technology/review/sites/g/files/jwhtju2326/files/tr/pdf/e442/e442010.pdf . SHORT, SQUAT, wide-bodied aluminium-alloy APM car — much shorter and wider than an MRT carriage; square boxy profile with softly rounded roof corners. Base livery is a restrained SILVER-GREY body with a darker graphite-grey lower skirt and a slim BLACK window band, plus one narrow blue pinstripe running the length of the body below the window band (grey and black dominate; blue is only a thin accent). Large continuous near-black side glazing, two wide flush double passenger doors on the near side, one at each end of the car. Aerodynamic moulded front with a steeply raked windscreen, dark grey nose cap and a slim LED headlight strip; no protruding cab. Flat grey roof with two low rectangular air-conditioning pods and a slim black roof seam. Rubber-tyred automated people mover: NO rails, NO pantograph, NO overhead wire, NO locomotive nose, NO yellow or red bus colours. Plain base livery only — no promotional or character wrap, no airline logos, no text. Front at UPPER-RIGHT, rear at LOWER-LEFT, single car, long axis ascending left to right.",
+        "postProcessing": "Trimmed to alpha bounds, fitted within 224 by 224 pixels and centred on a 256 by 256 transparent canvas.",
+        "note": "No image-generation model was available in this run; the prompt was used as a vector-art brief and rendered deterministically."
+      },
+      "format": {
+        "width": 256,
+        "height": 256,
+        "channels": "RGBA",
+        "paddingPx": 16,
+        "maxSourceCanvasPx": 224,
+        "headingNote": "Fixed-view isometric artwork has no geographic heading. Use the separate travel-direction arrow; do not derive movement direction from the sprite.",
+        "artworkAxis": "lower-left to upper-right in image space",
+        "observedOrientation": "Raked nose, dark windscreen and LED strip at upper-right; rear at lower-left. Single squat silver car with two doors.",
+        "visuallyDistinctFront": "upper-right raked nose"
+      },
+      "validation": {
+        "transparentPixelFraction": 0.7261,
+        "alphaMin": 0,
+        "alphaMax": 255,
+        "cornerPixelsTransparent": true,
+        "opaqueNearWhitePixels": 0,
+        "alphaBoundingBox": [
+          16,
+          48,
+          239,
+          206
+        ],
+        "visuallyInspectedOn": [
+          "#fffef9",
+          "#203b36"
+        ],
+        "promptEmbedded": true
+      },
+      "bytes": 25840,
+      "sha256": "3cae77090fcaecd682f7b26360a9ed40f7c0633f72bd750d9184c7c568310ff5"
+    },
+    {
+      "id": "car-cable",
+      "file": "car-cable.png",
+      "publicPath": "/transit/car-cable.png",
+      "label": "Singapore Cable Car cabin",
+      "representative": true,
+      "description": "Representative conventional suspended Singapore Cable Car cabin; metallic black shell with chrome trim, not the spherical SkyOrb and not a precise themed unit.",
+      "observedLivery": "Metallic black cabin and domed roof, bright chrome trim and hanger arm, lightly tinted panoramic glazing and a cyan LED strip under the roof lip.",
+      "referenceSources": [
+        {
+          "title": "Singapore Cable Car operator attraction page",
+          "url": "https://mountfaberleisure.com/attraction/singapore-cable-car/",
+          "evidence": "Operator distinguishes conventional cabins, current themed experiences, and SkyOrb; gallery includes standard enclosed suspended cabin forms."
+        },
+        {
+          "title": "Mount Faber Leisure conventional cabin operator photograph",
+          "url": "https://mountfaberleisure.com/wp-content/uploads/2025/04/New-Web_480-x-360-47.jpg",
+          "evidence": "Inspected operator photograph establishes rounded enclosed cabin, panoramic glazing, dark structure and connected suspension hanger; the photograph has a promotional wrap."
+        },
+        {
+          "title": "Mount Faber Leisure Sentosa Line cabin operator photograph",
+          "url": "https://mountfaberleisure.com/wp-content/uploads/2025/04/New-Web_480-x-360-48.jpg",
+          "evidence": "Inspected operator photograph establishes conventional cabins with several representative colours, including red. The generated red-roof/dark-shell combination is a fleet-type symbol, not an exact photographed unit."
+        }
+      ],
+      "generation": {
+        "tool": "built-in ImageGen source artwork, recoloured with ImageMagick",
+        "model": "not exposed by tool",
+        "transparentBackgroundRequested": true,
+        "prompt": "Use case: stylized-concept\nAsset type: small transparent PNG map vehicle sprite for Singapore traffic app.\nPrimary request: one representative conventional Singapore Cable Car passenger gondola cabin, reflecting the dark glazed red-roof cabins operated on the Singapore Cable Car network.\nReference evidence: Singapore Cable Car operator's gallery at https://mountfaberleisure.com/attraction/singapore-cable-car/ and operator photos https://mountfaberleisure.com/wp-content/uploads/2025/04/New-Web_480-x-360-47.jpg and https://mountfaberleisure.com/wp-content/uploads/2025/04/New-Web_480-x-360-48.jpg establish a conventional enclosed suspended gondola. This is the standard rounded rectangular cabin, not the spherical chrome SkyOrb.\nSubject: one small rounded rectangular eight-seat gondola with large dark smoked panoramic windows on front and near side, black window pillars and dark charcoal lower shell, red shallow gently domed roof, slim light-grey curved suspension hanger rising above the roof to a compact cable grip. Show thin black door seams and small rim details. Cabin has a broad rectangular footprint with softened chamfered corners and tapers very slightly near the floor. No cartoon ski lift form. Suspension hardware is structurally connected to roof and fully inside frame.\nStyle/medium: crisp realistic miniature 3D product render, compact map-icon level of detail, restrained physically believable glossy paint and dark glass, clear silhouette and softly highlighted edges. Same clean polished transit icon family as miniature MRT and LRT cutouts.\nComposition/framing: single entire cabin and hanger isolated and centered on a square canvas, elevated three-quarter isometric view seeing red roof, front, near side and hanging attachment, about 8 percent transparent padding around the complete silhouette.\nLighting: soft studio illumination from upper-left, restrained contrast.\nScene/backdrop: genuine transparent background with alpha; all empty space and openings transparent, no floor, no cast shadow, no grey or white backdrop.\nConstraints: no cable extending across canvas, no scenery, no station, no people, no lettering, no route color badge, no logo, no watermark, no promotional characters, no extra cabins. Preserve actual red roof and dark glazing. This is representative normal cabin livery; do not reproduce temporary advertising.",
+        "postProcessing": "Replaced the red roof pixels with graphite, preserved the chrome trim and alpha, and added a cyan LED strip under the roof lip. Artwork remains within the original 16 px framing.",
+        "note": "The existing ImageGen source cabin was recoloured locally; no new image-generation run was made."
+      },
+      "format": {
+        "width": 256,
+        "height": 256,
+        "channels": "RGBA",
+        "paddingPx": 16,
+        "maxSourceCanvasPx": 224,
+        "headingNote": "A suspended cabin is symmetric and has no geographic heading. The marker's separate arrow carries travel direction.",
+        "artworkAxis": "upright suspended cabin",
+        "observedOrientation": "Cabin body low-centre with the rigid hanger arm pointing straight up; roof, front glazing and near-side glazing are visible. Symmetric, so no front or rear is claimed.",
+        "visuallyDistinctFront": "not applicable: symmetric cabin"
+      },
+      "validation": {
+        "transparentPixelFraction": 0.6966,
+        "alphaMin": 0,
+        "alphaMax": 255,
+        "cornerPixelsTransparent": true,
+        "opaqueNearWhitePixels": 0,
+        "alphaBoundingBox": [
+          52,
+          19,
+          219,
+          235
+        ],
+        "visuallyInspectedOn": [
+          "#fffef9",
+          "#203b36"
+        ],
+        "promptEmbedded": true
+      },
+      "bytes": 42367,
+      "sha256": "6a300cc9b71281c0323a2da0149811e532398a7839b89696d69123bd48fc79aa"
     }
   ]
 }

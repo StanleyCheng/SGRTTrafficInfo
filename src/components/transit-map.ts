@@ -90,7 +90,8 @@ export function createTransitRenderer(map: LibreMap) {
       // Fixed-view artwork stays upright; the arrow carries the heading.
       entry.arrow.style.transform = `rotate(${entry.heading}deg)`;
       const stale = now >= vehicle.staleAt;
-      entry.button.dataset.state = stale ? "stale" : "recent";
+      entry.button.dataset.state = stale ? "stale" : vehicle.evidence === "schedule" ? "scheduled" : "recent";
+      entry.button.dataset.evidence = vehicle.evidence;
       const label = options.vehicleLabel(vehicle, stale);
       if (entry.button.getAttribute("aria-label") !== label) entry.button.setAttribute("aria-label", label);
       const fade = reduced.matches ? 1 : entry.phase.kind === "retiring" ? 1 - (now - entry.phase.startedAt) / FADE_MS

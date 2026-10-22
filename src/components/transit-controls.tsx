@@ -8,10 +8,11 @@ import { useI18n } from "./i18n-provider";
 import { CloseIcon } from "./icons";
 
 export function TransitControls({ open, onOpen, catalog, error, active, filters, focusedGroup,
-  stopNames, onStopNames, onFilter, onFocus, onExitFocus, state }: {
+  stopNames, onStopNames, estimated, onEstimated, onFilter, onFocus, onExitFocus, state }: {
   open: boolean; onOpen: (open: boolean) => void; catalog: TransitCatalog | null; error: boolean;
   active: TransitActive; filters: TransitFilters; focusedGroup: string | null;
   stopNames: boolean; onStopNames: (show: boolean) => void;
+  estimated: boolean; onEstimated: (enabled: boolean) => void;
   onFilter: (mode: TransitMode, value: string[] | null) => void;
   onFocus: (route: TransitRoute) => void; onExitFocus: () => void; state: TransitState;
 }) {
@@ -48,6 +49,8 @@ export function TransitControls({ open, onOpen, catalog, error, active, filters,
       {focused && <div className="atlas-route-focus"><strong>{focused.mode === "bus" ? `${t("transit.bus.label")} ${focused.service}` : focused.name}</strong>
         <span>{t("routes.focused")}</span><button type="button" onClick={onExitFocus}>{t("routes.exitFocus")}</button></div>}
       <label className="atlas-stop-names"><input type="checkbox" checked={stopNames} onChange={(event) => onStopNames(event.target.checked)} />{t("routes.stopNames")}</label>
+      <label className="atlas-stop-names"><input type="checkbox" checked={estimated} onChange={(event) => onEstimated(event.target.checked)} />{t("transit.estimatedPositions")}</label>
+      <p className="atlas-route-note">{t("transit.estimatedDescription")}</p>
       <label className="atlas-route-mode" htmlFor="route-mode">{t("routes.transport")}</label>
       <select id="route-mode" value={mode} onChange={(event) => { setMode(event.target.value as TransitMode); setSearch(""); setLimit(60); }}>
         {TRANSIT_MODES.map((item) => <option key={item} value={item}>{t(`transit.${item}.name`)}</option>)}
@@ -73,7 +76,8 @@ export function TransitControls({ open, onOpen, catalog, error, active, filters,
       </div>
       <p className="atlas-route-note">{focused?.mode === "bus" ? state.feedStatus === "loading" ? t("status.loading")
         : state.feedStatus === "unconfigured" ? t("transit.unconfigured") : state.feedStatus === "error" ? t("transit.feedError")
-          : state.coverage ? t("routes.coverage", state.coverage) : t("routes.estimateLimit") : t("routes.selectionHint")}</p>
+          : state.coverage ? t("routes.coverage", state.coverage) : t("routes.estimateLimit")
+        : estimated ? t("transit.scheduleNotice") : t("routes.selectionHint")}</p>
       {mode === "skytrain" && <p className="atlas-route-note">{t("routes.airportAccess")}</p>}
     </section>}
     {focused && !open && <button type="button" className="panel atlas-route-exit" onClick={onExitFocus}>{t("routes.exitFocus")}</button>}
